@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import "./styles.css"
 
-export const Route = createFileRoute('/(home)/')({ component: App })
+export const Route = createFileRoute('/(home)/')({
+  component: App,
+})
 
 function App() {
   return (

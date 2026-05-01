@@ -2,6 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import "./styles.css"
 
 export const Route = createFileRoute('/(home)/backtest/')({
+  head: (ctx) => ({
+    meta: [
+      { title: 'FoxelSignal | Backtest Dashboard' }
+    ]
+  }),
   component: RouteComponent,
 })
 

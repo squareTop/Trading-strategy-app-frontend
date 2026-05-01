@@ -2,6 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import "./styles.css"
 
 export const Route = createFileRoute('/(home)/vmi/')({
+  head: (ctx) => ({
+    meta: [
+      { title: 'FoxelSignal | VMI Valuation Dashboard' },
+    ]
+  }),
   component: RouteComponent,
 })
 
