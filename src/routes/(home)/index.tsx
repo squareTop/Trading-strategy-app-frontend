@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import {
   Building2,
   Calculator,
@@ -26,10 +26,6 @@ import {
 } from "../../lib/utils";
 import InteractiveChart from '#/components/InteractiveChart';
 
-export const Route = createFileRoute('/(home)/')({
-  component: App,
-})
-
 const POPULAR_TICKERS = [
   { symbol: "AAPL", label: "Apple" },
   { symbol: "MSFT", label: "Microsoft" },
@@ -40,23 +36,33 @@ const POPULAR_TICKERS = [
   { symbol: "META", label: "Meta" }
 ];
 
+export const stockDetailsQueryOptions = (symbol: string) =>
+  queryOptions({
+    queryKey: ['stockDetails', symbol],
+    queryFn: async () => {
+      const response = await fetch(`https://api.foxelsignal.io/vmi?symbol=${encodeURIComponent(symbol)}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error status ${response.status} received from system.`);
+      }
+      return response.json() as Promise<FoxelSignalIVResponse>;
+    },
+  });
+
+export const Route = createFileRoute('/(home)/')({
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(stockDetailsQueryOptions(POPULAR_TICKERS[0].symbol)).catch(() => { });
+  },
+  component: App,
+})
+
 function App() {
   const [ticker, setTicker] = useState<string>("AAPL");
   const [searchInput, setSearchInput] = useState<string>("AAPL");
   const [activeModel, setActiveModel] = useState<"FCF" | "OCF" | "NI">("FCF");
   const [showJsonDump, setShowJsonDump] = useState<boolean>(false);
 
-  const { data, isLoading, error, refetch } = useQuery<FoxelSignalIVResponse>({
-    queryKey: ['stockDetails', ticker],
-    queryFn: async () => {
-      const response = await fetch(`https://api.foxelsignal.io/vmi?symbol=${encodeURIComponent(ticker)}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error status ${response.status} received from system.`);
-      }
-      return response.json();
-    },
-  });
+  const { data, isLoading, error, refetch } = useQuery(stockDetailsQueryOptions(ticker));
 
   // Synchronize search input with the canonical symbol when data changes
   useEffect(() => {
