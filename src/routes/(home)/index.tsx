@@ -35,7 +35,7 @@ const POPULAR_TICKERS = [
   { symbol: "MSFT", label: "Microsoft" },
   { symbol: "GOOGL", label: "Google" },
   { symbol: "NVDA", label: "NVIDIA" },
-  { symbol: "TSLA", label: "Tesla" },
+  // { symbol: "TSLA", label: "Tesla" },
   { symbol: "AMZN", label: "Amazon" },
   { symbol: "META", label: "Meta" }
 ];
