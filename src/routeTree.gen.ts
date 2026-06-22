@@ -13,8 +13,6 @@ import { Route as homeRouteRouteImport } from './routes/(home)/route'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
-import { Route as homeVmiIndexRouteImport } from './routes/(home)/vmi/index'
-import { Route as homeBacktestIndexRouteImport } from './routes/(home)/backtest/index'
 
 const homeRouteRoute = homeRouteRouteImport.update({
   id: '/(home)',
@@ -35,30 +33,16 @@ const homeAboutRoute = homeAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => homeRouteRoute,
 } as any)
-const homeVmiIndexRoute = homeVmiIndexRouteImport.update({
-  id: '/vmi/',
-  path: '/vmi/',
-  getParentRoute: () => homeRouteRoute,
-} as any)
-const homeBacktestIndexRoute = homeBacktestIndexRouteImport.update({
-  id: '/backtest/',
-  path: '/backtest/',
-  getParentRoute: () => homeRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/about': typeof homeAboutRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
-  '/backtest/': typeof homeBacktestIndexRoute
-  '/vmi/': typeof homeVmiIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof homeAboutRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
-  '/backtest': typeof homeBacktestIndexRoute
-  '/vmi': typeof homeVmiIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -66,22 +50,18 @@ export interface FileRoutesById {
   '/(home)/about': typeof homeAboutRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/(home)/': typeof homeIndexRoute
-  '/(home)/backtest/': typeof homeBacktestIndexRoute
-  '/(home)/vmi/': typeof homeVmiIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/about' | '/demo/tanstack-query' | '/' | '/backtest/' | '/vmi/'
+  fullPaths: '/about' | '/demo/tanstack-query' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/about' | '/demo/tanstack-query' | '/' | '/backtest' | '/vmi'
+  to: '/about' | '/demo/tanstack-query' | '/'
   id:
     | '__root__'
     | '/(home)'
     | '/(home)/about'
     | '/demo/tanstack-query'
     | '/(home)/'
-    | '/(home)/backtest/'
-    | '/(home)/vmi/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,35 +99,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeAboutRouteImport
       parentRoute: typeof homeRouteRoute
     }
-    '/(home)/vmi/': {
-      id: '/(home)/vmi/'
-      path: '/vmi'
-      fullPath: '/vmi/'
-      preLoaderRoute: typeof homeVmiIndexRouteImport
-      parentRoute: typeof homeRouteRoute
-    }
-    '/(home)/backtest/': {
-      id: '/(home)/backtest/'
-      path: '/backtest'
-      fullPath: '/backtest/'
-      preLoaderRoute: typeof homeBacktestIndexRouteImport
-      parentRoute: typeof homeRouteRoute
-    }
   }
 }
 
 interface homeRouteRouteChildren {
   homeAboutRoute: typeof homeAboutRoute
   homeIndexRoute: typeof homeIndexRoute
-  homeBacktestIndexRoute: typeof homeBacktestIndexRoute
-  homeVmiIndexRoute: typeof homeVmiIndexRoute
 }
 
 const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeAboutRoute: homeAboutRoute,
   homeIndexRoute: homeIndexRoute,
-  homeBacktestIndexRoute: homeBacktestIndexRoute,
-  homeVmiIndexRoute: homeVmiIndexRoute,
 }
 
 const homeRouteRouteWithChildren = homeRouteRoute._addFileChildren(
