@@ -210,6 +210,10 @@ function App() {
             </button>
           </form>
 
+          <p className="mt-2 text-xs text-gray-400 font-mono">
+            Note: For SG and HK stocks, suffixes must be added (i.e. <strong className="text-brand-primary">.SI</strong> and <strong className="text-brand-primary">.HK</strong> respectively).
+          </p>
+
           {/* Quick Tickers Selection Bar */}
           <div className="mt-5 pt-4 border-t border-brand-border flex flex-wrap items-center gap-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-gray-400 mr-2">
