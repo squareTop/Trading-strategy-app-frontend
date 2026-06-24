@@ -3,9 +3,9 @@ import { formatFinancial, formatPercent } from "#/lib/utils";
 
 interface InteractiveChartProps {
   baseVal: number;
-  growth1: number;
-  growth6: number;
-  growth11: number;
+  growth1_5: number;
+  growth6_10: number;
+  growth11_20: number;
   discountRate: number;
   label: string;
   currency: string;
@@ -19,9 +19,9 @@ interface YearProjection {
 
 export default function InteractiveChart({
   baseVal,
-  growth1,
-  growth6,
-  growth11,
+  growth1_5,
+  growth6_10,
+  growth11_20,
   discountRate,
   label,
   currency = "USD",
@@ -35,9 +35,9 @@ export default function InteractiveChart({
     let currentNominal = baseVal;
 
     for (let yr = 1; yr <= 20; yr++) {
-      let growth = growth1;
-      if (yr > 5 && yr <= 10) growth = growth6;
-      else if (yr > 10) growth = growth11;
+      let growth = growth1_5;
+      if (yr > 5 && yr <= 10) growth = growth6_10;
+      else if (yr > 10) growth = growth11_20;
 
       currentNominal = currentNominal * (1 + growth);
       const pv = currentNominal / Math.pow(1 + discountRate, yr);
@@ -49,7 +49,7 @@ export default function InteractiveChart({
       });
     }
     return list;
-  }, [baseVal, growth1, growth6, growth11, discountRate]);
+  }, [baseVal, growth1_5, growth6_10, growth11_20, discountRate]);
 
   // Find max value to calibrate SVG height scaling
   const maxVal = useMemo(() => {
@@ -268,7 +268,7 @@ export default function InteractiveChart({
       </div>
 
       {/* Grid displaying the mathematical parameters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 bg-brand-bg/50 rounded-xl p-4 border border-brand-border/65 font-mono text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-6 bg-brand-bg/50 rounded-xl p-4 border border-brand-border/65 font-mono text-xs">
         <div>
           <p className="text-gray-500 uppercase font-semibold">Base cash-flow</p>
           <p className="text-sm font-bold text-brand-dark mt-0.5">
@@ -276,15 +276,21 @@ export default function InteractiveChart({
           </p>
         </div>
         <div>
-          <p className="text-gray-500 uppercase font-semibold">Growth rates (Yr 1-10)</p>
+          <p className="text-gray-500 uppercase font-semibold">Growth rates (Yr 1-5)</p>
           <p className="text-sm font-bold text-brand-dark mt-0.5">
-            {formatPercent(growth1)}
+            {formatPercent(growth1_5)}
+          </p>
+        </div>
+        <div>
+          <p className="text-gray-500 uppercase font-semibold">Growth rates (Yr 6-10)</p>
+          <p className="text-sm font-bold text-brand-dark mt-0.5">
+            {formatPercent(growth6_10)}
           </p>
         </div>
         <div>
           <p className="text-gray-500 uppercase font-semibold">Growth rates (Yr 11-20)</p>
           <p className="text-sm font-bold text-brand-dark mt-0.5">
-            {formatPercent(growth11)}
+            {formatPercent(growth11_20)}
           </p>
         </div>
         <div>

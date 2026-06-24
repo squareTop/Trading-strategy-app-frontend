@@ -40,7 +40,7 @@ export const stockDetailsQueryOptions = (symbol: string) =>
   queryOptions({
     queryKey: ['stockDetails', symbol],
     queryFn: async () => {
-      const response = await fetch(`https://api.foxelsignal.io/vmi?symbol=${encodeURIComponent(symbol)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/vmi?symbol=${encodeURIComponent(symbol)}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Error status ${response.status} received from system.`);
@@ -593,9 +593,9 @@ function App() {
                   {/* Dynamic Math SVG chart */}
                   <InteractiveChart
                     baseVal={currentModel.baseVal}
-                    growth1={data.growth_rate_1_5}
-                    growth6={data.growth_rate_6_10}
-                    growth11={data.growth_rate_11_20}
+                    growth1_5={data.growth_rate_1_5}
+                    growth6_10={data.growth_rate_6_10}
+                    growth11_20={data.growth_rate_11_20}
                     discountRate={data.discount_rate}
                     label={currentModel.label}
                     currency={data.financial_currency}
