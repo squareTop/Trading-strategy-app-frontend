@@ -470,11 +470,11 @@ function App() {
                     <span className="text-[11px] text-gray-500 font-mono">Market vs IV:</span>
                     {data.intrinsic_value_per_share_fcf > data.last_close_price ? (
                       <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                        +{formatPercent((data.intrinsic_value_per_share_fcf / data.last_close_price) - 1)} Arbitrage
+                        +{formatPercent(Math.abs(data.discount_premium_fcf))} Arbitrage
                       </span>
                     ) : (
                       <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-                        {formatPercent((data.intrinsic_value_per_share_fcf / data.last_close_price) - 1)} Premium
+                        {formatPercent(Math.abs(data.discount_premium_fcf))} Premium
                       </span>
                     )}
                   </div>
@@ -515,11 +515,11 @@ function App() {
                     <span className="text-[11px] text-gray-500 font-mono">Market vs IV:</span>
                     {data.intrinsic_value_per_share_ocf > data.last_close_price ? (
                       <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                        +{formatPercent((data.intrinsic_value_per_share_ocf / data.last_close_price) - 1)} Arbitrage
+                        +{formatPercent(Math.abs(data.discount_premium_ocf))} Arbitrage
                       </span>
                     ) : (
                       <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-                        {formatPercent((data.intrinsic_value_per_share_ocf / data.last_close_price) - 1)} Premium
+                        {formatPercent(Math.abs(data.discount_premium_ocf))} Premium
                       </span>
                     )}
                   </div>
@@ -560,11 +560,11 @@ function App() {
                     <span className="text-[11px] text-gray-500 font-mono">Market vs IV:</span>
                     {data.intrinsic_value_per_share_ni > data.last_close_price ? (
                       <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                        +{formatPercent((data.intrinsic_value_per_share_ni / data.last_close_price) - 1)} Arbitrage
+                        +{formatPercent(Math.abs(data.discount_premium_ni))} Arbitrage
                       </span>
                     ) : (
                       <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-                        {formatPercent((data.intrinsic_value_per_share_ni / data.last_close_price) - 1)} Premium
+                        {formatPercent(Math.abs(data.discount_premium_ni))} Premium
                       </span>
                     )}
                   </div>
