@@ -65,10 +65,14 @@ export default function InteractiveChart({
 
   const points = useMemo(() => {
     return projections.map((p, idx) => {
-      const x = paddingX + (idx / 19) * (width - paddingX * 2);
+      const rawX = paddingX + (idx / 19) * (width - paddingX * 2);
       const val = viewMode === "nominal" ? p.nominal : p.pv;
-      const y = height - paddingY - (val / maxVal) * (height - paddingY * 2);
-      return { x, y, ...p };
+      const rawY = height - paddingY - (val / maxVal) * (height - paddingY * 2);
+      return {
+        x: Math.round(rawX * 10000) / 10000,
+        y: Math.round(rawY * 10000) / 10000,
+        ...p,
+      };
     });
   }, [projections, viewMode, maxVal]);
 
@@ -222,7 +226,7 @@ export default function InteractiveChart({
           {/* X Axis Labelling */}
           {[1, 5, 10, 15, 20].map((yr) => {
             const idx = yr - 1;
-            const x = paddingX + (idx / 19) * (width - paddingX * 2);
+            const x = points[idx]?.x ?? Math.round((paddingX + (idx / 19) * (width - paddingX * 2)) * 10000) / 10000;
             return (
               <text
                 key={yr}
