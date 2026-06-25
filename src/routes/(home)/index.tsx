@@ -58,7 +58,7 @@ export const Route = createFileRoute('/(home)/')({
 
 function App() {
   const [ticker, setTicker] = useState<string>("AAPL");
-  const [searchInput, setSearchInput] = useState<string>("AAPL");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [activeModel, setActiveModel] = useState<"FCF" | "OCF" | "NI">("FCF");
   const [showJsonDump, setShowJsonDump] = useState<boolean>(false);
 
@@ -187,6 +187,7 @@ function App() {
               </div>
               <input
                 type="text"
+                autoComplete="off"
                 placeholder="Enter stock ticker (e.g. MSFT)..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
