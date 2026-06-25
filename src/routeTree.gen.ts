@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as homeRouteRouteImport } from './routes/(home)/route'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
 
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const homeRouteRoute = homeRouteRouteImport.update({
   id: '/(home)',
   getParentRoute: () => rootRouteImport,
@@ -35,11 +41,13 @@ const homeAboutRoute = homeAboutRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
 }
 export interface FileRoutesByTo {
+  '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
@@ -47,18 +55,20 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(home)': typeof homeRouteRouteWithChildren
+  '/health': typeof HealthRoute
   '/(home)/about': typeof homeAboutRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/(home)/': typeof homeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/about' | '/demo/tanstack-query' | '/'
+  fullPaths: '/health' | '/about' | '/demo/tanstack-query' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/about' | '/demo/tanstack-query' | '/'
+  to: '/health' | '/about' | '/demo/tanstack-query' | '/'
   id:
     | '__root__'
     | '/(home)'
+    | '/health'
     | '/(home)/about'
     | '/demo/tanstack-query'
     | '/(home)/'
@@ -66,11 +76,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   homeRouteRoute: typeof homeRouteRouteWithChildren
+  HealthRoute: typeof HealthRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(home)': {
       id: '/(home)'
       path: ''
@@ -118,6 +136,7 @@ const homeRouteRouteWithChildren = homeRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   homeRouteRoute: homeRouteRouteWithChildren,
+  HealthRoute: HealthRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
 }
 export const routeTree = rootRouteImport
