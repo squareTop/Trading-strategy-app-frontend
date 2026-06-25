@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+// * Health check for Dokploy zero downtime
 export const Route = createFileRoute('/health')({
   server: {
     handlers: {
