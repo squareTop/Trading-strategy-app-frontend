@@ -364,7 +364,7 @@ function App() {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Layers className="w-4 h-4 text-brand-primary" />
-                    <h3 className="font-display text-sm font-semibold text-brand-dark uppercase tracking-wider font-bold">
+                    <h3 className="font-display text-sm font-semibold text-brand-dark uppercase tracking-wider">
                       Balance Sheet Adjustments
                     </h3>
                   </div>
@@ -374,12 +374,12 @@ function App() {
                       <div>
                         <span className="font-bold text-brand-dark block">Cash & Liquid Equivalents</span>
                         <span className="text-[10px] text-gray-400 font-mono">
-                          {formatFinancial(data.cash_and_equivalents, data.financial_currency)}
+                          {formatFinancial(data.cash_and_equivalents, data.listing_currency)}
                         </span>
                       </div>
                       <div className="text-right">
                         <strong className="font-mono text-green-600 block">
-                          +{formatPrice(data.cash_per_share_fcf, data.financial_currency)}
+                          +{formatPrice(data.cash_per_share_fcf, data.listing_currency)}
                         </strong>
                         <span className="text-[10px] text-gray-400 font-mono">per share</span>
                       </div>
@@ -389,12 +389,12 @@ function App() {
                       <div>
                         <span className="font-bold text-brand-dark block">Total Funded Debt Load</span>
                         <span className="text-[10px] text-gray-400 font-mono">
-                          {formatFinancial(data.total_debt, data.financial_currency)}
+                          {formatFinancial(data.total_debt, data.listing_currency)}
                         </span>
                       </div>
                       <div className="text-right">
                         <strong className="font-mono text-red-600 block">
-                          -{formatPrice(data.debt_per_share_fcf, data.financial_currency)}
+                          -{formatPrice(data.debt_per_share_fcf, data.listing_currency)}
                         </strong>
                         <span className="text-[10px] text-gray-400 font-mono">per share</span>
                       </div>
@@ -411,7 +411,7 @@ function App() {
                           : "text-red-700"
                           }`}>
                           {(data.cash_per_share_fcf - data.debt_per_share_fcf) >= 0 ? "+" : ""}
-                          {formatPrice(data.cash_per_share_fcf - data.debt_per_share_fcf, data.financial_currency)}
+                          {formatPrice(data.cash_per_share_fcf - data.debt_per_share_fcf, data.listing_currency)}
                         </strong>
                         <span className="text-[10px] text-gray-400 font-mono">per share</span>
                       </div>
@@ -598,7 +598,7 @@ function App() {
                     growth11_20={data.growth_rate_11_20}
                     discountRate={data.discount_rate}
                     label={currentModel.label}
-                    currency={data.financial_currency}
+                    currency={data.listing_currency}
                   />
 
                   {/* Math Formula breakdown list */}
