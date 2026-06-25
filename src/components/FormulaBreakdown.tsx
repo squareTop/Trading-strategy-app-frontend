@@ -18,6 +18,9 @@ interface FormulaBreakdownProps {
   discountPremium: number;
   cashPerShare: number;
   debtPerShare: number;
+
+  financialCurrency: string;
+  exchangeRate: number;
 }
 
 export default function FormulaBreakdown({
@@ -35,15 +38,12 @@ export default function FormulaBreakdown({
   discountPremium,
   cashPerShare,
   debtPerShare,
+  financialCurrency,
+  exchangeRate,
 }: FormulaBreakdownProps) {
   const isUndervalued = finalIvPerShare > lastClosePrice;
-  // Let's compute actual percentage relative to the Intrinsic Value or Last Close Price
-  const marginOfSafety = isUndervalued
-    ? ((finalIvPerShare - lastClosePrice) / finalIvPerShare)
-    : 0;
-
-  // Determine standard Premium or Discount representation
-  const premiumPercent = Math.abs(discountPremium);
+  // Calculate arbitrage relative to Last Close Price: (IV / Last Close) - 1
+  const arbitrageVal = (finalIvPerShare / lastClosePrice) - 1;
 
   return (
     <div className="bg-white border border-brand-border rounded-xl p-6 transition-all duration-200 animate-slide-up">
@@ -177,9 +177,29 @@ export default function FormulaBreakdown({
                     <span className="text-red-300 text-right">-{formatPrice(debtPerShare, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between text-base pt-1">
-                    <span className="text-gray-300 font-display font-semibold">Calculated IV:</span>
+                    <span className="text-gray-300 font-display font-semibold">Calculated IV ({currency}):</span>
                     <span className="text-brand-primary font-bold">{formatPrice(finalIvPerShare, currency)}</span>
                   </div>
+
+                  {financialCurrency && currency && financialCurrency.toUpperCase() !== currency.toUpperCase() && (
+                    <div className="mt-4 pt-3 border-t border-white/10 space-y-1.5 text-[11px] leading-relaxed">
+                      <div className="text-gray-400 font-semibold uppercase tracking-wider text-[9px]">
+                        FX Translation Details
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">IV (In Financial Currency - {financialCurrency}):</span>
+                        <span className="text-white font-medium">{formatPrice(finalIvPerShare / exchangeRate, financialCurrency)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">FX Rate Applied ({financialCurrency} → {currency}):</span>
+                        <span className="text-white font-medium">× {exchangeRate.toFixed(4)}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-white/5 pt-1.5">
+                        <span className="text-gray-400">IV (In Exchange Currency - {currency}):</span>
+                        <span className="text-brand-primary font-bold">{formatPrice(finalIvPerShare, currency)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Outcome Callout Box */}
@@ -194,9 +214,9 @@ export default function FormulaBreakdown({
                         <TrendingUp className="w-3 h-3" /> Undervalued
                       </div>
                       <p className="text-xl font-bold text-green-400 mt-2 font-mono">
-                        {formatPercent(marginOfSafety)}
+                        +{formatPercent(arbitrageVal)}
                       </p>
-                      <p className="text-[10px] text-gray-400 mt-1">Margin of Safety discount</p>
+                      <p className="text-[10px] text-gray-400 mt-1">IV is above Close price</p>
                     </div>
                   ) : (
                     <div className="mt-2">
@@ -204,15 +224,19 @@ export default function FormulaBreakdown({
                         <ShieldAlert className="w-3 h-3" /> Overvalued
                       </div>
                       <p className="text-xl font-bold text-amber-500 mt-2 font-mono">
-                        +{formatPercent(premiumPercent)}
+                        {formatPercent(arbitrageVal)}
                       </p>
-                      <p className="text-[10px] text-gray-400 mt-1">Trading at market premium</p>
+                      <p className="text-[10px] text-gray-400 mt-1">IV is below Close price</p>
                     </div>
                   )}
 
                   <p className="text-[10px] text-gray-400 mt-3 font-mono">
                     Last Close: <span className="font-semibold text-white">{formatPrice(lastClosePrice, currency)}</span>
                   </p>
+
+                  <div className="mt-3 pt-2 text-[9px] text-gray-500 font-mono border-t border-white/10">
+                    Formula: (IV / Close) - 1
+                  </div>
                 </div>
               </div>
             </div>
