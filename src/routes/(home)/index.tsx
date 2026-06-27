@@ -55,11 +55,6 @@ export const Route = createFileRoute('/(home)/')({
       ticker: typeof search.ticker === 'string' ? search.ticker : undefined,
     }
   },
-  loaderDeps: ({ search }) => ({ ticker: search.ticker }),
-  loader: async ({ context, deps }) => {
-    const symbol = deps.ticker || POPULAR_TICKERS[0].symbol;
-    await context.queryClient.ensureQueryData(stockDetailsQueryOptions(symbol)).catch(() => { });
-  },
   component: App,
 })
 
@@ -70,8 +65,17 @@ function App() {
   const [searchInput, setSearchInput] = useState<string>("");
   const [activeModel, setActiveModel] = useState<"FCF" | "OCF" | "NI">("FCF");
   const [showJsonDump, setShowJsonDump] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const { data, isLoading, error, refetch } = useQuery(stockDetailsQueryOptions(ticker));
+
+  const showLoading = isMounted && isLoading;
+  const showError = isMounted && !isLoading && !!error;
+  const showData = isMounted && !isLoading && !error && !!data;
 
   // Sync ticker with URL search parameter
   useEffect(() => {
@@ -181,10 +185,10 @@ function App() {
             <button
               id="search-btn"
               type="submit"
-              disabled={isLoading}
+              disabled={showLoading}
               className="px-6 py-3 rounded-xl bg-brand-primary text-white text-xs font-extrabold uppercase tracking-wide hover:bg-brand-primary-hover active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20"
             >
-              {isLoading ? (
+              {showLoading ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <>
@@ -226,7 +230,7 @@ function App() {
         </div>
 
         {/* Global Loading Overlay Screen */}
-        {isLoading && (
+        {showLoading && (
           <div className="mt-8 bg-white border border-brand-border rounded-xl p-16 flex flex-col items-center justify-center text-center animate-fade-in shadow-xs">
             <div className="w-12 h-12 rounded-full border-4 border-brand-bg border-t-brand-primary animate-spin mb-4"></div>
             <p className="font-display text-lg font-bold text-brand-dark">
@@ -239,7 +243,7 @@ function App() {
         )}
 
         {/* Error Boundary Module */}
-        {!isLoading && error && (
+        {showError && (
           <div className="mt-8 bg-red-50 border border-red-200 rounded-xl p-6 text-red-800 animate-slide-up shadow-xs">
             <div className="flex gap-3">
               <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -269,7 +273,7 @@ function App() {
         )}
 
         {/* Dashboard Panels (Visible when data exists) */}
-        {!isLoading && !error && data && (
+        {showData && (
           <div className="mt-8 grid grid-cols-1 gap-8 animate-fade-in">
             {/* Stock Metadata Profile Card */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
