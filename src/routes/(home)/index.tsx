@@ -50,19 +50,36 @@ export const stockDetailsQueryOptions = (symbol: string) =>
   });
 
 export const Route = createFileRoute('/(home)/')({
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(stockDetailsQueryOptions(POPULAR_TICKERS[0].symbol)).catch(() => { });
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      ticker: typeof search.ticker === 'string' ? search.ticker : undefined,
+    }
+  },
+  loaderDeps: ({ search }) => ({ ticker: search.ticker }),
+  loader: async ({ context, deps }) => {
+    const symbol = deps.ticker || POPULAR_TICKERS[0].symbol;
+    await context.queryClient.ensureQueryData(stockDetailsQueryOptions(symbol)).catch(() => { });
   },
   component: App,
 })
 
 function App() {
-  const [ticker, setTicker] = useState<string>("AAPL");
+  const { ticker: urlTicker } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const [ticker, setTicker] = useState<string>(urlTicker || "AAPL");
   const [searchInput, setSearchInput] = useState<string>("");
   const [activeModel, setActiveModel] = useState<"FCF" | "OCF" | "NI">("FCF");
   const [showJsonDump, setShowJsonDump] = useState<boolean>(false);
 
   const { data, isLoading, error, refetch } = useQuery(stockDetailsQueryOptions(ticker));
+
+  // Sync ticker with URL search parameter
+  useEffect(() => {
+    if (urlTicker) {
+      setTicker(urlTicker);
+      setSearchInput(urlTicker);
+    }
+  }, [urlTicker]);
 
   // Synchronize search input with the canonical symbol when data changes
   useEffect(() => {
@@ -76,6 +93,9 @@ function App() {
     const cleanTicker = searchInput.trim().toUpperCase();
     if (cleanTicker) {
       setTicker(cleanTicker);
+      navigate({
+        search: (prev) => ({ ...prev, ticker: cleanTicker }),
+      });
     }
   };
 
@@ -126,42 +146,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
-      {/* Editorial Tech Banner Head */}
-      <header className="border-b border-brand-border bg-white px-4 md:px-8 py-4 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          {/* Brand Wordmark */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-brand-primary flex items-center justify-center text-white font-extrabold text-lg tracking-wider select-none shadow-md shadow-brand-primary/20">
-              FS
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-display font-black text-lg tracking-tight text-brand-dark">FC</span>
-                <span className="font-display font-medium text-lg tracking-tight text-brand-dark">FoxelSignal</span>
-              </div>
-              <p className="text-[10px] uppercase font-mono tracking-widest text-gray-400 font-bold">
-                Intrinsic Value Core Terminal
-              </p>
-            </div>
-          </div>
-
-          {/* Right indicator rail */}
-          <div className="flex items-center gap-4 text-xs font-mono">
-            <div className="hidden md:flex items-center gap-2 bg-[#f4ece1] px-2.5 py-1 rounded-md border border-[#e2d8c9] text-gray-600">
-              <Compass className="w-3.5 h-3.5 text-brand-primary" />
-              <span>Engine Status: <strong className="text-brand-dark">API Ready</strong></span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-gray-500 uppercase tracking-widest text-[10px] font-bold">Live Data Pipeline</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Terminal Frame Layout */}
       <main className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
         {/* Search & Selection Card */}
@@ -226,6 +210,9 @@ function App() {
                 onClick={() => {
                   setSearchInput(pt.symbol);
                   setTicker(pt.symbol);
+                  navigate({
+                    search: (prev) => ({ ...prev, ticker: pt.symbol }),
+                  });
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all border ${ticker === pt.symbol
                   ? "bg-brand-primary text-white border-brand-primary"

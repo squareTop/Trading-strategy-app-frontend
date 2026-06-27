@@ -13,6 +13,7 @@ import { Route as HealthRouteImport } from './routes/health'
 import { Route as homeRouteRouteImport } from './routes/(home)/route'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
+import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
 
 const HealthRoute = HealthRouteImport.update({
@@ -34,6 +35,11 @@ const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
   path: '/demo/tanstack-query',
   getParentRoute: () => rootRouteImport,
 } as any)
+const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
+  id: '/daily-signals',
+  path: '/daily-signals',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 const homeAboutRoute = homeAboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -43,12 +49,14 @@ const homeAboutRoute = homeAboutRouteImport.update({
 export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
+  '/daily-signals': typeof homeDailySignalsRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
 }
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
+  '/daily-signals': typeof homeDailySignalsRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
 }
@@ -57,19 +65,26 @@ export interface FileRoutesById {
   '/(home)': typeof homeRouteRouteWithChildren
   '/health': typeof HealthRoute
   '/(home)/about': typeof homeAboutRoute
+  '/(home)/daily-signals': typeof homeDailySignalsRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/(home)/': typeof homeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/health' | '/about' | '/demo/tanstack-query' | '/'
+  fullPaths:
+    | '/health'
+    | '/about'
+    | '/daily-signals'
+    | '/demo/tanstack-query'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/health' | '/about' | '/demo/tanstack-query' | '/'
+  to: '/health' | '/about' | '/daily-signals' | '/demo/tanstack-query' | '/'
   id:
     | '__root__'
     | '/(home)'
     | '/health'
     | '/(home)/about'
+    | '/(home)/daily-signals'
     | '/demo/tanstack-query'
     | '/(home)/'
   fileRoutesById: FileRoutesById
@@ -110,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTanstackQueryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(home)/daily-signals': {
+      id: '/(home)/daily-signals'
+      path: '/daily-signals'
+      fullPath: '/daily-signals'
+      preLoaderRoute: typeof homeDailySignalsRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
     '/(home)/about': {
       id: '/(home)/about'
       path: '/about'
@@ -122,11 +144,13 @@ declare module '@tanstack/react-router' {
 
 interface homeRouteRouteChildren {
   homeAboutRoute: typeof homeAboutRoute
+  homeDailySignalsRoute: typeof homeDailySignalsRoute
   homeIndexRoute: typeof homeIndexRoute
 }
 
 const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeAboutRoute: homeAboutRoute,
+  homeDailySignalsRoute: homeDailySignalsRoute,
   homeIndexRoute: homeIndexRoute,
 }
 
