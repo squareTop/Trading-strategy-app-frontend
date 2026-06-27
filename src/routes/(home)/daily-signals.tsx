@@ -419,68 +419,66 @@ function DailySignalsPage() {
         {!isLoading && !error && signals && (
           <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
             {/* Filter control bar */}
-            <div className="p-4 md:p-6 border-b border-brand-border bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="grow flex flex-wrap items-center gap-3">
-                {/* Text search */}
-                <div className="relative max-w-xs w-full">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Search className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Search ticker..."
-                    value={tickerSearch}
-                    onChange={(e) => setTickerSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-brand-border bg-brand-bg/20 text-brand-dark font-mono text-xs placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all uppercase"
-                  />
-                </div>
+            <div className="p-4 md:p-6 border-b border-brand-border bg-white flex flex-wrap items-center gap-3">
+              {/* Text search */}
+              <div className="relative max-w-xs w-full sm:w-auto sm:grow-0 grow">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search ticker..."
+                  value={tickerSearch}
+                  onChange={(e) => setTickerSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-brand-border bg-brand-bg/20 text-brand-dark font-mono text-xs placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all uppercase"
+                />
+              </div>
 
-                {/* Direction Filter Dropdown */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
-                    Direction:
-                  </span>
-                  <select
-                    value={directionFilter}
-                    onChange={(e) => setDirectionFilter(e.target.value)}
-                    className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
-                  >
-                    <option value="all">All Directions</option>
-                    <option value="long">Long</option>
-                    <option value="short">Short</option>
-                  </select>
-                </div>
+              {/* Direction Filter Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
+                  Direction:
+                </span>
+                <select
+                  value={directionFilter}
+                  onChange={(e) => setDirectionFilter(e.target.value)}
+                  className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
+                >
+                  <option value="all">All Directions</option>
+                  <option value="long">Long</option>
+                  <option value="short">Short</option>
+                </select>
+              </div>
 
-                {/* Gate Filter Dropdown */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
-                    Gate:
-                  </span>
-                  <select
-                    value={gateFilter}
-                    onChange={(e) => setGateFilter(e.target.value)}
-                    className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
-                  >
-                    <option value="all">All Gates</option>
-                    <option value="pass">Passed Only</option>
-                    <option value="fail">Failed Only</option>
-                  </select>
-                </div>
+              {/* Gate Filter Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
+                  Gate:
+                </span>
+                <select
+                  value={gateFilter}
+                  onChange={(e) => setGateFilter(e.target.value)}
+                  className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
+                >
+                  <option value="all">All Gates</option>
+                  <option value="pass">Passed Only</option>
+                  <option value="fail">Failed Only</option>
+                </select>
               </div>
 
               {/* Reset / Actions */}
-              <div className="flex items-center gap-3 self-end lg:self-auto">
+              <div className="flex items-center gap-3 sm:ml-auto ml-0">
                 {(tickerSearch || directionFilter !== 'all' || gateFilter !== 'all' || sorting.length > 0) && (
                   <button
                     onClick={handleResetFilters}
-                    className="text-xs text-gray-500 hover:text-brand-primary font-mono font-bold flex items-center gap-1 hover:underline transition-all cursor-pointer"
+                    className="text-xs text-gray-500 hover:text-brand-primary font-mono font-bold flex items-center gap-1 hover:underline transition-all cursor-pointer whitespace-nowrap"
                   >
                     Reset Filters
                   </button>
                 )}
                 <button
                   onClick={() => refetch()}
-                  className="bg-brand-bg hover:bg-brand-border/40 text-brand-dark p-2 rounded-lg border border-brand-border/80 transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer"
+                  className="bg-brand-bg hover:bg-brand-border/40 text-brand-dark p-2 rounded-lg border border-brand-border/80 transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer whitespace-nowrap"
                   title="Refresh signals list"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
