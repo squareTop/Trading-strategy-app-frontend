@@ -131,10 +131,6 @@ function DailySignalsPage() {
   // Define Columns
   const columnHelper = createColumnHelper<DailySignal>()
   const columns = useMemo(() => [
-    columnHelper.accessor('id', {
-      header: 'ID',
-      cell: info => <span className="font-mono text-gray-500 text-xs">#{info.getValue()}</span>,
-    }),
     columnHelper.accessor('ticker', {
       header: 'Ticker',
       cell: info => {
@@ -159,8 +155,8 @@ function DailySignalsPage() {
         return (
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${isLong
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-red-50 text-red-700 border-red-200'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-red-50 text-red-700 border-red-200'
               }`}
           >
             {isLong ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -247,8 +243,8 @@ function DailySignalsPage() {
         return (
           <span
             className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${val
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-amber-50 text-amber-700 border-amber-200'
               }`}
           >
             {val ? 'PASS' : 'FAIL'}
@@ -291,7 +287,7 @@ function DailySignalsPage() {
 
   return (
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
-      <main className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
+      <main className="max-w-360 mx-auto px-4 md:px-8 mt-8">
 
         {/* Banner Section */}
         <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs mb-8">
@@ -500,7 +496,7 @@ function DailySignalsPage() {
 
             {/* Responsive Table Wrapper */}
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse table-auto">
+              <table className="w-full text-left border-collapse table-auto min-w-[1100px]">
                 <thead className="bg-[#f0eadd]/60 border-b border-brand-border">
                   {table.getHeaderGroups().map(headerGroup => (
                     <tr key={headerGroup.id}>
@@ -509,7 +505,7 @@ function DailySignalsPage() {
                         return (
                           <th
                             key={header.id}
-                            className="px-4 py-3 bg-white text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 select-none border-b border-brand-border"
+                            className="px-4 py-3 bg-white text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 select-none border-b border-brand-border whitespace-nowrap"
                           >
                             {header.isPlaceholder ? null : (
                               <div
@@ -545,7 +541,7 @@ function DailySignalsPage() {
                           }`}
                       >
                         {row.getVisibleCells().map(cell => (
-                          <td key={cell.id} className="px-4 py-3.5 text-xs text-brand-dark">
+                          <td key={cell.id} className="px-4 py-3.5 text-xs text-brand-dark whitespace-nowrap">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         ))}

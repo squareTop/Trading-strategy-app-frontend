@@ -147,7 +147,7 @@ function App() {
   return (
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
       {/* Main Terminal Frame Layout */}
-      <main className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
+      <main className="max-w-360 mx-auto px-4 md:px-8 mt-8">
         {/* Search & Selection Card */}
         <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
           <div className="max-w-2xl">
