@@ -128,7 +128,7 @@ function App() {
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
       {/* Editorial Tech Banner Head */}
       <header className="border-b border-brand-border bg-white px-4 md:px-8 py-4 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Brand Wordmark */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-brand-primary flex items-center justify-center text-white font-extrabold text-lg tracking-wider select-none shadow-md shadow-brand-primary/20">
@@ -163,7 +163,7 @@ function App() {
       </header>
 
       {/* Main Terminal Frame Layout */}
-      <main className="max-w-[1280px] mx-auto px-4 md:px-8 mt-8">
+      <main className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
         {/* Search & Selection Card */}
         <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
           <div className="max-w-2xl">
@@ -440,7 +440,7 @@ function App() {
                 <div
                   onClick={() => setActiveModel("FCF")}
                   className={`bg-white border rounded-xl p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "FCF"
-                    ? "ring-2 ring-brand-primary border-transparent translate-y-[-4px] shadow-md"
+                    ? "ring-2 ring-brand-primary border-transparent -translate-y-1 shadow-md"
                     : "border-brand-border hover:border-brand-primary hover:shadow-xs"
                     }`}
                 >
@@ -485,7 +485,7 @@ function App() {
                 <div
                   onClick={() => setActiveModel("OCF")}
                   className={`bg-white border rounded-xl p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "OCF"
-                    ? "ring-2 ring-brand-primary border-transparent translate-y-[-4px] shadow-md"
+                    ? "ring-2 ring-brand-primary border-transparent -translate-y-1 shadow-md"
                     : "border-brand-border hover:border-brand-primary hover:shadow-xs"
                     }`}
                 >
@@ -530,7 +530,7 @@ function App() {
                 <div
                   onClick={() => setActiveModel("NI")}
                   className={`bg-white border rounded-xl p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "NI"
-                    ? "ring-2 ring-brand-primary border-transparent translate-y-[-4px] shadow-md"
+                    ? "ring-2 ring-brand-primary border-transparent -translate-y-1 shadow-md"
                     : "border-brand-border hover:border-brand-primary hover:shadow-xs"
                     }`}
                 >
