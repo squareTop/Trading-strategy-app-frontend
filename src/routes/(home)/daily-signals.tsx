@@ -83,7 +83,6 @@ function DailySignalsPage() {
   const [sorting, setSorting] = useState<SortingState>([])
   const [tickerSearch, setTickerSearch] = useState<string>('')
   const [directionFilter, setDirectionFilter] = useState<string>('all')
-  const [gateFilter, setGateFilter] = useState<string>('all')
 
   // Calculate high-level aggregated signals stats
   const stats = useMemo(() => {
@@ -120,13 +119,10 @@ function DailySignalsPage() {
     return signals.filter(s => {
       const matchesSearch = s.ticker.toLowerCase().includes(tickerSearch.toLowerCase())
       const matchesDirection = directionFilter === 'all' || s.direction === directionFilter
-      const matchesGate = gateFilter === 'all' ||
-        (gateFilter === 'pass' && s.gate_pass === true) ||
-        (gateFilter === 'fail' && s.gate_pass === false)
 
-      return matchesSearch && matchesDirection && matchesGate
+      return matchesSearch && matchesDirection
     })
-  }, [signals, tickerSearch, directionFilter, gateFilter])
+  }, [signals, tickerSearch, directionFilter])
 
   // Define Columns
   const columnHelper = createColumnHelper<DailySignal>()
@@ -281,7 +277,6 @@ function DailySignalsPage() {
   const handleResetFilters = () => {
     setTickerSearch('')
     setDirectionFilter('all')
-    setGateFilter('all')
     setSorting([])
   }
 
@@ -450,25 +445,9 @@ function DailySignalsPage() {
                 </select>
               </div>
 
-              {/* Gate Filter Dropdown */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
-                  Gate:
-                </span>
-                <select
-                  value={gateFilter}
-                  onChange={(e) => setGateFilter(e.target.value)}
-                  className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
-                >
-                  <option value="all">All Gates</option>
-                  <option value="pass">Passed Only</option>
-                  <option value="fail">Failed Only</option>
-                </select>
-              </div>
-
               {/* Reset / Actions */}
               <div className="flex items-center gap-3 sm:ml-auto ml-0">
-                {(tickerSearch || directionFilter !== 'all' || gateFilter !== 'all' || sorting.length > 0) && (
+                {(tickerSearch || directionFilter !== 'all' || sorting.length > 0) && (
                   <button
                     onClick={handleResetFilters}
                     className="text-xs text-gray-500 hover:text-brand-primary font-mono font-bold flex items-center gap-1 hover:underline transition-all cursor-pointer whitespace-nowrap"
