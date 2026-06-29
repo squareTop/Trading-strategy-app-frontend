@@ -76,6 +76,38 @@ export const Route = createFileRoute('/(home)/daily-signals')({
   component: DailySignalsPage,
 })
 
+const STRATEGY_TO_PIPELINE: Record<string, string> = {
+  // Trend / SMA Crossover
+  sma_cross: 'SMA Crossover',
+  smooth_trend: 'SMA Crossover',
+  high_velocity: 'SMA Crossover',
+  bb_trend_ride: 'SMA Crossover',
+  bb_breakout: 'SMA Crossover',
+  bb_breakout_long: 'SMA Crossover',
+
+  // Mean Reversion
+  'MR-A': 'Mean Reversion',
+  'MR-B': 'Mean Reversion',
+  mr_a_long: 'Mean Reversion',
+  mr_a_short: 'Mean Reversion',
+  mrb_short: 'Mean Reversion',
+
+  // Price Action
+  fs_continuation: 'Price Action',
+  fs_reversal: 'Price Action',
+  uc1_dc1: 'Price Action',
+  fs_reversal_long: 'Price Action',
+  continuation_short: 'Price Action',
+  dc1_short: 'Price Action',
+  fs_reversal_short: 'Price Action',
+}
+
+const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
+  trend: 'SMA Crossover',
+  mean_rev: 'Mean Reversion',
+  price_action: 'Price Action',
+}
+
 function DailySignalsPage() {
   const { data: signals, isLoading, error, refetch } = useQuery(dailySignalsQueryOptions)
 
@@ -161,17 +193,26 @@ function DailySignalsPage() {
         )
       },
     }),
-    columnHelper.accessor('trigger', {
-      header: 'Trigger / Strategy',
-      cell: info => {
-        const trigger = info.getValue() || 'N/A'
-        return (
-          <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-            {trigger}
-          </span>
-        )
+    columnHelper.accessor(
+      row => {
+        const strategyName = row.selected_strategy || (row.trigger ? row.trigger.split(':')[0] : '')
+        const pipelineName =
+          (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
+          (row.pipeline && PIPELINE_DISPLAY_NAMES[row.pipeline]) ||
+          row.pipeline ||
+          'N/A'
+        return `${pipelineName} / ${strategyName || 'N/A'}`
       },
-    }),
+      {
+        id: 'pipeline_strategy',
+        header: 'Pipeline / Strategy',
+        cell: info => (
+          <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
+            {info.getValue()}
+          </span>
+        ),
+      }
+    ),
     columnHelper.accessor('entry', {
       header: 'Entry',
       cell: info => <span className="font-mono font-bold text-brand-dark">{formatPrice(info.getValue(), 'USD')}</span>,
