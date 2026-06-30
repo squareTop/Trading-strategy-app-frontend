@@ -52,4 +52,16 @@ export interface FoxelSignalIVResponse {
   debt_per_share_fcf: number;
 
   current_year: number;
+  
+  // ETF Data Points
+  is_etf?: boolean;
+  exchange?: string;
+  expense_ratio?: number;
+  assets_under_management?: number;
+  inception_date?: string;
+  investment_objective?: string;
+  asset_class?: string;
+  avg_volume?: number;
+  error?: string;
 }
+

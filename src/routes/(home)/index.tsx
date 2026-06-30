@@ -2,13 +2,16 @@ import { createFileRoute } from '@tanstack/react-router';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import {
   BarChart3,
+  BookOpen,
   Building2,
   Calculator,
+  Calendar,
   ChevronDown,
   ChevronRight,
   Compass,
   Database,
   Layers,
+  Percent,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -273,8 +276,8 @@ function App() {
           </div>
         )}
 
-        {/* Dashboard Panels (Visible when data exists) */}
-        {showData && (
+        {/* Dashboard Panels (Visible when data exists and is a stock) */}
+        {showData && !data.is_etf && (
           <div className="mt-8 grid grid-cols-1 gap-8 animate-fade-in">
             {/* Stock Metadata Profile Card */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -796,6 +799,247 @@ function App() {
                     </div>
                     <div className="text-gray-400">
                       Query ID: <span className="font-semibold text-gray-600">{data.id}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard Panels (Visible when data exists and is an ETF) */}
+        {showData && data.is_etf && (
+          <div className="mt-8 grid grid-cols-1 gap-8 animate-fade-in">
+            {/* ETF Profile Overview */}
+            <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-[10px] font-mono font-bold px-2.5 py-1 rounded-sm border border-blue-200">
+                    <Compass className="w-3.5 h-3.5 text-blue-600 animate-spin-slow" />
+                    <span>Exchange Traded Fund (ETF)</span>
+                  </div>
+                  
+                  <h2 className="font-display text-2.5xl md:text-3.5xl font-black text-brand-dark mt-3 leading-tight tracking-tight">
+                    {data.name}
+                  </h2>
+                  
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2.5 text-xs text-gray-500 font-mono">
+                    <span className="font-bold text-brand-primary text-sm">{data.symbol}</span>
+                    <span>•</span>
+                    <span>Asset Class: <strong className="text-brand-dark">{data.asset_class || "N/A"}</strong></span>
+                    <span>•</span>
+                    <span>Exchange: {data.exchange || "N/A"}</span>
+                  </div>
+                </div>
+
+                <div className="md:text-right shrink-0 bg-brand-bg/50 p-4 rounded-xl border border-brand-border/40 min-w-44">
+                  <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-400 block">
+                    Last Close Price
+                  </span>
+                  <p className="font-mono text-3xl font-black text-brand-dark leading-none mt-1">
+                    {formatPrice(data.last_close_price, data.listing_currency)}
+                  </p>
+                  <p className="text-[10px] font-mono text-gray-400 mt-1">
+                    Currency: <strong className="text-brand-dark uppercase">{data.listing_currency || "USD"}</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ETF Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Expense Ratio Card */}
+              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                      <Percent className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                      Expense Ratio
+                    </span>
+                  </div>
+                  <p className="font-mono text-3.5xl font-black text-brand-primary leading-none">
+                    {data.expense_ratio !== undefined && data.expense_ratio !== null
+                      ? `${data.expense_ratio.toFixed(2)}%`
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-brand-border/50 text-[10px] text-gray-400 font-mono">
+                  Annual management fee of the fund
+                </div>
+              </div>
+
+              {/* Assets Under Management Card */}
+              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                      Assets Under Management (AUM)
+                    </span>
+                  </div>
+                  <p className="font-mono text-3.5xl font-black text-emerald-700 leading-none">
+                    {data.assets_under_management !== undefined && data.assets_under_management !== null
+                      ? formatFinancial(data.assets_under_management, data.listing_currency)
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-brand-border/50 text-[10px] text-gray-400 font-mono">
+                  Total value of assets managed by the fund
+                </div>
+              </div>
+
+              {/* Inception Date Card */}
+              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                      Inception Date
+                    </span>
+                  </div>
+                  <p className="font-mono text-2xl font-black text-brand-dark leading-none pt-1">
+                    {data.inception_date
+                      ? new Date(data.inception_date).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-brand-border/50 text-[10px] text-gray-400 font-mono">
+                  Date the fund was officially launched
+                </div>
+              </div>
+            </div>
+
+            {/* ETF Secondary Information Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Investment Objective Card */}
+              <div className="col-span-1 lg:col-span-2 bg-[#f0eadd] border border-brand-border rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2.5 mb-4 border-b border-brand-border/60 pb-3">
+                    <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                      <BookOpen className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-sm font-bold text-brand-dark uppercase tracking-wider">
+                        Investment Objective & Strategy
+                      </h3>
+                      <p className="text-[10px] text-gray-500 font-mono">Official objective statement</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line">
+                    {data.investment_objective || "No investment objective statement provided."}
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-brand-border/40 flex justify-between items-center text-[10px] text-gray-400 font-mono">
+                  <span>Source: FMP Stable Datasets</span>
+                  <span>Verification: Active Profile</span>
+                </div>
+              </div>
+
+              {/* Liquidity & Volatility Card */}
+              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-brand-primary" />
+                    <h3 className="font-display text-sm font-semibold text-brand-dark uppercase tracking-wider">
+                      Liquidity & Risk Metrics
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
+                      <div>
+                        <span className="font-bold text-brand-dark block">System Beta</span>
+                        <span className="text-[10px] text-gray-400 font-mono">Volatility relative to market</span>
+                      </div>
+                      <div className="text-right">
+                        <strong className="font-mono text-brand-dark text-sm">
+                          {data.beta !== undefined && data.beta !== null ? data.beta.toFixed(2) : "N/A"}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
+                      <div>
+                        <span className="font-bold text-brand-dark block">Average Volume</span>
+                        <span className="text-[10px] text-gray-400 font-mono">Daily share turnover</span>
+                      </div>
+                      <div className="text-right">
+                        <strong className="font-mono text-brand-dark text-sm">
+                          {data.avg_volume !== undefined && data.avg_volume !== null
+                            ? formatLargeNumber(data.avg_volume)
+                            : "N/A"}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs">
+                      <div>
+                        <span className="font-bold text-brand-dark block">Fund Structure</span>
+                        <span className="text-[10px] text-gray-400 font-mono">Product asset structure</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="bg-brand-bg text-brand-dark px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border border-brand-border">
+                          {data.asset_class || "ETF"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 bg-brand-bg/60 p-3 rounded-lg text-center font-mono text-[10px] text-gray-500 border border-brand-border/40">
+                  Calculated against baseline market indices
+                </div>
+              </div>
+            </div>
+
+            {/* API developer parameters section */}
+            <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
+              <button
+                onClick={() => setShowJsonDump(!showJsonDump)}
+                className="w-full flex items-center justify-between gap-3 text-brand-dark hover:text-brand-primary transition-all text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Terminal className="w-4.5 h-4.5 text-brand-primary" />
+                  <span className="font-display font-semibold text-sm">
+                    Inspect Raw FoxelSignal API Payload (JSON)
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 font-mono text-xs text-gray-400">
+                  <span>{showJsonDump ? "Hide console" : "Expand console"}</span>
+                  {showJsonDump ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </div>
+              </button>
+
+              {showJsonDump && (
+                <div className="mt-4 animate-fade-in">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Developer Interface: Real response packet extracted directly from our <code>api.foxelsignal.io/vmi</code> server route.
+                  </p>
+                  <pre className="bg-[#111827] text-[#93c5fd] font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-96 border border-brand-primary/10 leading-snug">
+                    <code>{JSON.stringify(data, null, 2)}</code>
+                  </pre>
+
+                  {/* Endpoint copyable representation */}
+                  <div className="mt-4 bg-brand-bg/50 border border-brand-border/60 rounded-lg p-3 flex flex-col md:flex-row md:items-center justify-between gap-2 font-mono text-[10px] text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase">
+                        GET
+                      </span>
+                      <span className="font-bold text-brand-dark">https://api.foxelsignal.io/vmi?symbol={data.symbol}</span>
                     </div>
                   </div>
                 </div>
