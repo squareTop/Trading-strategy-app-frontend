@@ -55,7 +55,7 @@ export function formatLargeNumber(value: number): string {
 /**
  * Formats ISO strings into stylized readable date strings.
  */
-export function formatDate(isoStr: string): string {
+export function formatDate(isoStr: string, timeZone?: string): string {
   if (!isoStr) return "N/A";
   try {
     const date = new Date(isoStr);
@@ -65,7 +65,8 @@ export function formatDate(isoStr: string): string {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      timeZoneName: "short"
+      timeZoneName: "short",
+      timeZone: timeZone
     });
   } catch {
     return isoStr;

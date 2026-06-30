@@ -312,7 +312,7 @@ function DailySignalsPage() {
   const lastUpdate = useMemo(() => {
     if (!signals || signals.length === 0) return 'N/A'
     const match = signals.find(s => s.generated_at_sgt)
-    return match?.generated_at_sgt ? formatDate(match.generated_at_sgt) : 'N/A'
+    return match?.generated_at_sgt ? formatDate(match.generated_at_sgt, 'Asia/Singapore') : 'N/A'
   }, [signals])
 
   const handleResetFilters = () => {
