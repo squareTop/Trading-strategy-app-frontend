@@ -16,6 +16,13 @@ export interface FoxelSignalIVResponse {
   growth_rate_11_20: number;
   total_debt: number;
   cash_and_equivalents: number;
+  total_assets: number;
+  current_debt: number;
+  long_term_debt: number;
+  eps_growth: number;
+  price_to_book_ratios_ttm: number;
+  price_to_earnings_ratios_ttm: number;
+  return_on_invested_capital_ttm: number;
 
   // Net Income Model
   net_income: number;

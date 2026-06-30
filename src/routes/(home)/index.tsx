@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import {
+  BarChart3,
   Building2,
   Calculator,
   ChevronDown,
@@ -364,6 +365,20 @@ function App() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
                       <div>
+                        <span className="font-bold text-brand-dark block">Total Corporate Assets</span>
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          Book Value
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <strong className="font-mono text-brand-dark text-sm">
+                          {formatFinancial(data.total_assets, data.listing_currency)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
+                      <div>
                         <span className="font-bold text-brand-dark block">Cash & Liquid Equivalents</span>
                         <span className="text-[10px] text-gray-400 font-mono">
                           {formatFinancial(data.cash_and_equivalents, data.listing_currency)}
@@ -377,18 +392,26 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
+                    <div className="flex justify-between items-start text-xs pb-3 border-b border-brand-border/50">
                       <div>
                         <span className="font-bold text-brand-dark block">Total Funded Debt Load</span>
-                        <span className="text-[10px] text-gray-400 font-mono">
+                        <span className="text-[10px] text-gray-400 font-mono block">
                           {formatFinancial(data.total_debt, data.listing_currency)}
                         </span>
+                        <div className="mt-1 pl-2 border-l-2 border-brand-border space-y-0.5">
+                          <span className="text-[9px] text-gray-500 font-mono block">
+                            Current Debt: {formatFinancial(data.current_debt, data.listing_currency)}
+                          </span>
+                          <span className="text-[9px] text-gray-500 font-mono block">
+                            Long Term Debt: {formatFinancial(data.long_term_debt, data.listing_currency)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <strong className="font-mono text-red-600 block">
+                      <div className="text-right font-mono">
+                        <strong className="text-red-600 block">
                           -{formatPrice(data.debt_per_share_fcf, data.listing_currency)}
                         </strong>
-                        <span className="text-[10px] text-gray-400 font-mono">per share</span>
+                        <span className="text-[10px] text-gray-400">per share</span>
                       </div>
                     </div>
 
@@ -413,6 +436,122 @@ function App() {
 
                 <div className="mt-5 bg-brand-bg/60 p-3 rounded-lg text-center font-mono text-[10px] text-gray-500 border border-brand-border/40">
                   Formula: Final IV = IV before assets + Cash - Debt
+                </div>
+              </div>
+            </div>
+
+            {/* Key Valuation & Performance Metrics Card */}
+            <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
+              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-brand-border">
+                <BarChart3 className="w-5 h-5 text-brand-primary" />
+                <h3 className="font-display text-base font-bold text-brand-dark uppercase tracking-wider">
+                  Key Valuation & Financial Metrics (TTM)
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Price to Earnings (P/E) Ratio */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Price to Earnings (P/E)
+                  </span>
+                  <span className="font-mono text-xl font-black text-brand-dark">
+                    {data.price_to_earnings_ratios_ttm ? data.price_to_earnings_ratios_ttm.toFixed(2) : "N/A"}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Trailing twelve months (TTM)
+                  </span>
+                </div>
+
+                {/* Price to Book (P/B) Ratio */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Price to Book (P/B)
+                  </span>
+                  <span className="font-mono text-xl font-black text-brand-dark">
+                    {data.price_to_book_ratios_ttm ? data.price_to_book_ratios_ttm.toFixed(2) : "N/A"}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Multiple of book value
+                  </span>
+                </div>
+
+                {/* Return on Invested Capital (ROIC) */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Return on Capital (ROIC)
+                  </span>
+                  <span className="font-mono text-xl font-black text-emerald-700">
+                    {formatPercent(data.return_on_invested_capital_ttm)}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Capital allocation efficiency
+                  </span>
+                </div>
+
+                {/* EPS Growth Rate */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    EPS Growth Rate
+                  </span>
+                  <span className="font-mono text-xl font-black text-brand-primary">
+                    {formatPercent(data.eps_growth)}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Year-over-year growth
+                  </span>
+                </div>
+
+                {/* Net Income */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Net Income (TTM)
+                  </span>
+                  <span className="font-mono text-lg font-bold text-brand-dark">
+                    {formatFinancial(data.net_income, data.financial_currency)}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Earnings baseline
+                  </span>
+                </div>
+
+                {/* Operating Cash Flow */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Operating Cash Flow
+                  </span>
+                  <span className="font-mono text-lg font-bold text-brand-dark">
+                    {formatFinancial(data.operating_cash_flow, data.financial_currency)}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Cash flow from operations
+                  </span>
+                </div>
+
+                {/* Free Cash Flow */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Free Cash Flow
+                  </span>
+                  <span className="font-mono text-lg font-bold text-brand-dark">
+                    {formatFinancial(data.free_cash_flow, data.financial_currency)}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Discretionary cash flow
+                  </span>
+                </div>
+
+                {/* Total Assets */}
+                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                    Total Assets
+                  </span>
+                  <span className="font-mono text-lg font-bold text-brand-dark">
+                    {formatFinancial(data.total_assets, data.financial_currency)}
+                  </span>
+                  <span className="block text-[9px] text-gray-400 mt-1">
+                    Aggregate book assets
+                  </span>
                 </div>
               </div>
             </div>
