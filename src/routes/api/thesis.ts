@@ -23,7 +23,7 @@ export const Route = createFileRoute('/api/thesis')({
           )
         }
 
-        const adapter = openRouterText('deepseek/deepseek-chat')
+        const adapter = openRouterText('deepseek/deepseek-v4-flash')
 
         const stream = chat({
           adapter,
