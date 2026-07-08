@@ -13,6 +13,8 @@ import { Route as HealthRouteImport } from './routes/health'
 import { Route as homeRouteRouteImport } from './routes/(home)/route'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
+import { Route as ApiThesisRouteImport } from './routes/api/thesis'
+import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
 import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
 
@@ -35,6 +37,16 @@ const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
   path: '/demo/tanstack-query',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiThesisRoute = ApiThesisRouteImport.update({
+  id: '/api/thesis',
+  path: '/api/thesis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const homeThesisRoute = homeThesisRouteImport.update({
+  id: '/thesis',
+  path: '/thesis',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
   id: '/daily-signals',
   path: '/daily-signals',
@@ -50,6 +62,8 @@ export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
   '/daily-signals': typeof homeDailySignalsRoute
+  '/thesis': typeof homeThesisRoute
+  '/api/thesis': typeof ApiThesisRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
 }
@@ -57,6 +71,8 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
   '/daily-signals': typeof homeDailySignalsRoute
+  '/thesis': typeof homeThesisRoute
+  '/api/thesis': typeof ApiThesisRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
 }
@@ -66,6 +82,8 @@ export interface FileRoutesById {
   '/health': typeof HealthRoute
   '/(home)/about': typeof homeAboutRoute
   '/(home)/daily-signals': typeof homeDailySignalsRoute
+  '/(home)/thesis': typeof homeThesisRoute
+  '/api/thesis': typeof ApiThesisRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/(home)/': typeof homeIndexRoute
 }
@@ -75,16 +93,27 @@ export interface FileRouteTypes {
     | '/health'
     | '/about'
     | '/daily-signals'
+    | '/thesis'
+    | '/api/thesis'
     | '/demo/tanstack-query'
     | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/health' | '/about' | '/daily-signals' | '/demo/tanstack-query' | '/'
+  to:
+    | '/health'
+    | '/about'
+    | '/daily-signals'
+    | '/thesis'
+    | '/api/thesis'
+    | '/demo/tanstack-query'
+    | '/'
   id:
     | '__root__'
     | '/(home)'
     | '/health'
     | '/(home)/about'
     | '/(home)/daily-signals'
+    | '/(home)/thesis'
+    | '/api/thesis'
     | '/demo/tanstack-query'
     | '/(home)/'
   fileRoutesById: FileRoutesById
@@ -92,6 +121,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   homeRouteRoute: typeof homeRouteRouteWithChildren
   HealthRoute: typeof HealthRoute
+  ApiThesisRoute: typeof ApiThesisRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
 }
 
@@ -125,6 +155,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTanstackQueryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/thesis': {
+      id: '/api/thesis'
+      path: '/api/thesis'
+      fullPath: '/api/thesis'
+      preLoaderRoute: typeof ApiThesisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(home)/thesis': {
+      id: '/(home)/thesis'
+      path: '/thesis'
+      fullPath: '/thesis'
+      preLoaderRoute: typeof homeThesisRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
     '/(home)/daily-signals': {
       id: '/(home)/daily-signals'
       path: '/daily-signals'
@@ -145,12 +189,14 @@ declare module '@tanstack/react-router' {
 interface homeRouteRouteChildren {
   homeAboutRoute: typeof homeAboutRoute
   homeDailySignalsRoute: typeof homeDailySignalsRoute
+  homeThesisRoute: typeof homeThesisRoute
   homeIndexRoute: typeof homeIndexRoute
 }
 
 const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeAboutRoute: homeAboutRoute,
   homeDailySignalsRoute: homeDailySignalsRoute,
+  homeThesisRoute: homeThesisRoute,
   homeIndexRoute: homeIndexRoute,
 }
 
@@ -161,6 +207,7 @@ const homeRouteRouteWithChildren = homeRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   homeRouteRoute: homeRouteRouteWithChildren,
   HealthRoute: HealthRoute,
+  ApiThesisRoute: ApiThesisRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
 }
 export const routeTree = rootRouteImport
