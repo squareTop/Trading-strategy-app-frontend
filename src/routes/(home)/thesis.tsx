@@ -401,7 +401,7 @@ function ThesisPage() {
               <div>
                 <p className="font-display font-bold text-brand-dark text-sm">
                   {phase === 'computing'
-                    ? 'Running Mode 2 analysis...'
+                    ? 'Running classification & Markov analysis...'
                     : 'Extracting tickers from thesis...'}
                 </p>
                 <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">
@@ -592,7 +592,7 @@ function ThesisPage() {
 
             <div className="bg-[#f0eadd] border border-brand-border rounded-xl p-5 shadow-xs">
               <p className="font-mono text-[10px] text-gray-500">
-                Signals generated via DeepSeek V4 Flash + FoxelSignal Mode 2 engine.
+                Signals generated via DeepSeek V4 Flash + FoxelSignal thesis engine.
                 Markov state classification uses 8-state HMM regime detection.
               </p>
             </div>
