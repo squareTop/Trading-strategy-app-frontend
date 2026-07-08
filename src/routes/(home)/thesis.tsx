@@ -110,7 +110,7 @@ function ThesisPage() {
   const [showRawJson, setShowRawJson] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
-  const { messages, sendMessage, isLoading, error, stop } = useChat({
+  const { messages, sendMessage, isLoading, error, stop, clear } = useChat({
     connection: fetchServerSentEvents('/api/thesis'),
     onFinish: async (message) => {
       const fullText = message.parts
@@ -154,13 +154,14 @@ function ThesisPage() {
   const handleSubmit = useCallback(() => {
     if (!thesis.trim() || isLoading) return
     saveDefaults(thesis, equity, riskPct)
+    clear()
     setPhase('streaming')
     setRecords([])
     setCoverage([])
     setErrorMsg(null)
     abortRef.current = new AbortController()
     sendMessage(thesis.trim())
-  }, [thesis, equity, riskPct, isLoading, sendMessage])
+  }, [thesis, equity, riskPct, isLoading, sendMessage, clear])
 
   const handleCancel = useCallback(() => {
     stop()
@@ -172,7 +173,8 @@ function ThesisPage() {
     setRecords([])
     setCoverage([])
     setErrorMsg(null)
-  }, [])
+    clear()
+  }, [clear])
 
   const lastAssistant = useMemo(
     () => messages.filter((m) => m.role === 'assistant').pop(),
