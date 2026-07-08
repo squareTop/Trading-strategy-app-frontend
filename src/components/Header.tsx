@@ -15,7 +15,7 @@ export default function Header() {
     <header className="border-b border-brand-border bg-white px-4 md:px-8 py-3 sticky top-0 z-40 shadow-xs">
       <div className="max-w-360 mx-auto flex items-center justify-between gap-4">
         {/* Brand Wordmark */}
-        <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity shrink-0">
+        <Link to="/" search={{ ticker: undefined }} className="flex items-center gap-3 hover:opacity-90 transition-opacity shrink-0">
           <div className="w-9 h-9 rounded-lg bg-brand-primary flex items-center justify-center text-white font-extrabold text-lg tracking-wider select-none shadow-md shadow-brand-primary/20">
             FS
           </div>

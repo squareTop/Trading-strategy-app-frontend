@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useCallback, useMemo, useRef } from 'react'
-import { useChat, fetchServerSentEvents } from '@tanstack/ai-react'
+import { useChat } from '@tanstack/ai-react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -24,8 +24,9 @@ import {
   Loader2,
   ArrowUpRight,
   Terminal,
+  MessageSquareText,
 } from 'lucide-react'
-import { formatPercent, formatPrice, formatLargeNumber, formatDate } from '../../lib/utils'
+import { formatPrice, formatLargeNumber } from '../../lib/utils'
 import { Link } from '@tanstack/react-router'
 
 interface ThesisSignal {
@@ -57,7 +58,7 @@ interface CoverageRow {
   reject_reason: string | null
 }
 
-type Phase = 'idle' | 'streaming' | 'computing' | 'complete' | 'error'
+type Step = 'idle' | 'extracting' | 'analyzing' | 'explaining' | 'complete' | 'error'
 
 const STORAGE_KEY = 'foxel_thesis_defaults'
 
@@ -65,14 +66,14 @@ function loadDefaults() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) return JSON.parse(saved)
-  } catch { }
+  } catch {}
   return { thesis: '', equity: 100000, riskPct: 2 }
 }
 
 function saveDefaults(thesis: string, equity: number, riskPct: number) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ thesis, equity, riskPct }))
-  } catch { }
+  } catch {}
 }
 
 const DEFAULT_THESIS =
@@ -91,7 +92,7 @@ function extractTickers(text: string): string[] {
     try {
       const arr = JSON.parse(match[0])
       return arr.map((t: unknown) => String(t).trim().toUpperCase()).filter(Boolean)
-    } catch { }
+    } catch {}
   }
   const words = cleaned.match(/[A-Z][A-Z0-9.\-]{0,9}/g)
   return [...new Set(words ?? [])]
@@ -102,83 +103,153 @@ function ThesisPage() {
   const [thesis, setThesis] = useState(saved.thesis || DEFAULT_THESIS)
   const [equity, setEquity] = useState(saved.equity)
   const [riskPct, setRiskPct] = useState(saved.riskPct)
-  const [phase, setPhase] = useState<Phase>('idle')
+  const [step, setStep] = useState<Step>('idle')
   const [records, setRecords] = useState<ThesisSignal[]>([])
   const [coverage, setCoverage] = useState<CoverageRow[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
-  const [showRawJson, setShowRawJson] = useState(false)
-  const abortRef = useRef<AbortController | null>(null)
+  const [pipelineTime, setPipelineTime] = useState(0)
+  const [explainText, setExplainText] = useState('')
+  const [isExplaining, setIsExplaining] = useState(false)
+  const explainAbortRef = useRef<AbortController | null>(null)
 
-  const { messages, sendMessage, isLoading, error, stop, clear } = useChat({
-    connection: fetchServerSentEvents('/api/thesis'),
+  const {
+    messages: extractMessages,
+    sendMessage: sendExtract,
+    isLoading: isExtracting,
+    stop: stopExtract,
+  } = useChat({
+    fetcher: ({ messages }) =>
+      fetch('/api/thesis', {
+        method: 'POST',
+        body: JSON.stringify({ messages, max_tickers: 20 }),
+      }),
     onFinish: async (message) => {
       const fullText = message.parts
         .filter((p) => p.type === 'text')
-        .map((p) => (p as any).content || '')
+        .map((p) => (p as { content: string }).content)
         .join('')
       const tickers = extractTickers(fullText)
       if (tickers.length === 0) {
-        setPhase('error')
+        setStep('error')
         setErrorMsg('Could not extract any tickers from the thesis response.')
         return
       }
-      setPhase('computing')
+      setStep('analyzing')
+      const t0 = performance.now()
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
         const res = await fetch(`${apiUrl}/api/thesis-run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tickers,
-            equity,
-            risk_pct: riskPct / 100,
-          }),
+          body: JSON.stringify({ tickers, equity, risk_pct: riskPct / 100 }),
         })
+        setPipelineTime(performance.now() - t0)
         if (!res.ok) {
           const errBody = await res.text().catch(() => '')
           throw new Error(`Backend returned ${res.status}: ${errBody}`)
         }
         const data = await res.json()
-        console.log("api data", data)
         setRecords(data.records || [])
         setCoverage(data.coverage || [])
-        setPhase('complete')
-      } catch (err: any) {
-        setPhase('error')
-        setErrorMsg(err.message || 'Backend computation failed')
+
+        if (data.records && data.records.length > 0) {
+          setStep('complete')
+        } else {
+          setStep('explaining')
+          sendExplain(thesis, data.coverage || [])
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Backend computation failed'
+        setStep('error')
+        setErrorMsg(msg)
       }
     },
   })
 
+  const sendExplain = useCallback(
+    async (thesisText: string, cov: CoverageRow[]) => {
+      setIsExplaining(true)
+      setExplainText('')
+      const controller = new AbortController()
+      explainAbortRef.current = controller
+
+      try {
+        const res = await fetch('/api/thesis-explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thesis: thesisText, coverage: cov }),
+          signal: controller.signal,
+        })
+        if (!res.ok) throw new Error(`Explain endpoint returned ${res.status}`)
+
+        const reader = res.body?.getReader()
+        if (!reader) throw new Error('No response body')
+
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let acc = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i]
+            if (line.startsWith('data: ') && line.slice(6) !== '[DONE]') {
+              try {
+                const chunk = JSON.parse(line.slice(6))
+                if (chunk.type === 'TEXT_MESSAGE_CONTENT') {
+                  acc += chunk.delta || ''
+                  setExplainText(acc)
+                }
+              } catch {
+                const raw = line.slice(6)
+                if (raw !== '[DONE]') acc += raw
+              }
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return
+        setExplainText('[Analyst note generation failed]')
+      } finally {
+        setIsExplaining(false)
+        setStep('complete')
+      }
+    },
+    [],
+  )
+
   const handleSubmit = useCallback(() => {
-    if (!thesis.trim() || isLoading) return
+    if (!thesis.trim() || isExtracting || isExplaining) return
     saveDefaults(thesis, equity, riskPct)
-    clear()
-    setPhase('streaming')
+    setStep('extracting')
     setRecords([])
     setCoverage([])
     setErrorMsg(null)
-    abortRef.current = new AbortController()
-    sendMessage(thesis.trim())
-  }, [thesis, equity, riskPct, isLoading, sendMessage, clear])
+    setPipelineTime(0)
+    sendExtract(thesis.trim())
+  }, [thesis, equity, riskPct, isExtracting, isExplaining, sendExtract])
 
   const handleCancel = useCallback(() => {
-    stop()
-    setPhase('idle')
-  }, [stop])
+    stopExtract()
+    explainAbortRef.current?.abort()
+    setStep('idle')
+  }, [stopExtract])
 
   const handleReset = useCallback(() => {
-    setPhase('idle')
+    setStep('idle')
     setRecords([])
     setCoverage([])
     setErrorMsg(null)
-    clear()
-  }, [clear])
+  }, [])
 
   const lastAssistant = useMemo(
-    () => messages.filter((m) => m.role === 'assistant').pop(),
-    [messages],
+    () => extractMessages.filter((m) => m.role === 'assistant').pop(),
+    [extractMessages],
   )
 
   const columns = useMemo(
@@ -202,10 +273,11 @@ function ThesisPage() {
           const dir = info.getValue()
           return (
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${dir === 'long'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-red-50 text-red-700 border-red-200'
-                }`}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${
+                dir === 'long'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-red-50 text-red-700 border-red-200'
+              }`}
             >
               {dir === 'long' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {dir}
@@ -223,7 +295,9 @@ function ThesisPage() {
       }),
       columnHelper.accessor('selected_strategy', {
         header: 'Strategy',
-        cell: (info) => <span className="font-mono text-xs text-gray-700">{info.getValue() || '-'}</span>,
+        cell: (info) => (
+          <span className="font-mono text-xs text-gray-700">{info.getValue() || '-'}</span>
+        ),
       }),
       columnHelper.accessor('entry', {
         header: 'Entry',
@@ -296,6 +370,8 @@ function ThesisPage() {
     initialState: { pagination: { pageSize: 10 } },
   })
 
+  const isRunning = isExtracting || step === 'analyzing' || isExplaining
+
   return (
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
       <main className="max-w-360 mx-auto px-4 md:px-8 mt-8">
@@ -315,7 +391,7 @@ function ThesisPage() {
           </div>
 
           <p className="text-sm text-gray-500 mb-6 max-w-2xl">
-            Describe an investment thesis in plain English. DeepSeek extracts relevant tickers,
+            Describe an investment thesis in plain English. The AI extracts relevant tickers (max 20),
             then the FoxelSignal engine classifies each into 8 Markov states, computes
             transition probabilities, and generates entry/stop/target signals.
           </p>
@@ -323,7 +399,7 @@ function ThesisPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              if (!isLoading) handleSubmit()
+              handleSubmit()
             }}
             className="space-y-4"
           >
@@ -336,7 +412,7 @@ function ThesisPage() {
                 onChange={(e) => setThesis(e.target.value)}
                 placeholder="Describe your investment thesis..."
                 rows={4}
-                disabled={isLoading}
+                disabled={isRunning}
                 className="w-full px-4 py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-sans text-sm placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all resize-vertical disabled:opacity-50"
               />
             </div>
@@ -350,7 +426,7 @@ function ThesisPage() {
                   type="number"
                   value={equity}
                   onChange={(e) => setEquity(Number(e.target.value))}
-                  disabled={isLoading}
+                  disabled={isRunning}
                   min={1000}
                   className="w-full px-4 py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all disabled:opacity-50"
                 />
@@ -363,7 +439,7 @@ function ThesisPage() {
                   type="number"
                   value={riskPct}
                   onChange={(e) => setRiskPct(Number(e.target.value))}
-                  disabled={isLoading}
+                  disabled={isRunning}
                   min={0.01}
                   max={10}
                   step={0.01}
@@ -373,7 +449,7 @@ function ThesisPage() {
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-              {isLoading ? (
+              {isRunning ? (
                 <button
                   type="button"
                   onClick={handleCancel}
@@ -396,56 +472,97 @@ function ThesisPage() {
           </form>
         </div>
 
-        {(isLoading || phase === 'computing') && (
+        {isRunning && (
           <div className="mt-6 bg-white border border-brand-border rounded-xl p-6 shadow-xs animate-fade-in">
-            <div className="flex items-center gap-3 mb-4">
-              <Loader2 className="w-5 h-5 text-brand-primary animate-spin" />
-              <div>
-                <p className="font-display font-bold text-brand-dark text-sm">
-                  {phase === 'computing'
-                    ? 'Running classification & Markov analysis...'
-                    : 'Extracting tickers from thesis...'}
-                </p>
-                <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">
-                  {phase === 'computing' ? 'Backend Computation' : 'DeepSeek V4 Flash'}
-                </p>
+            <div className="space-y-3">
+              {/* Step 1: LLM extraction */}
+              <div className="flex items-start gap-3">
+                {step === 'extracting' ? (
+                  <Loader2 className="w-4 h-4 text-brand-primary animate-spin mt-0.5 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-mono font-bold text-brand-dark">
+                    Extracting tickers from thesis
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-mono">AI Ticker Extraction</p>
+                </div>
               </div>
+
+              {/* Step 2: Analysis */}
+              <div className="flex items-start gap-3">
+                {step === 'extracting' ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-200 mt-0.5 shrink-0" />
+                ) : step === 'analyzing' ? (
+                  <Loader2 className="w-4 h-4 text-brand-primary animate-spin mt-0.5 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-mono font-bold text-brand-dark">
+                    Running classification & analysis
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    {step === 'extracting' ? 'Waiting...' : step === 'analyzing' ? `${pipelineTime > 0 ? (pipelineTime / 1000).toFixed(1) + 's' : 'Processing...'}` : 'Done'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3: Analyst explain (only when no signals) */}
+              {step === 'explaining' && (
+                <div className="flex items-start gap-3">
+                  <Loader2 className="w-4 h-4 text-brand-primary animate-spin mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-mono font-bold text-brand-dark">
+                      Generating analyst commentary
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-mono">AI Analysis</p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {isLoading && lastAssistant && (
-              <div className="bg-[#111827] text-[#93c5fd] font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-40 leading-relaxed border border-brand-primary/10">
+            {isExtracting && lastAssistant && (
+              <div className="mt-4 bg-[#111827] text-[#93c5fd] font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-32 leading-relaxed border border-brand-primary/10">
                 <div className="text-[10px] text-gray-500 mb-2 uppercase tracking-wider font-bold flex items-center gap-2">
                   <Terminal className="w-3 h-3" />
-                  LLM Output Stream
+                  LLM Stream
                 </div>
                 {lastAssistant.parts
                   .filter((p) => p.type === 'text')
-                  .map((p, i) => <span key={i}>{(p as { content: string }).content || ''}</span>)}
+                  .map((p, i) => (
+                    <span key={i}>{(p as { content: string }).content || ''}</span>
+                  ))}
               </div>
             )}
 
-            <div className="mt-3 h-1 bg-brand-bg rounded-full overflow-hidden">
-              <div className="h-full bg-brand-primary rounded-full animate-pulse transition-all" style={{ width: phase === 'computing' ? '80%' : '40%' }} />
-            </div>
+            {(step === 'explaining' || (step === 'analyzing' && !isExtracting)) && (
+              <div className="mt-3 h-1 bg-brand-bg rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-brand-primary rounded-full animate-pulse transition-all"
+                  style={{ width: step === 'explaining' ? '80%' : '50%' }}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {error && !isLoading && (
-          <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6 shadow-xs animate-fade-in">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+        {step === 'explaining' && explainText && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs animate-fade-in">
+            <div className="flex items-start gap-3">
+              <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-display font-bold text-red-950 text-sm">Connection Error</h4>
-                <p className="text-xs text-red-800 mt-1 font-mono">{error.message}</p>
-                <button onClick={handleSubmit} className="mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
-                  Retry
-                </button>
+                <h4 className="font-display font-bold text-amber-900 text-sm mb-2">Analyst Note</h4>
+                <div className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap font-sans">
+                  {explainText}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {phase === 'error' && !isLoading && (
+        {step === 'error' && !isRunning && (
           <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6 shadow-xs animate-fade-in">
             <div className="flex gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -460,7 +577,7 @@ function ThesisPage() {
           </div>
         )}
 
-        {phase === 'complete' && records.length > 0 && (
+        {step === 'complete' && (
           <div className="mt-6 space-y-6 animate-fade-in">
             {coverage.length > 0 && (
               <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
@@ -469,23 +586,37 @@ function ThesisPage() {
                   <h3 className="font-display font-bold text-brand-dark text-sm uppercase tracking-wider">
                     Regime Map — {coverage.length} Ticker(s) Analyzed
                   </h3>
+                  {pipelineTime > 0 && (
+                    <span className="text-[10px] font-mono text-gray-400 ml-auto">
+                      {(pipelineTime / 1000).toFixed(1)}s
+                    </span>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {coverage.map((c) => (
                     <div
                       key={c.ticker}
-                      className={`p-3 rounded-lg border text-xs font-mono ${c.fired
-                        ? 'bg-emerald-50 border-emerald-200'
-                        : c.reject_reason
-                          ? 'bg-amber-50 border-amber-200'
-                          : 'bg-gray-50 border-gray-200'
-                        }`}
+                      className={`p-3 rounded-lg border text-xs font-mono ${
+                        c.fired
+                          ? 'bg-emerald-50 border-emerald-200'
+                          : c.reject_reason
+                            ? 'bg-amber-50 border-amber-200'
+                            : 'bg-gray-50 border-gray-200'
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-black text-brand-dark">{c.ticker}</span>
+                        <Link
+                          to="/"
+                          search={{ ticker: c.ticker }}
+                          className="font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 transition-all"
+                        >
+                          {c.ticker}
+                          <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+                        </Link>
                         <span
-                          className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${c.fired ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'
-                            }`}
+                          className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            c.fired ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'
+                          }`}
                         >
                           {c.fired ? 'SIGNAL' : c.reject_reason || 'SKIP'}
                         </span>
@@ -500,120 +631,105 @@ function ThesisPage() {
               </div>
             )}
 
-            <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
-              <div className="px-6 py-4 border-b border-brand-border bg-white flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <h3 className="font-display font-bold text-brand-dark text-sm uppercase tracking-wider">
-                    Thesis Signals — {records.length} Firing
-                  </h3>
+            {records.length > 0 && (
+              <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
+                <div className="px-6 py-4 border-b border-brand-border bg-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <h3 className="font-display font-bold text-brand-dark text-sm uppercase tracking-wider">
+                      Thesis Signals — {records.length} Firing
+                    </h3>
+                  </div>
+                  <button
+                    onClick={handleReset}
+                    className="bg-brand-bg hover:bg-brand-border/40 text-brand-dark p-2 rounded-lg border border-brand-border/80 transition-all active:scale-95 flex items-center gap-1 text-xs font-bold"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    New Scan
+                  </button>
                 </div>
-                <button
-                  onClick={handleReset}
-                  className="bg-brand-bg hover:bg-brand-border/40 text-brand-dark p-2 rounded-lg border border-brand-border/80 transition-all active:scale-95 flex items-center gap-1 text-xs font-bold"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  New Scan
-                </button>
-              </div>
 
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left border-collapse table-auto min-w-[900px]">
-                  <thead className="bg-[#f0eadd]/60 border-b border-brand-border">
-                    {table.getHeaderGroups().map((hg) => (
-                      <tr key={hg.id}>
-                        {hg.headers.map((header) => (
-                          <th
-                            key={header.id}
-                            className="px-4 py-3 bg-white text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 select-none border-b border-brand-border whitespace-nowrap"
-                          >
-                            {header.isPlaceholder ? null : (
-                              <div
-                                onClick={header.column.getToggleSortingHandler()}
-                                className={`flex items-center gap-1 ${header.column.getCanSort() ? 'cursor-pointer hover:text-brand-primary transition-all' : ''}`}
-                              >
-                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                {header.column.getCanSort() && (
-                                  <span className="shrink-0">
-                                    {({
-                                      asc: ' ▴',
-                                      desc: ' ▾',
-                                    })[header.column.getIsSorted() as string] ?? (
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-left border-collapse table-auto min-w-[900px]">
+                    <thead className="bg-[#f0eadd]/60 border-b border-brand-border">
+                      {table.getHeaderGroups().map((hg) => (
+                        <tr key={hg.id}>
+                          {hg.headers.map((header) => (
+                            <th
+                              key={header.id}
+                              className="px-4 py-3 bg-white text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 select-none border-b border-brand-border whitespace-nowrap"
+                            >
+                              {header.isPlaceholder ? null : (
+                                <div
+                                  onClick={header.column.getToggleSortingHandler()}
+                                  className={`flex items-center gap-1 ${header.column.getCanSort() ? 'cursor-pointer hover:text-brand-primary transition-all' : ''}`}
+                                >
+                                  {flexRender(header.column.columnDef.header, header.getContext())}
+                                  {header.column.getCanSort() && (
+                                    <span className="shrink-0">
+                                      {({
+                                        asc: ' ▴',
+                                        desc: ' ▾',
+                                      })[header.column.getIsSorted() as string] ?? (
                                         <ArrowUpDown className="w-3 h-3 opacity-30 inline" />
                                       )}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    ))}
-                  </thead>
-                  <tbody className="divide-y divide-brand-border/50">
-                    {table.getRowModel().rows.map((row, index) => (
-                      <tr
-                        key={row.id}
-                        className={`hover:bg-brand-primary/5 transition-all ${index % 2 === 1 ? 'bg-brand-bg/30' : 'bg-white'}`}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-4 py-3.5 text-xs text-brand-dark whitespace-nowrap">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {table.getPageCount() > 1 && (
-                <div className="px-4 py-4 md:px-6 border-t border-brand-border bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs font-mono text-gray-500">
-                  <span>
-                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                      className="p-2 rounded-lg border border-brand-border/60 hover:bg-brand-bg transition-all disabled:opacity-30 flex items-center justify-center cursor-pointer"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                      className="p-2 rounded-lg border border-brand-border/60 hover:bg-brand-bg transition-all disabled:opacity-30 flex items-center justify-center cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </th>
+                          ))}
+                        </tr>
+                      ))}
+                    </thead>
+                    <tbody className="divide-y divide-brand-border/50">
+                      {table.getRowModel().rows.map((row, index) => (
+                        <tr
+                          key={row.id}
+                          className={`hover:bg-brand-primary/5 transition-all ${index % 2 === 1 ? 'bg-brand-bg/30' : 'bg-white'}`}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <td key={cell.id} className="px-4 py-3.5 text-xs text-brand-dark whitespace-nowrap">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </div>
+
+                {table.getPageCount() > 1 && (
+                  <div className="px-4 py-4 md:px-6 border-t border-brand-border bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs font-mono text-gray-500">
+                    <span>
+                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                        className="p-2 rounded-lg border border-brand-border/60 hover:bg-brand-bg transition-all disabled:opacity-30 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                        className="p-2 rounded-lg border border-brand-border/60 hover:bg-brand-bg transition-all disabled:opacity-30 cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="bg-[#f0eadd] border border-brand-border rounded-xl p-5 shadow-xs">
               <p className="font-mono text-[10px] text-gray-500">
-                Signals generated via DeepSeek V4 Flash + FoxelSignal thesis engine.
+                Signals generated via AI-driven ticker extraction + FoxelSignal thesis engine.
                 Markov state classification uses 8-state HMM regime detection.
               </p>
-            </div>
-          </div>
-        )}
-
-        {phase === 'complete' && records.length === 0 && (
-          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs animate-fade-in">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-display font-bold text-amber-900 text-sm">No Signals Fired</h4>
-                <p className="text-xs text-amber-800 mt-1">
-                  All tickers were analyzed but none met the entry criteria. Check the regime map for details.
-                </p>
-                <button onClick={handleReset} className="mt-3 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
-                  Try Another Thesis
-                </button>
-              </div>
             </div>
           </div>
         )}
