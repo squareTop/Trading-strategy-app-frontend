@@ -48,7 +48,7 @@ export const Route = createFileRoute('/api/thesis')({
           outputSchema: TickerExtractionSchema,
           stream: true,
           modelOptions: {
-            temperature: 0.1, maxCompletionTokens: 1024, reasoning: {
+            temperature: 0.1, reasoning: {
               effort: "none"
             }
           },

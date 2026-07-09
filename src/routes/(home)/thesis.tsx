@@ -85,14 +85,14 @@ function loadDefaults() {
   try {
     const saved = localStorage.getItem(DEFAULTS_KEY)
     if (saved) return JSON.parse(saved)
-  } catch {}
+  } catch { }
   return { thesis: '', equity: 100000, riskPct: 2 }
 }
 
 function saveDefaults(thesis: string, equity: number, riskPct: number) {
   try {
     localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ thesis, equity, riskPct }))
-  } catch {}
+  } catch { }
 }
 
 const DEFAULT_THESIS =
@@ -129,8 +129,8 @@ function ThesisPage() {
   const [analystNote, setAnalystNote] = useState<AnalystNote | null>(null)
   const [cachedDate, setCachedDate] = useState<string | null>(null)
   const [isExplaining, setIsExplaining] = useState(false)
+  const [extractedTickers, setExtractedTickers] = useState<string[]>([])
   const explainAbortRef = useRef<AbortController | null>(null)
-  const processedRunRef = useRef<string | null>(null)
 
   const {
     sendMessage: sendExtract,
@@ -154,18 +154,19 @@ function ThesisPage() {
     return t.filter((x): x is string => typeof x === 'string')
   }, [partial])
 
+  // Tickers to display: partial during streaming, final after extraction
+  const displayTickers = step === 'extracting' ? partialTickers : extractedTickers
+
   // When `final` lands, extract validated tickers and run backend analysis.
   useEffect(() => {
     if (!final) return
-    // Guard against duplicate processing for the same run id.
-    const runId = (final as { tickers: string[] } | null) ? undefined : undefined
-    if (runId && processedRunRef.current === runId) return
     const tickers = (final as TickerExtraction).tickers
     if (!Array.isArray(tickers) || tickers.length === 0) {
       setStep('error')
       setErrorMsg('AI returned no tickers for this thesis.')
       return
     }
+    setExtractedTickers(tickers)
     void runBackendAnalysis(tickers)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [final])
@@ -186,6 +187,7 @@ function ThesisPage() {
         throw new Error(`Backend returned ${res.status}: ${errBody}`)
       }
       const data = await res.json()
+      console.log("thesis data: ", data)
       const recs: ThesisSignal[] = data.records || []
       const cov: CoverageRow[] = data.coverage || []
       setRecords(recs)
@@ -311,7 +313,7 @@ function ThesisPage() {
       setErrorMsg(null)
       setPipelineTime(0)
       setCachedDate(null)
-      processedRunRef.current = null
+      setExtractedTickers([])
       sendExtract(thesis.trim())
     },
     [thesis, equity, riskPct, isExtracting, isExplaining, sendExtract],
@@ -330,6 +332,7 @@ function ThesisPage() {
     setAnalystNote(null)
     setErrorMsg(null)
     setCachedDate(null)
+    setExtractedTickers([])
   }, [])
 
   const columns = useMemo(
@@ -353,11 +356,10 @@ function ThesisPage() {
           const dir = info.getValue()
           return (
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${
-                dir === 'long'
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${dir === 'long'
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-red-50 text-red-700 border-red-200'
-              }`}
+                }`}
             >
               {dir === 'long' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {dir}
@@ -409,40 +411,40 @@ function ThesisPage() {
         header: 'Size',
         cell: (info) => {
           const v = info.getValue()
-          return <span className="font-mono text-gray-700">{v !== null ? formatLargeNumber(v) : '-'}</span>
+          return <span className="font-mono text-gray-700">{v != null ? formatLargeNumber(v) : '-'}</span>
         },
       }),
       columnHelper.accessor('risk_dollars', {
         header: 'Risk $',
         cell: (info) => {
           const v = info.getValue()
-          return <span className="font-mono text-gray-700 font-medium">{v !== null ? formatPrice(v, 'USD') : '-'}</span>
+          return <span className="font-mono text-gray-700 font-medium">{v != null ? formatPrice(v, 'USD') : '-'}</span>
         },
       }),
       columnHelper.accessor('markov_persistence', {
         header: 'Persist',
         cell: (info) => {
           const v = info.getValue()
-          return <span className="font-mono">{v !== null ? (v * 100).toFixed(0) + '%' : '-'}</span>
+          return <span className="font-mono">{v != null ? (v * 100).toFixed(0) + '%' : '-'}</span>
         },
       }),
       columnHelper.accessor('markov_dwell_bars', {
         header: 'Dwell',
         cell: (info) => {
           const v = info.getValue()
-          return <span className="font-mono text-gray-600">{v !== null ? `${v.toFixed(0)}b` : '-'}</span>
+          return <span className="font-mono text-gray-600">{v != null ? `${v.toFixed(0)}b` : '-'}</span>
         },
       }),
       columnHelper.accessor('markov_next_state_prob_if_moves', {
         header: 'If Moves',
         cell: (info) => {
           const v = info.getValue()
-          if (v === null) return <span className="text-gray-400 font-mono">-</span>
+          if (v == null) return <span className="text-gray-400 font-mono">-</span>
           const rec = info.row.original
           const ns = rec.markov_next_state
           return (
             <span className="font-mono text-indigo-600 font-bold">
-              {ns !== null ? `S${ns} ` : ''}{(v * 100).toFixed(0)}%
+              {ns != null ? `S${ns} ` : ''}{(v * 100).toFixed(0)}%
             </span>
           )
         },
@@ -579,12 +581,12 @@ function ThesisPage() {
                     Extracting tickers from thesis
                   </p>
                   <p className="text-[10px] text-gray-400 font-mono">AI Ticker Extraction</p>
-                  {step === 'extracting' && partialTickers.length > 0 && (
+                  {displayTickers.length > 0 && step !== 'explaining' && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {partialTickers.map((tk, i) => (
+                      {displayTickers.map((tk, i) => (
                         <span
                           key={`${tk}-${i}`}
-                          className="text-[10px] font-mono font-bold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded border border-brand-primary/20 animate-fade-in"
+                          className="text-[10px] font-mono font-bold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded border border-brand-primary/20"
                         >
                           {tk}
                         </span>
@@ -642,8 +644,8 @@ function ThesisPage() {
           </div>
         )}
 
-        {/* Structured Analyst Note */}
-        {step === 'explaining' && analystNote && (
+        {/* Analyst Note — shows during explaining (streaming) and complete (cached/final) */}
+        {analystNote && (step === 'explaining' || step === 'complete') && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs animate-fade-in">
             <div className="flex items-start gap-3 mb-4">
               <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -727,55 +729,6 @@ function ThesisPage() {
               </div>
             )}
 
-            {/* Analyst note (cached or completed) */}
-            {analystNote && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs">
-                <div className="flex items-start gap-3 mb-4">
-                  <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <h4 className="font-display font-bold text-amber-900 text-sm">Analyst Note</h4>
-                </div>
-                <div className="space-y-4 text-sm text-amber-900 leading-relaxed font-sans">
-                  <p>{analystNote.summary}</p>
-                  {analystNote.tickerAssessments?.length > 0 && (
-                    <div className="space-y-2">
-                      <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700">
-                        Per-Ticker Assessment
-                      </h5>
-                      {analystNote.tickerAssessments.map((a, i) => (
-                        <div key={i} className="bg-amber-100/60 rounded-lg p-3 border border-amber-200/60">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Link
-                              to="/"
-                              search={{ ticker: a.ticker }}
-                              className="font-mono font-black text-brand-primary hover:underline"
-                            >
-                              {a.ticker}
-                            </Link>
-                            <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.5 rounded">
-                              {a.state}
-                            </span>
-                          </div>
-                          <p className="text-xs text-amber-900/90">{a.assessment}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div>
-                    <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
-                      Thesis Timing
-                    </h5>
-                    <p>{analystNote.thesisTiming}</p>
-                  </div>
-                  <div>
-                    <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
-                      What to Watch For
-                    </h5>
-                    <p>{analystNote.watchFor}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {coverage.length > 0 && (
               <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
                 <div className="flex items-center gap-2 mb-4">
@@ -791,55 +744,62 @@ function ThesisPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {coverage.map((c) => {
-                    const isLong = c.state !== null && c.state >= 1 && c.state <= 5
-                    const isShort = c.state !== null && c.state >= 6 && c.state <= 7
-                    const ArrowIcon = isShort ? ArrowDownRight : isLong ? ArrowUpRight : ArrowRight
-                    const hasNext = c.next_state && c.next_state.prob_if_moves != null
-                    const lowSample = c.next_on_break != null && c.next_on_break.length < 3
-                    return (
-                    <div
-                      key={c.ticker}
-                      className={`p-3 rounded-lg border text-xs font-mono ${
-                        c.fired
-                          ? 'bg-emerald-50 border-emerald-200'
-                          : c.reject_reason
-                            ? 'bg-amber-50 border-amber-200'
-                            : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <Link
-                          to="/"
-                          search={{ ticker: c.ticker }}
-                          className="font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 transition-all"
+                    try {
+                      const isLong = c.state != null && c.state >= 1 && c.state <= 5
+                      const isShort = c.state != null && c.state >= 6 && c.state <= 7
+                      const ArrowIcon = isShort ? ArrowDownRight : isLong ? ArrowUpRight : ArrowRight
+                      const hasNext = !!c.next_state && c.next_state.prob_if_moves != null
+                      const lowSample = c.next_on_break != null && (c.next_on_break?.length ?? 0) < 3
+                      return (
+                        <div
+                          key={c.ticker}
+                          className={`p-3 rounded-lg border text-xs font-mono ${c.fired
+                              ? 'bg-emerald-50 border-emerald-200'
+                              : c.reject_reason
+                                ? 'bg-amber-50 border-amber-200'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}
                         >
-                          {c.ticker}
-                          <ArrowIcon className={`w-3 h-3 shrink-0 ${isShort ? 'text-red-500/60' : isLong ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                        </Link>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                            c.fired ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'
-                          }`}
-                        >
-                          {c.fired ? 'SIGNAL' : c.reject_reason || 'SKIP'}
-                        </span>
-                      </div>
-                      <div className="text-gray-600 leading-relaxed">
-                        <div>
-                          {c.state_name || 'N/A'}
-                          {c.persistence !== null && <> · {(c.persistence * 100).toFixed(0)}% stay</>}
-                          {c.expected_dwell_bars !== null && <> · ~{c.expected_dwell_bars.toFixed(0)}b</>}
-                        </div>
-                        {hasNext && (
-                          <div className="text-gray-500 mt-0.5">
-                            on break → {c.next_state!.state_name}
-                            <span className="font-bold text-gray-700"> ({(c.next_state!.prob_if_moves! * 100).toFixed(0)}%)</span>
-                            {lowSample && <span className="text-amber-600 font-bold ml-1">· est.</span>}
+                          <div className="flex items-center justify-between mb-1">
+                            <Link
+                              to="/"
+                              search={{ ticker: c.ticker }}
+                              className="font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 transition-all"
+                            >
+                              {c.ticker}
+                              <ArrowIcon className={`w-3 h-3 shrink-0 ${isShort ? 'text-red-500/60' : isLong ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                            </Link>
+                            <span
+                              className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${c.fired ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'
+                                }`}
+                            >
+                              {c.fired ? 'SIGNAL' : c.reject_reason || 'SKIP'}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    )
+                          <div className="text-gray-600 leading-relaxed">
+                            <div>
+                              {c.state_name || 'N/A'}
+                              {c.persistence != null && <> · {(c.persistence * 100).toFixed(0)}% stay</>}
+                              {c.expected_dwell_bars != null && <> · ~{c.expected_dwell_bars.toFixed(0)}b</>}
+                            </div>
+                            {hasNext && (
+                              <div className="text-gray-500 mt-0.5">
+                                on break → {c.next_state!.state_name}
+                                <span className="font-bold text-gray-700"> ({(c.next_state!.prob_if_moves! * 100).toFixed(0)}%)</span>
+                                {lowSample && <span className="text-amber-600 font-bold ml-1">· est.</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    } catch {
+                      return (
+                        <div key={c.ticker} className="p-3 rounded-lg border text-xs font-mono bg-red-50 border-red-200">
+                          <span className="font-black text-brand-dark">{c.ticker}</span>
+                          <span className="text-gray-400 ml-2">render error</span>
+                        </div>
+                      )
+                    }
                   })}
                 </div>
               </div>
@@ -885,8 +845,8 @@ function ThesisPage() {
                                         asc: ' ▴',
                                         desc: ' ▾',
                                       })[header.column.getIsSorted() as string] ?? (
-                                        <ArrowUpDown className="w-3 h-3 opacity-30 inline" />
-                                      )}
+                                          <ArrowUpDown className="w-3 h-3 opacity-30 inline" />
+                                        )}
                                     </span>
                                   )}
                                 </div>
