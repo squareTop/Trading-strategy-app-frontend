@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { chat, toServerSentEventsResponse } from '@tanstack/ai'
 import { openRouterText } from '@tanstack/ai-openrouter'
 import { TickerExtractionSchema } from '#/lib/thesis-schema'
+import { AI_MODEL } from '#/lib/ai-config'
 
 export const Route = createFileRoute('/api/thesis')({
   server: {
@@ -33,7 +34,7 @@ export const Route = createFileRoute('/api/thesis')({
 
         const maxTickers = Math.max(1, Math.min(body.max_tickers ?? 20, 20))
 
-        const adapter = openRouterText('deepseek/deepseek-v4-flash')
+        const adapter = openRouterText(AI_MODEL)
 
         const stream = chat({
           adapter,

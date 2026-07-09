@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { chat, toServerSentEventsResponse } from '@tanstack/ai'
 import { openRouterText } from '@tanstack/ai-openrouter'
 import { AnalystNoteSchema } from '#/lib/thesis-schema'
+import { AI_MODEL } from '#/lib/ai-config'
 
 export const Route = createFileRoute('/api/thesis-explain')({
   server: {
@@ -28,7 +29,7 @@ export const Route = createFileRoute('/api/thesis-explain')({
         const coverage = body.coverage || []
 
         const stream = chat({
-          adapter: openRouterText('deepseek/deepseek-v4-flash'),
+          adapter: openRouterText(AI_MODEL),
           messages: [
             {
               role: 'user',
