@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   Loader2,
   ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight,
   Clock,
   MessageSquareText,
 } from 'lucide-react'
@@ -43,6 +45,8 @@ interface ThesisSignal {
   markov_dwell_bars: number | null
   markov_next_state: number | null
   markov_next_state_prob: number | null
+  markov_next_state_prob_if_moves: number | null
+  markov_low_sample: boolean | null
   entry: number | null
   stop: number | null
   target: number | null
@@ -53,11 +57,22 @@ interface ThesisSignal {
   markov_readout: string | null
 }
 
+interface NextStateInfo {
+  state: number
+  state_name: string
+  prob: number
+  prob_if_moves?: number
+  confirmation_bars: number
+}
+
 interface CoverageRow {
   ticker: string
   state: number | null
   state_name: string | null
   persistence: number | null
+  next_state: NextStateInfo | null
+  next_on_break: NextStateInfo[] | null
+  expected_dwell_bars: number | null
   fired: boolean
   reject_reason: string | null
 }
@@ -418,6 +433,20 @@ function ThesisPage() {
           return <span className="font-mono text-gray-600">{v !== null ? `${v.toFixed(0)}b` : '-'}</span>
         },
       }),
+      columnHelper.accessor('markov_next_state_prob_if_moves', {
+        header: 'If Moves',
+        cell: (info) => {
+          const v = info.getValue()
+          if (v === null) return <span className="text-gray-400 font-mono">-</span>
+          const rec = info.row.original
+          const ns = rec.markov_next_state
+          return (
+            <span className="font-mono text-indigo-600 font-bold">
+              {ns !== null ? `S${ns} ` : ''}{(v * 100).toFixed(0)}%
+            </span>
+          )
+        },
+      }),
     ],
     [],
   )
@@ -761,7 +790,13 @@ function ThesisPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {coverage.map((c) => (
+                  {coverage.map((c) => {
+                    const isLong = c.state !== null && c.state >= 1 && c.state <= 5
+                    const isShort = c.state !== null && c.state >= 6 && c.state <= 7
+                    const ArrowIcon = isShort ? ArrowDownRight : isLong ? ArrowUpRight : ArrowRight
+                    const hasNext = c.next_state && c.next_state.prob_if_moves != null
+                    const lowSample = c.next_on_break != null && c.next_on_break.length < 3
+                    return (
                     <div
                       key={c.ticker}
                       className={`p-3 rounded-lg border text-xs font-mono ${
@@ -779,7 +814,7 @@ function ThesisPage() {
                           className="font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 transition-all"
                         >
                           {c.ticker}
-                          <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+                          <ArrowIcon className={`w-3 h-3 shrink-0 ${isShort ? 'text-red-500/60' : isLong ? 'text-emerald-500/60' : 'text-gray-400'}`} />
                         </Link>
                         <span
                           className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
@@ -789,12 +824,23 @@ function ThesisPage() {
                           {c.fired ? 'SIGNAL' : c.reject_reason || 'SKIP'}
                         </span>
                       </div>
-                      <div className="text-gray-600">
-                        State: {c.state_name || 'N/A'}
-                        {c.persistence !== null && <> | Persist: {(c.persistence * 100).toFixed(0)}%</>}
+                      <div className="text-gray-600 leading-relaxed">
+                        <div>
+                          {c.state_name || 'N/A'}
+                          {c.persistence !== null && <> · {(c.persistence * 100).toFixed(0)}% stay</>}
+                          {c.expected_dwell_bars !== null && <> · ~{c.expected_dwell_bars.toFixed(0)}b</>}
+                        </div>
+                        {hasNext && (
+                          <div className="text-gray-500 mt-0.5">
+                            on break → {c.next_state!.state_name}
+                            <span className="font-bold text-gray-700"> ({(c.next_state!.prob_if_moves! * 100).toFixed(0)}%)</span>
+                            {lowSample && <span className="text-amber-600 font-bold ml-1">· est.</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
