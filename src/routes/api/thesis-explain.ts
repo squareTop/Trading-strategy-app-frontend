@@ -48,7 +48,11 @@ export const Route = createFileRoute('/api/thesis-explain')({
           ],
           outputSchema: AnalystNoteSchema,
           stream: true,
-          modelOptions: { temperature: 0.3, maxCompletionTokens: 1024 },
+          modelOptions: {
+            temperature: 0.3, maxCompletionTokens: 1024, reasoning: {
+              effort: "none"
+            }
+          },
         })
 
         return toServerSentEventsResponse(stream)
