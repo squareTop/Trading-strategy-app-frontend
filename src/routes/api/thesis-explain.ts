@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { chat, toServerSentEventsResponse } from '@tanstack/ai'
 import { openRouterText } from '@tanstack/ai-openrouter'
-import type { UIMessage } from '@tanstack/ai-react'
+import { AnalystNoteSchema } from '#/lib/thesis-schema'
 
 export const Route = createFileRoute('/api/thesis-explain')({
   server: {
@@ -14,11 +14,14 @@ export const Route = createFileRoute('/api/thesis-explain')({
           )
         }
 
-        let body: { messages?: UIMessage[]; thesis?: string; coverage?: unknown[] }
+        let body: { thesis?: string; coverage?: unknown[] }
         try {
           body = await request.json()
         } catch {
-          return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400 })
+          return new Response(JSON.stringify({ error: 'Invalid request' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          })
         }
 
         const thesis = body.thesis || '(not provided)'
@@ -26,24 +29,24 @@ export const Route = createFileRoute('/api/thesis-explain')({
 
         const stream = chat({
           adapter: openRouterText('deepseek/deepseek-v4-flash'),
-          messages: body.messages || [],
-          systemPrompts: [
-            'You are a senior financial analyst reviewing automated trading signal results.',
-            '',
-            'The user submitted this investment thesis:',
-            thesis,
-            '',
-            'The engine analyzed the following tickers (coverage data includes state, persistence, and reject reason):',
-            JSON.stringify(coverage, null, 2),
-            '',
-            'No actionable signals fired. Write a brief analyst note (2-4 paragraphs) explaining:',
-            '1. What market regime each ticker is in based on its state',
-            '2. Why no entries triggered (common reasons: states in Avoid, mean reversion not due, trend not confirmed)',
-            '3. Whether the thesis timing may be off or needs refinement',
-            '4. What to watch for — conditions that would trigger entries',
-            '',
-            'Be specific, reference the actual tickers and states, and stay grounded in the data.',
+          messages: [
+            {
+              role: 'user',
+              content:
+                'Review the following thesis analysis results and write an analyst note.\n\n'
+                + `Thesis:\n${thesis}\n\n`
+                + `Coverage data (ticker, state, persistence, reject reason):\n${JSON.stringify(coverage, null, 2)}`,
+            },
           ],
+          systemPrompts: [
+            'You are a senior financial analyst reviewing automated trading signal results. '
+            + 'No actionable signals fired. Assess each ticker\'s market regime based on its '
+            + 'state name, explain why entries did not trigger, evaluate thesis timing, and '
+            + 'identify what conditions would change the picture. Be specific and grounded '
+            + 'in the coverage data — reference actual tickers and states.',
+          ],
+          outputSchema: AnalystNoteSchema,
+          stream: true,
           modelOptions: { temperature: 0.3, maxCompletionTokens: 1024 },
         })
 

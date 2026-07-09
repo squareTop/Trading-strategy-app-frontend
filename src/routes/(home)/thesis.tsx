@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useChat } from '@tanstack/ai-react'
 import {
   useReactTable,
@@ -23,11 +23,15 @@ import {
   CheckCircle2,
   Loader2,
   ArrowUpRight,
-  Terminal,
+  Clock,
   MessageSquareText,
 } from 'lucide-react'
 import { formatPrice, formatLargeNumber } from '../../lib/utils'
 import { Link } from '@tanstack/react-router'
+import { TickerExtractionSchema } from '../../lib/thesis-schema'
+import type { TickerExtraction, AnalystNote } from '../../lib/thesis-schema'
+import { readCache, writeCache } from '../../lib/thesis-cache'
+import type { ThesisCacheEntry } from '../../lib/thesis-cache'
 
 interface ThesisSignal {
   ticker: string
@@ -60,11 +64,11 @@ interface CoverageRow {
 
 type Step = 'idle' | 'extracting' | 'analyzing' | 'explaining' | 'complete' | 'error'
 
-const STORAGE_KEY = 'foxel_thesis_defaults'
+const DEFAULTS_KEY = 'foxel_thesis_defaults'
 
 function loadDefaults() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(DEFAULTS_KEY)
     if (saved) return JSON.parse(saved)
   } catch {}
   return { thesis: '', equity: 100000, riskPct: 2 }
@@ -72,7 +76,7 @@ function loadDefaults() {
 
 function saveDefaults(thesis: string, equity: number, riskPct: number) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ thesis, equity, riskPct }))
+    localStorage.setItem(DEFAULTS_KEY, JSON.stringify({ thesis, equity, riskPct }))
   } catch {}
 }
 
@@ -85,17 +89,15 @@ export const Route = createFileRoute('/(home)/thesis')({
 
 const columnHelper = createColumnHelper<ThesisSignal>()
 
-function extractTickers(text: string): string[] {
-  const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-  const match = cleaned.match(/\[.*?\]/s)
-  if (match) {
-    try {
-      const arr = JSON.parse(match[0])
-      return arr.map((t: unknown) => String(t).trim().toUpperCase()).filter(Boolean)
-    } catch {}
+function restoreFromCache(entry: ThesisCacheEntry) {
+  return {
+    tickers: entry.tickers,
+    records: entry.records as ThesisSignal[],
+    coverage: entry.coverage as CoverageRow[],
+    analystNote: entry.analystNote as AnalystNote | null,
+    pipelineTime: entry.pipelineTime,
+    cachedDate: entry.cachedDate,
   }
-  const words = cleaned.match(/[A-Z][A-Z0-9.\-]{0,9}/g)
-  return [...new Set(words ?? [])]
 }
 
 function ThesisPage() {
@@ -109,130 +111,196 @@ function ThesisPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
   const [pipelineTime, setPipelineTime] = useState(0)
-  const [explainText, setExplainText] = useState('')
+  const [analystNote, setAnalystNote] = useState<AnalystNote | null>(null)
+  const [cachedDate, setCachedDate] = useState<string | null>(null)
   const [isExplaining, setIsExplaining] = useState(false)
   const explainAbortRef = useRef<AbortController | null>(null)
+  const processedRunRef = useRef<string | null>(null)
 
   const {
-    messages: extractMessages,
     sendMessage: sendExtract,
     isLoading: isExtracting,
     stop: stopExtract,
+    partial,
+    final,
   } = useChat({
     fetcher: ({ messages }) =>
       fetch('/api/thesis', {
         method: 'POST',
         body: JSON.stringify({ messages, max_tickers: 20 }),
       }),
-    onFinish: async (message) => {
-      const fullText = message.parts
-        .filter((p) => p.type === 'text')
-        .map((p) => (p as { content: string }).content)
-        .join('')
-      const tickers = extractTickers(fullText)
-      if (tickers.length === 0) {
-        setStep('error')
-        setErrorMsg('Could not extract any tickers from the thesis response.')
-        return
-      }
-      setStep('analyzing')
-      const t0 = performance.now()
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-        const res = await fetch(`${apiUrl}/api/thesis-run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tickers, equity, risk_pct: riskPct / 100 }),
-        })
-        setPipelineTime(performance.now() - t0)
-        if (!res.ok) {
-          const errBody = await res.text().catch(() => '')
-          throw new Error(`Backend returned ${res.status}: ${errBody}`)
-        }
-        const data = await res.json()
-        setRecords(data.records || [])
-        setCoverage(data.coverage || [])
-
-        if (data.records && data.records.length > 0) {
-          setStep('complete')
-        } else {
-          setStep('explaining')
-          sendExplain(thesis, data.coverage || [])
-        }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Backend computation failed'
-        setStep('error')
-        setErrorMsg(msg)
-      }
-    },
+    outputSchema: TickerExtractionSchema,
   })
 
-  const sendExplain = useCallback(
-    async (thesisText: string, cov: CoverageRow[]) => {
-      setIsExplaining(true)
-      setExplainText('')
-      const controller = new AbortController()
-      explainAbortRef.current = controller
+  // Live ticker preview from partial — DeepPartial<TickerExtraction>
+  const partialTickers = useMemo(() => {
+    const t = (partial as { tickers?: unknown[] } | undefined)?.tickers
+    if (!Array.isArray(t)) return []
+    return t.filter((x): x is string => typeof x === 'string')
+  }, [partial])
 
-      try {
-        const res = await fetch('/api/thesis-explain', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ thesis: thesisText, coverage: cov }),
-          signal: controller.signal,
+  // When `final` lands, extract validated tickers and run backend analysis.
+  useEffect(() => {
+    if (!final) return
+    // Guard against duplicate processing for the same run id.
+    const runId = (final as { tickers: string[] } | null) ? undefined : undefined
+    if (runId && processedRunRef.current === runId) return
+    const tickers = (final as TickerExtraction).tickers
+    if (!Array.isArray(tickers) || tickers.length === 0) {
+      setStep('error')
+      setErrorMsg('AI returned no tickers for this thesis.')
+      return
+    }
+    void runBackendAnalysis(tickers)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [final])
+
+  async function runBackendAnalysis(tickers: string[]) {
+    setStep('analyzing')
+    const t0 = performance.now()
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const res = await fetch(`${apiUrl}/api/thesis-run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickers, equity, risk_pct: riskPct / 100 }),
+      })
+      setPipelineTime(performance.now() - t0)
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '')
+        throw new Error(`Backend returned ${res.status}: ${errBody}`)
+      }
+      const data = await res.json()
+      const recs: ThesisSignal[] = data.records || []
+      const cov: CoverageRow[] = data.coverage || []
+      setRecords(recs)
+      setCoverage(cov)
+
+      if (recs.length > 0) {
+        setStep('complete')
+        writeCache({
+          thesis: thesis.trim(),
+          equity,
+          riskPct,
+          tickers,
+          records: recs,
+          coverage: cov,
+          analystNote: null,
+          pipelineTime: performance.now() - t0,
         })
-        if (!res.ok) throw new Error(`Explain endpoint returned ${res.status}`)
+        setCachedDate(new Date().toISOString().slice(0, 10))
+      } else {
+        setStep('explaining')
+        await runExplain(tickers, cov)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Backend computation failed'
+      setStep('error')
+      setErrorMsg(msg)
+    }
+  }
 
-        const reader = res.body?.getReader()
-        if (!reader) throw new Error('No response body')
+  async function runExplain(tickers: string[], cov: CoverageRow[]) {
+    setIsExplaining(true)
+    setAnalystNote(null)
+    const controller = new AbortController()
+    explainAbortRef.current = controller
 
-        const decoder = new TextDecoder()
-        let buffer = ''
-        let acc = ''
+    try {
+      const res = await fetch('/api/thesis-explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thesis: thesis.trim(), coverage: cov }),
+        signal: controller.signal,
+      })
+      if (!res.ok) throw new Error(`Explain endpoint returned ${res.status}`)
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i]
-            if (line.startsWith('data: ') && line.slice(6) !== '[DONE]') {
-              try {
-                const chunk = JSON.parse(line.slice(6))
-                if (chunk.type === 'TEXT_MESSAGE_CONTENT') {
-                  acc += chunk.delta || ''
-                  setExplainText(acc)
-                }
-              } catch {
-                const raw = line.slice(6)
-                if (raw !== '[DONE]') acc += raw
-              }
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No response body')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let note: AnalystNote | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          if (!line.startsWith('data: ')) continue
+          const payload = line.slice(6)
+          if (payload === '[DONE]') continue
+          try {
+            const chunk = JSON.parse(payload)
+            if (
+              chunk.type === 'CUSTOM' &&
+              chunk.name === 'structured-output.complete' &&
+              chunk.value?.object
+            ) {
+              note = chunk.value.object as AnalystNote
+              setAnalystNote(note)
             }
+          } catch {
+            // non-JSON line — ignore
           }
         }
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') return
-        setExplainText('[Analyst note generation failed]')
-      } finally {
-        setIsExplaining(false)
-        setStep('complete')
       }
-    },
-    [],
-  )
 
-  const handleSubmit = useCallback(() => {
-    if (!thesis.trim() || isExtracting || isExplaining) return
-    saveDefaults(thesis, equity, riskPct)
-    setStep('extracting')
-    setRecords([])
-    setCoverage([])
-    setErrorMsg(null)
-    setPipelineTime(0)
-    sendExtract(thesis.trim())
-  }, [thesis, equity, riskPct, isExtracting, isExplaining, sendExtract])
+      setStep('complete')
+      writeCache({
+        thesis: thesis.trim(),
+        equity,
+        riskPct,
+        tickers,
+        records,
+        coverage: cov,
+        analystNote: note,
+        pipelineTime,
+      })
+      setCachedDate(new Date().toISOString().slice(0, 10))
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      setStep('complete')
+    } finally {
+      setIsExplaining(false)
+    }
+  }
+
+  const handleSubmit = useCallback(
+    (bypassCache = false) => {
+      if (!thesis.trim() || isExtracting || isExplaining) return
+      saveDefaults(thesis, equity, riskPct)
+
+      if (!bypassCache) {
+        const cached = readCache(thesis.trim(), equity, riskPct)
+        if (cached) {
+          const r = restoreFromCache(cached)
+          setRecords(r.records)
+          setCoverage(r.coverage)
+          setAnalystNote(r.analystNote)
+          setPipelineTime(r.pipelineTime)
+          setCachedDate(r.cachedDate)
+          setStep('complete')
+          setErrorMsg(null)
+          return
+        }
+      }
+
+      setStep('extracting')
+      setRecords([])
+      setCoverage([])
+      setAnalystNote(null)
+      setErrorMsg(null)
+      setPipelineTime(0)
+      setCachedDate(null)
+      processedRunRef.current = null
+      sendExtract(thesis.trim())
+    },
+    [thesis, equity, riskPct, isExtracting, isExplaining, sendExtract],
+  )
 
   const handleCancel = useCallback(() => {
     stopExtract()
@@ -244,13 +312,10 @@ function ThesisPage() {
     setStep('idle')
     setRecords([])
     setCoverage([])
+    setAnalystNote(null)
     setErrorMsg(null)
+    setCachedDate(null)
   }, [])
-
-  const lastAssistant = useMemo(
-    () => extractMessages.filter((m) => m.role === 'assistant').pop(),
-    [extractMessages],
-  )
 
   const columns = useMemo(
     () => [
@@ -295,9 +360,7 @@ function ThesisPage() {
       }),
       columnHelper.accessor('selected_strategy', {
         header: 'Strategy',
-        cell: (info) => (
-          <span className="font-mono text-xs text-gray-700">{info.getValue() || '-'}</span>
-        ),
+        cell: (info) => <span className="font-mono text-xs text-gray-700">{info.getValue() || '-'}</span>,
       }),
       columnHelper.accessor('entry', {
         header: 'Entry',
@@ -399,7 +462,7 @@ function ThesisPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              handleSubmit()
+              handleSubmit(false)
             }}
             className="space-y-4"
           >
@@ -487,6 +550,18 @@ function ThesisPage() {
                     Extracting tickers from thesis
                   </p>
                   <p className="text-[10px] text-gray-400 font-mono">AI Ticker Extraction</p>
+                  {step === 'extracting' && partialTickers.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {partialTickers.map((tk, i) => (
+                        <span
+                          key={`${tk}-${i}`}
+                          className="text-[10px] font-mono font-bold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded border border-brand-primary/20 animate-fade-in"
+                        >
+                          {tk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -504,7 +579,11 @@ function ThesisPage() {
                     Running classification & analysis
                   </p>
                   <p className="text-[10px] text-gray-400 font-mono">
-                    {step === 'extracting' ? 'Waiting...' : step === 'analyzing' ? `${pipelineTime > 0 ? (pipelineTime / 1000).toFixed(1) + 's' : 'Processing...'}` : 'Done'}
+                    {step === 'extracting'
+                      ? 'Waiting...'
+                      : step === 'analyzing'
+                        ? `${pipelineTime > 0 ? (pipelineTime / 1000).toFixed(1) + 's' : 'Processing...'}`
+                        : 'Done'}
                   </p>
                 </div>
               </div>
@@ -523,20 +602,6 @@ function ThesisPage() {
               )}
             </div>
 
-            {isExtracting && lastAssistant && (
-              <div className="mt-4 bg-[#111827] text-[#93c5fd] font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-32 leading-relaxed border border-brand-primary/10">
-                <div className="text-[10px] text-gray-500 mb-2 uppercase tracking-wider font-bold flex items-center gap-2">
-                  <Terminal className="w-3 h-3" />
-                  LLM Stream
-                </div>
-                {lastAssistant.parts
-                  .filter((p) => p.type === 'text')
-                  .map((p, i) => (
-                    <span key={i}>{(p as { content: string }).content || ''}</span>
-                  ))}
-              </div>
-            )}
-
             {(step === 'explaining' || (step === 'analyzing' && !isExtracting)) && (
               <div className="mt-3 h-1 bg-brand-bg rounded-full overflow-hidden">
                 <div
@@ -548,15 +613,50 @@ function ThesisPage() {
           </div>
         )}
 
-        {step === 'explaining' && explainText && (
+        {/* Structured Analyst Note */}
+        {step === 'explaining' && analystNote && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs animate-fade-in">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 mb-4">
               <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-display font-bold text-amber-900 text-sm mb-2">Analyst Note</h4>
-                <div className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap font-sans">
-                  {explainText}
+              <h4 className="font-display font-bold text-amber-900 text-sm">Analyst Note</h4>
+            </div>
+            <div className="space-y-4 text-sm text-amber-900 leading-relaxed font-sans">
+              <p>{analystNote.summary}</p>
+              {analystNote.tickerAssessments?.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700">
+                    Per-Ticker Assessment
+                  </h5>
+                  {analystNote.tickerAssessments.map((a, i) => (
+                    <div key={i} className="bg-amber-100/60 rounded-lg p-3 border border-amber-200/60">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link
+                          to="/"
+                          search={{ ticker: a.ticker }}
+                          className="font-mono font-black text-brand-primary hover:underline"
+                        >
+                          {a.ticker}
+                        </Link>
+                        <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.5 rounded">
+                          {a.state}
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-900/90">{a.assessment}</p>
+                    </div>
+                  ))}
                 </div>
+              )}
+              <div>
+                <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
+                  Thesis Timing
+                </h5>
+                <p>{analystNote.thesisTiming}</p>
+              </div>
+              <div>
+                <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
+                  What to Watch For
+                </h5>
+                <p>{analystNote.watchFor}</p>
               </div>
             </div>
           </div>
@@ -569,7 +669,10 @@ function ThesisPage() {
               <div>
                 <h4 className="font-display font-bold text-red-950 text-sm">Thesis Scan Failed</h4>
                 <p className="text-xs text-red-800 mt-1 font-mono">{errorMsg}</p>
-                <button onClick={handleReset} className="mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
+                <button
+                  onClick={handleReset}
+                  className="mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+                >
                   Try Again
                 </button>
               </div>
@@ -579,6 +682,71 @@ function ThesisPage() {
 
         {step === 'complete' && (
           <div className="mt-6 space-y-6 animate-fade-in">
+            {/* Cache indicator + re-run */}
+            {cachedDate && (
+              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs font-mono">
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Cached from {cachedDate}</span>
+                </div>
+                <button
+                  onClick={() => handleSubmit(true)}
+                  className="text-emerald-700 hover:text-emerald-900 hover:underline font-bold uppercase tracking-wider text-[10px]"
+                >
+                  Re-run (bypass cache)
+                </button>
+              </div>
+            )}
+
+            {/* Analyst note (cached or completed) */}
+            {analystNote && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs">
+                <div className="flex items-start gap-3 mb-4">
+                  <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <h4 className="font-display font-bold text-amber-900 text-sm">Analyst Note</h4>
+                </div>
+                <div className="space-y-4 text-sm text-amber-900 leading-relaxed font-sans">
+                  <p>{analystNote.summary}</p>
+                  {analystNote.tickerAssessments?.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700">
+                        Per-Ticker Assessment
+                      </h5>
+                      {analystNote.tickerAssessments.map((a, i) => (
+                        <div key={i} className="bg-amber-100/60 rounded-lg p-3 border border-amber-200/60">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Link
+                              to="/"
+                              search={{ ticker: a.ticker }}
+                              className="font-mono font-black text-brand-primary hover:underline"
+                            >
+                              {a.ticker}
+                            </Link>
+                            <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.5 rounded">
+                              {a.state}
+                            </span>
+                          </div>
+                          <p className="text-xs text-amber-900/90">{a.assessment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
+                      Thesis Timing
+                    </h5>
+                    <p>{analystNote.thesisTiming}</p>
+                  </div>
+                  <div>
+                    <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
+                      What to Watch For
+                    </h5>
+                    <p>{analystNote.watchFor}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {coverage.length > 0 && (
               <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
                 <div className="flex items-center gap-2 mb-4">

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { chat, toServerSentEventsResponse } from '@tanstack/ai'
 import { openRouterText } from '@tanstack/ai-openrouter'
-import type { UIMessage } from '@tanstack/ai-react'
+import { TickerExtractionSchema } from '#/lib/thesis-schema'
 
 export const Route = createFileRoute('/api/thesis')({
   server: {
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/api/thesis')({
           )
         }
 
-        let body: { messages?: UIMessage[]; max_tickers?: number }
+        let body: { messages?: { role: 'user'; content: string }[]; max_tickers?: number }
         try {
           body = await request.json()
         } catch {
@@ -37,15 +37,15 @@ export const Route = createFileRoute('/api/thesis')({
 
         const stream = chat({
           adapter,
-          messages: body.messages,
+          messages: body.messages as any,
           systemPrompts: [
             'You are a financial analyst. Given an investment thesis, identify the '
             + 'publicly-traded instruments (stocks or ETFs) most directly relevant to '
-            + 'expressing or testing it.\n\n'
-            + 'Return ONLY a JSON array of standard US exchange ticker symbols, at most '
-            + `${maxTickers} tickers, no prose, no explanation. `
-            + 'Example: ["AAPL", "NVDA", "SMH"]',
+            + `expressing or testing it. Return at most ${maxTickers} tickers. `
+            + 'Prefer the most liquid, directly-exposed names.',
           ],
+          outputSchema: TickerExtractionSchema,
+          stream: true,
           modelOptions: { temperature: 0.1, maxCompletionTokens: 1024 },
         })
 
