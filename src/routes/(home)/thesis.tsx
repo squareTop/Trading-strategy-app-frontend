@@ -131,11 +131,18 @@ function ThesisPage() {
   const [isExplaining, setIsExplaining] = useState(false)
   const [extractedTickers, setExtractedTickers] = useState<string[]>([])
   const explainAbortRef = useRef<AbortController | null>(null)
+  const analysisAbortRef = useRef<AbortController | null>(null)
+  const stepRef = useRef<Step>('idle')
+
+  useEffect(() => {
+    stepRef.current = step
+  }, [step])
 
   const {
     sendMessage: sendExtract,
     isLoading: isExtracting,
     stop: stopExtract,
+    clear: clearChat,
     partial,
     final,
   } = useChat({
@@ -160,6 +167,7 @@ function ThesisPage() {
   // When `final` lands, extract validated tickers and run backend analysis.
   useEffect(() => {
     if (!final) return
+    if (stepRef.current !== 'extracting') return
     const tickers = (final as TickerExtraction).tickers
     if (!Array.isArray(tickers) || tickers.length === 0) {
       setStep('error')
@@ -174,12 +182,17 @@ function ThesisPage() {
   async function runBackendAnalysis(tickers: string[]) {
     setStep('analyzing')
     const t0 = performance.now()
+    analysisAbortRef.current?.abort()
+    const controller = new AbortController()
+    analysisAbortRef.current = controller
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
       const res = await fetch(`${apiUrl}/api/thesis-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tickers, equity, risk_pct: riskPct / 100 }),
+        signal: controller.signal,
       })
       setPipelineTime(performance.now() - t0)
       if (!res.ok) {
@@ -187,7 +200,8 @@ function ThesisPage() {
         throw new Error(`Backend returned ${res.status}: ${errBody}`)
       }
       const data = await res.json()
-      console.log("thesis data: ", data)
+      if (stepRef.current !== 'analyzing') return
+
       const recs: ThesisSignal[] = data.records || []
       const cov: CoverageRow[] = data.coverage || []
       setRecords(recs)
@@ -211,15 +225,22 @@ function ThesisPage() {
         await runExplain(tickers, cov)
       }
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      if (stepRef.current !== 'analyzing') return
       const msg = err instanceof Error ? err.message : 'Backend computation failed'
       setStep('error')
       setErrorMsg(msg)
+    } finally {
+      if (analysisAbortRef.current === controller) {
+        analysisAbortRef.current = null
+      }
     }
   }
 
   async function runExplain(tickers: string[], cov: CoverageRow[]) {
     setIsExplaining(true)
     setAnalystNote(null)
+    explainAbortRef.current?.abort()
     const controller = new AbortController()
     explainAbortRef.current = controller
 
@@ -258,6 +279,7 @@ function ThesisPage() {
               chunk.value?.object
             ) {
               note = chunk.value.object as AnalystNote
+              if (stepRef.current !== 'explaining') return
               setAnalystNote(note)
             }
           } catch {
@@ -265,6 +287,8 @@ function ThesisPage() {
           }
         }
       }
+
+      if (stepRef.current !== 'explaining') return
 
       setStep('complete')
       writeCache({
@@ -280,8 +304,12 @@ function ThesisPage() {
       setCachedDate(new Date().toISOString().slice(0, 10))
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return
+      if (stepRef.current !== 'explaining') return
       setStep('complete')
     } finally {
+      if (explainAbortRef.current === controller) {
+        explainAbortRef.current = null
+      }
       setIsExplaining(false)
     }
   }
@@ -319,11 +347,16 @@ function ThesisPage() {
     [thesis, equity, riskPct, isExtracting, isExplaining, sendExtract],
   )
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
     stopExtract()
+    clearChat()
+    analysisAbortRef.current?.abort()
     explainAbortRef.current?.abort()
     setStep('idle')
-  }, [stopExtract])
+  }, [stopExtract, clearChat])
+
 
   const handleReset = useCallback(() => {
     setStep('idle')
@@ -546,7 +579,7 @@ function ThesisPage() {
               {isRunning ? (
                 <button
                   type="button"
-                  onClick={handleCancel}
+                  onClick={(e) => handleCancel(e)}
                   className="px-6 py-3 rounded-xl bg-red-500 text-white text-xs font-extrabold uppercase tracking-wide hover:bg-red-600 active:scale-[0.98] transition-all flex items-center gap-2 shadow-lg"
                 >
                   <Loader2 className="w-4 h-4 animate-spin" />
