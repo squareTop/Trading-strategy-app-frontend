@@ -644,54 +644,7 @@ function ThesisPage() {
           </div>
         )}
 
-        {/* Analyst Note — shows during explaining (streaming) and complete (cached/final) */}
-        {analystNote && (step === 'explaining' || step === 'complete') && (
-          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs animate-fade-in">
-            <div className="flex items-start gap-3 mb-4">
-              <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <h4 className="font-display font-bold text-amber-900 text-sm">Analyst Note</h4>
-            </div>
-            <div className="space-y-4 text-sm text-amber-900 leading-relaxed font-sans">
-              <p>{analystNote.summary}</p>
-              {analystNote.tickerAssessments?.length > 0 && (
-                <div className="space-y-2">
-                  <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700">
-                    Per-Ticker Assessment
-                  </h5>
-                  {analystNote.tickerAssessments.map((a, i) => (
-                    <div key={i} className="bg-amber-100/60 rounded-lg p-3 border border-amber-200/60">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Link
-                          to="/"
-                          search={{ ticker: a.ticker }}
-                          className="font-mono font-black text-brand-primary hover:underline"
-                        >
-                          {a.ticker}
-                        </Link>
-                        <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.5 rounded">
-                          {a.state}
-                        </span>
-                      </div>
-                      <p className="text-xs text-amber-900/90">{a.assessment}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div>
-                <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
-                  Thesis Timing
-                </h5>
-                <p>{analystNote.thesisTiming}</p>
-              </div>
-              <div>
-                <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
-                  What to Watch For
-                </h5>
-                <p>{analystNote.watchFor}</p>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {step === 'error' && !isRunning && (
           <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-6 shadow-xs animate-fade-in">
@@ -711,10 +664,10 @@ function ThesisPage() {
           </div>
         )}
 
-        {step === 'complete' && (
+        {(step === 'explaining' || step === 'complete') && (
           <div className="mt-6 space-y-6 animate-fade-in">
             {/* Cache indicator + re-run */}
-            {cachedDate && (
+            {cachedDate && step === 'complete' && (
               <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs font-mono">
                 <div className="flex items-center gap-2 text-emerald-700">
                   <Clock className="w-3.5 h-3.5" />
@@ -801,6 +754,31 @@ function ThesisPage() {
                       )
                     }
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Analyst Note — shows during explaining (streaming) and complete (cached/final) */}
+            {analystNote && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-xs animate-fade-in">
+                <div className="flex items-start gap-3 mb-4">
+                  <MessageSquareText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <h4 className="font-display font-bold text-amber-900 text-sm">Analyst Note</h4>
+                </div>
+                <div className="space-y-4 text-sm text-amber-900 leading-relaxed font-sans">
+                  <p>{analystNote.summary}</p>
+                  <div>
+                    <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
+                      Thesis Timing
+                    </h5>
+                    <p>{analystNote.thesisTiming}</p>
+                  </div>
+                  <div>
+                    <h5 className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-700 mb-1">
+                      What to Watch For
+                    </h5>
+                    <p>{analystNote.watchFor}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -899,12 +877,14 @@ function ThesisPage() {
               </div>
             )}
 
-            <div className="bg-[#f0eadd] border border-brand-border rounded-xl p-5 shadow-xs">
-              <p className="font-mono text-[10px] text-gray-500">
-                Signals generated via AI-driven ticker extraction + FoxelSignal thesis engine.
-                Markov state classification uses 8-state HMM regime detection.
-              </p>
-            </div>
+            {step === 'complete' && (
+              <div className="bg-[#f0eadd] border border-brand-border rounded-xl p-5 shadow-xs">
+                <p className="font-mono text-[10px] text-gray-500">
+                  Signals generated via AI-driven ticker extraction + FoxelSignal thesis engine.
+                  Markov state classification uses 8-state HMM regime detection.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>

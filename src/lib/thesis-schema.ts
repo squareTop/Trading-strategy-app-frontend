@@ -13,15 +13,7 @@ export const AnalystNoteSchema = z.object({
   summary: z
     .string()
     .meta({ description: 'One-paragraph summary of the analysis findings' }),
-  tickerAssessments: z
-    .array(
-      z.object({
-        ticker: z.string(),
-        state: z.string(),
-        assessment: z.string(),
-      }),
-    )
-    .meta({ description: 'Per-ticker regime assessment explaining what state it is in and why' }),
+
   thesisTiming: z
     .string()
     .meta({ description: 'Assessment of whether the thesis timing is right or needs refinement' }),
