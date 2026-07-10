@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { chat, toServerSentEventsResponse } from '@tanstack/ai'
 import { openRouterText } from '@tanstack/ai-openrouter'
-import { TickerExtractionSchema } from '#/lib/thesis-schema'
+import { z } from 'zod'
 import { AI_MODEL } from '#/lib/ai-config'
 
 export const Route = createFileRoute('/api/thesis')({
@@ -36,19 +36,30 @@ export const Route = createFileRoute('/api/thesis')({
 
         const adapter = openRouterText(AI_MODEL)
 
+        const DynamicTickerExtractionSchema = z.object({
+          tickers: z
+            .array(z.string())
+            .max(maxTickers)
+            .meta({ description: `Standard US exchange ticker symbols most relevant to the thesis (maximum of ${maxTickers} items)` }),
+        })
+
         const stream = chat({
           adapter,
           messages: body.messages as any,
           systemPrompts: [
-            'You are a financial analyst. Given an investment thesis, identify the '
+            'You are a financial analyst. Given an investment thesis, identify all '
             + 'publicly-traded instruments (stocks or ETFs) most directly relevant to '
-            + `expressing or testing it. Return at most ${maxTickers} tickers. `
+            + `expressing or testing it. You should attempt to find as many highly relevant `
+            + `tickers as possible (aiming for up to ${maxTickers} if they exist), but `
+            + `strictly do not exceed ${maxTickers} tickers. `
+            + `CRITICAL: The tickers array MUST NOT contain more than ${maxTickers} elements. `
             + 'Prefer the most liquid, directly-exposed names.',
           ],
-          outputSchema: TickerExtractionSchema,
+          outputSchema: DynamicTickerExtractionSchema,
           stream: true,
           modelOptions: {
-            temperature: 0.1, reasoning: {
+            temperature: 0.1,
+            reasoning: {
               effort: "none"
             }
           },
