@@ -504,9 +504,9 @@ function ScoreboardPage() {
                 Pipeline Rollup Summary
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs font-mono">
+                <table className="w-full text-left border-collapse text-xs font-mono table-auto min-w-[950px]">
                   <thead>
-                    <tr className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px]">
+                    <tr className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px] whitespace-nowrap">
                       <th className="py-3 px-4 font-bold">Pipeline</th>
                       <th className="py-3 px-4 text-right font-bold">Resolved</th>
                       <th className="py-3 px-4 text-right font-bold">Open</th>
@@ -526,7 +526,7 @@ function ScoreboardPage() {
                       return (
                         <tr
                           key={row.pipeline}
-                          className={`border-b border-brand-border/60 hover:bg-brand-bg/30 transition-colors ${
+                          className={`border-b border-brand-border/60 hover:bg-brand-bg/30 transition-colors whitespace-nowrap ${
                             isAll ? 'bg-brand-bg/60 font-bold border-t-2 border-brand-dark/80' : ''
                           }`}
                         >
@@ -652,15 +652,15 @@ function ScoreboardPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs font-mono">
+                  <table className={`w-full text-left border-collapse text-xs font-mono table-auto ${activeTab === 'resolved' ? 'min-w-[1150px]' : 'min-w-[700px]'}`}>
                     <thead>
                       {activeTable.getHeaderGroups().map(headerGroup => (
-                        <tr key={headerGroup.id} className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px]">
+                        <tr key={headerGroup.id} className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px] whitespace-nowrap">
                           {headerGroup.headers.map(header => (
                             <th
                               key={header.id}
                               colSpan={header.colSpan}
-                              className="py-3 px-4 font-bold select-none cursor-pointer hover:bg-brand-border/40 transition-colors"
+                              className="py-3 px-4 font-bold select-none cursor-pointer hover:bg-brand-border/40 transition-colors whitespace-nowrap"
                               onClick={header.column.getToggleSortingHandler()}
                             >
                               <div className="flex items-center justify-end gap-1.5 first:justify-start">
@@ -674,9 +674,9 @@ function ScoreboardPage() {
                     </thead>
                     <tbody>
                       {activeTable.getRowModel().rows.map(row => (
-                        <tr key={row.id} className="border-b border-brand-border/60 hover:bg-brand-bg/30 transition-colors">
+                        <tr key={row.id} className="border-b border-brand-border/60 hover:bg-brand-bg/30 transition-colors whitespace-nowrap">
                           {row.getVisibleCells().map(cell => (
-                            <td key={cell.id} className="py-3.5 px-4 text-right first:text-left">
+                            <td key={cell.id} className="py-3.5 px-4 text-right first:text-left whitespace-nowrap">
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
                           ))}
