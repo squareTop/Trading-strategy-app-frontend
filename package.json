@@ -13,7 +13,7 @@
     "start": "PORT=4000 node .output/server/index.mjs"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.3.2",
     "@tanstack/ai": "^0.40.0",
     "@tanstack/ai-openrouter": "^0.15.8",
     "@tanstack/ai-react": "^0.16.4",
@@ -25,27 +25,27 @@
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
     "@tanstack/react-table": "^8.21.3",
-    "@tanstack/router-plugin": "^1.132.0",
+    "@tanstack/router-plugin": "^1.168.20",
     "lucide-react": "^0.545.0",
-    "nitro": "npm:nitro-nightly@latest",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "tailwindcss": "^4.1.18",
+    "nitro": "npm:nitro-nightly@3.0.1-20260712-095235-05bf1c38",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/typography": "^0.5.20",
     "@tanstack/devtools-vite": "latest",
     "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.0",
-    "@types/node": "^22.10.2",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^28.1.0",
-    "typescript": "^6.0.2",
-    "vite": "^8.0.0",
-    "vitest": "^4.1.5"
+    "typescript": "^6.0.3",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
