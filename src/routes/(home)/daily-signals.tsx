@@ -27,6 +27,7 @@ import {
   HelpCircle
 } from 'lucide-react'
 import { formatPercent, formatPrice, formatLargeNumber, formatDate } from '../../lib/utils'
+import { API_URL } from '../../lib/config'
 
 export interface DailySignal {
   id: number;
@@ -61,7 +62,7 @@ export interface DailySignal {
 export const dailySignalsQueryOptions = queryOptions({
   queryKey: ['dailySignals'],
   queryFn: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/daily-signals`);
+    const response = await fetch(`${API_URL}/daily-signals`);
     if (!response.ok) {
       throw new Error(`Failed to fetch daily signals: error status ${response.status}`);
     }

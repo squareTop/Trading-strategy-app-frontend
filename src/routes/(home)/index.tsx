@@ -28,6 +28,7 @@ import {
   formatPercent,
   formatPrice
 } from "../../lib/utils";
+import { API_URL } from "../../lib/config";
 import InteractiveChart from '#/components/InteractiveChart';
 
 const POPULAR_TICKERS = [
@@ -44,7 +45,7 @@ export const stockDetailsQueryOptions = (symbol: string) =>
   queryOptions({
     queryKey: ['stockDetails', symbol],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/vmi?symbol=${encodeURIComponent(symbol)}`);
+      const response = await fetch(`${API_URL}/vmi?symbol=${encodeURIComponent(symbol)}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Error status ${response.status} received from system.`);

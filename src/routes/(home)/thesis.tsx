@@ -29,6 +29,7 @@ import {
   MessageSquareText,
 } from 'lucide-react'
 import { formatPrice, formatLargeNumber } from '../../lib/utils'
+import { API_URL } from '../../lib/config'
 import { Link } from '@tanstack/react-router'
 import { TickerExtractionSchema } from '../../lib/thesis-schema'
 import type { TickerExtraction, AnalystNote } from '../../lib/thesis-schema'
@@ -187,8 +188,7 @@ function ThesisPage() {
     analysisAbortRef.current = controller
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const res = await fetch(`${apiUrl}/api/thesis-run`, {
+      const res = await fetch(`${API_URL}/api/thesis-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tickers, equity, risk_pct: riskPct / 100 }),

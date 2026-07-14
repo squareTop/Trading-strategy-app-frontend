@@ -26,6 +26,7 @@ import {
   Clock
 } from 'lucide-react'
 import { formatPercent, formatPrice } from '../../lib/utils'
+import { API_URL } from '../../lib/config'
 
 export interface ScorecardRow {
   pipeline: string;
@@ -68,7 +69,7 @@ export interface ScoreboardResponse {
 export const scoreboardQueryOptions = queryOptions({
   queryKey: ['scoreboard'],
   queryFn: async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/scoreboard`);
+    const response = await fetch(`${API_URL}/api/scoreboard`);
     if (!response.ok) {
       throw new Error(`Failed to fetch scoreboard: error status ${response.status}`);
     }

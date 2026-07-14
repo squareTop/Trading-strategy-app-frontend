@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { chat, toServerSentEventsResponse } from '@tanstack/ai'
 import { openRouterText } from '@tanstack/ai-openrouter'
 import { AnalystNoteSchema } from '#/lib/thesis-schema'
-import { AI_MODEL } from '#/lib/ai-config'
+import { AI_MODEL } from '#/lib/config'
 
 export const Route = createFileRoute('/api/thesis-explain')({
   server: {
