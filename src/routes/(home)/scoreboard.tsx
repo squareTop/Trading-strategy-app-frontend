@@ -11,25 +11,21 @@ import {
 } from '@tanstack/react-table'
 import type { SortingState } from '@tanstack/react-table'
 import {
-  TrendingUp,
-  TrendingDown,
   Search,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ArrowUpRight,
   Layers,
-  Percent,
   CheckCircle,
   Activity,
   Award,
   TrendingUp as SpyIcon,
   SlidersHorizontal,
-  XCircle,
   HelpCircle,
   Clock
 } from 'lucide-react'
-import { formatPercent, formatPrice, formatDate } from '../../lib/utils'
+import { formatPercent, formatPrice } from '../../lib/utils'
 
 export interface ScorecardRow {
   pipeline: string;
@@ -656,14 +652,14 @@ function ScoreboardPage() {
                     <thead>
                       {activeTable.getHeaderGroups().map(headerGroup => (
                         <tr key={headerGroup.id} className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px] whitespace-nowrap">
-                          {headerGroup.headers.map(header => (
+                          {headerGroup.headers.map((header, index) => (
                             <th
                               key={header.id}
                               colSpan={header.colSpan}
                               className="py-3 px-4 font-bold select-none cursor-pointer hover:bg-brand-border/40 transition-colors whitespace-nowrap"
                               onClick={header.column.getToggleSortingHandler()}
                             >
-                              <div className="flex items-center justify-end gap-1.5 first:justify-start">
+                              <div className={`flex items-center gap-1.5 ${index === 0 ? 'justify-start' : 'justify-center'}`}>
                                 {flexRender(header.column.columnDef.header, header.getContext())}
                                 {header.column.getCanSort() && <ArrowUpDown className="w-3 h-3 text-gray-400 shrink-0" />}
                               </div>
@@ -675,8 +671,8 @@ function ScoreboardPage() {
                     <tbody>
                       {activeTable.getRowModel().rows.map(row => (
                         <tr key={row.id} className="border-b border-brand-border/60 hover:bg-brand-bg/30 transition-colors whitespace-nowrap">
-                          {row.getVisibleCells().map(cell => (
-                            <td key={cell.id} className="py-3.5 px-4 text-right first:text-left whitespace-nowrap">
+                          {row.getVisibleCells().map((cell, index) => (
+                            <td key={cell.id} className={`py-3.5 px-4 whitespace-nowrap ${index === 0 ? 'text-left' : 'text-center'}`}>
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
                           ))}
