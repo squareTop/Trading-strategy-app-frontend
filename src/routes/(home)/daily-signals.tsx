@@ -323,10 +323,10 @@ function DailySignalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
-      <main className="max-w-360 mx-auto px-4 md:px-8 mt-8">
-
-        {/* Banner Section */}
+    <div className="min-h-[calc(100vh-61px)] bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-12 flex flex-col">
+      <main className="max-w-360 w-full mx-auto px-4 md:px-8 mt-8 flex-1 flex flex-col justify-between">
+        <div className="flex-1">
+          {/* Banner Section */}
         <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="max-w-2xl">
@@ -623,6 +623,13 @@ function DailySignalsPage() {
             )}
           </div>
         )}
+        </div>
+
+        <div className="mt-12 text-center max-w-3xl mx-auto border-t border-brand-border/40 pt-6">
+          <p className="text-[10px] text-gray-400 font-mono leading-relaxed">
+            Disclaimer: The information provided on this platform is for educational and informational purposes only and does not constitute financial, investment, or legal advice. Trading financial instruments involves significant risk of loss. Past performance is not indicative of future results. Always consult with a licensed professional before making investment decisions.
+          </p>
+        </div>
       </main>
     </div>
   )

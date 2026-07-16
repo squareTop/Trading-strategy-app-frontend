@@ -500,22 +500,23 @@ function ThesisPage() {
   const isRunning = isExtracting || step === 'analyzing' || isExplaining
 
   return (
-    <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
-      <main className="max-w-360 mx-auto px-4 md:px-8 mt-8">
-        <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-              <Sparkles className="w-5 h-5" />
+    <div className="min-h-[calc(100vh-61px)] bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-12 flex flex-col">
+      <main className="max-w-360 w-full mx-auto px-4 md:px-8 mt-8 flex-1 flex flex-col justify-between">
+        <div className="flex-1">
+          <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-mono text-xs text-brand-primary font-bold uppercase tracking-wider block mb-0.5">
+                  AI-Powered Thesis Engine
+                </span>
+                <h1 className="font-display text-2xl md:text-3xl font-extrabold text-brand-dark tracking-tight leading-none">
+                  Thesis Scanner
+                </h1>
+              </div>
             </div>
-            <div>
-              <span className="font-mono text-xs text-brand-primary font-bold uppercase tracking-wider block mb-0.5">
-                AI-Powered Thesis Engine
-              </span>
-              <h1 className="font-display text-2xl md:text-3xl font-extrabold text-brand-dark tracking-tight leading-none">
-                Thesis Scanner
-              </h1>
-            </div>
-          </div>
 
           <p className="text-sm text-gray-500 mb-6 max-w-2xl">
             Describe an investment thesis in plain English. The AI extracts relevant tickers (max 20),
@@ -920,6 +921,13 @@ function ThesisPage() {
             )}
           </div>
         )}
+        </div>
+
+        <div className="mt-12 text-center max-w-3xl mx-auto border-t border-brand-border/40 pt-6">
+          <p className="text-[10px] text-gray-400 font-mono leading-relaxed">
+            Disclaimer: The information provided on this platform is for educational and informational purposes only and does not constitute financial, investment, or legal advice. Trading financial instruments involves significant risk of loss. Past performance is not indicative of future results. Always consult with a licensed professional before making investment decisions.
+          </p>
+        </div>
       </main>
     </div>
   )
