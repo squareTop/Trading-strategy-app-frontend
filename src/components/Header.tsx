@@ -16,21 +16,27 @@ export default function Header() {
     <header className="border-b border-brand-border bg-white px-4 md:px-8 py-3 sticky top-0 z-40 shadow-xs">
       <div className="max-w-360 mx-auto flex items-center justify-between gap-4">
         {/* Brand Wordmark */}
-        <Link to="/" search={{ ticker: undefined }} className="flex items-center gap-3 hover:opacity-90 transition-opacity shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-brand-primary flex items-center justify-center text-white font-extrabold text-lg tracking-wider select-none shadow-md shadow-brand-primary/20">
-            FS
-          </div>
+        <Link to="/" search={{ ticker: undefined }} className="flex items-center gap-2.5 hover:opacity-90 transition-opacity shrink-0">
+          <svg className="w-9 h-9 shrink-0 select-none drop-shadow-[0_4px_6px_rgba(249,115,22,0.12)]" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Left Ear/Face segment */}
+            <path d="M 6,10 L 16,6 L 16,19 L 6,10 Z" fill="#f97316" />
+            {/* Right Ear/Face segment (slightly darker for 3D depth) */}
+            <path d="M 26,10 L 16,6 L 16,19 L 26,10 Z" fill="#c2410c" />
+            {/* Snout */}
+            <path d="M 16,19 L 12,23 L 16,27 L 20,23 Z" fill="#121d25" />
+          </svg>
           <div className="hidden sm:block">
-            <div className="flex items-center gap-1.5">
-              <span className="font-display font-black text-lg tracking-tight text-brand-dark">FC</span>
-              <span className="font-display font-medium text-lg tracking-tight text-brand-dark">FoxelSignal</span>
+            <div className="flex items-center gap-0.5 font-display text-lg tracking-tight leading-none">
+              <span className="font-black text-brand-dark">Foxel</span>
+              <span className="font-medium text-brand-primary">Signal</span>
             </div>
-            <p className="text-[10px] uppercase font-mono tracking-widest text-gray-400 font-bold">
+            <p className="text-[10px] uppercase font-mono tracking-widest text-gray-400 font-bold mt-1.5 leading-none">
               Intelligence Terminal
             </p>
           </div>
-          <div className="sm:hidden">
-            <span className="font-display font-bold text-base tracking-tight text-brand-dark">FC</span>
+          <div className="sm:hidden flex items-center gap-0.5 font-display text-base tracking-tight leading-none">
+            <span className="font-black text-brand-dark">Foxel</span>
+            <span className="font-medium text-brand-primary">Signal</span>
           </div>
         </Link>
 
