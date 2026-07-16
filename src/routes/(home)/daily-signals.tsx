@@ -59,6 +59,19 @@ export interface DailySignal {
   backtest_asof: string | null;
 }
 
+export interface DailySignalJSONAPI {
+  type: string;
+  id: string;
+  attributes: DailySignal;
+}
+
+export interface DailySignalsResponse {
+  data: DailySignalJSONAPI[];
+  meta: {
+    total_scan: number;
+  };
+}
+
 export const dailySignalsQueryOptions = queryOptions({
   queryKey: ['dailySignals'],
   queryFn: async () => {
@@ -66,7 +79,7 @@ export const dailySignalsQueryOptions = queryOptions({
     if (!response.ok) {
       throw new Error(`Failed to fetch daily signals: error status ${response.status}`);
     }
-    return response.json() as Promise<DailySignal[]>;
+    return response.json() as Promise<DailySignalsResponse>;
   }
 })
 
@@ -110,7 +123,14 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
 }
 
 function DailySignalsPage() {
-  const { data: signals, isLoading, error, refetch } = useQuery(dailySignalsQueryOptions)
+  const { data: signalsResponse, isLoading, error, refetch } = useQuery(dailySignalsQueryOptions)
+
+  // Map JSON:API data array to normal list of DailySignals
+  const signals = useMemo(() => {
+    return signalsResponse?.data?.map(item => item.attributes) || []
+  }, [signalsResponse])
+
+  const totalScan = signalsResponse?.meta?.total_scan ?? 200
 
   // Local state for table & filters
   const [sorting, setSorting] = useState<SortingState>([])
@@ -121,7 +141,7 @@ function DailySignalsPage() {
   // Calculate high-level aggregated signals stats
   const stats = useMemo(() => {
     if (!signals || signals.length === 0) {
-      return { total: 0, longCount: 0, shortCount: 0, avgWinRate: 0, passedCount: 0 }
+      return { total: totalScan, longCount: 0, shortCount: 0, avgWinRate: 0, passedCount: 0 }
     }
 
     let longCount = 0
@@ -139,13 +159,13 @@ function DailySignalsPage() {
     })
 
     return {
-      total: signals.length,
+      total: totalScan,
       longCount,
       shortCount: signals.length - longCount,
       avgWinRate: winRateCount > 0 ? winRateSum / winRateCount : 0,
       passedCount,
     }
-  }, [signals])
+  }, [signals, totalScan])
 
   // Get all unique pipeline/strategy options from the data dynamically
   const pipelineStrategyOptions = useMemo(() => {
@@ -373,7 +393,7 @@ function DailySignalsPage() {
         </div>
 
         {/* Stats Grid cards */}
-        {!isLoading && !error && signals && (
+        {!isLoading && !error && signalsResponse && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white border border-brand-border rounded-xl p-4 flex flex-col justify-between shadow-xs">
               <div className="flex items-center gap-2 text-gray-400 mb-2">
@@ -464,7 +484,7 @@ function DailySignalsPage() {
         )}
 
         {/* Filter Toolbar & Data Table */}
-        {!isLoading && !error && signals && (
+        {!isLoading && !error && signalsResponse && (
           <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
             {/* Filter control bar */}
             <div className="p-4 md:p-6 border-b border-brand-border bg-white flex flex-wrap items-center gap-3">
