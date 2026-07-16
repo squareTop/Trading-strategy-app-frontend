@@ -116,6 +116,7 @@ function DailySignalsPage() {
   const [sorting, setSorting] = useState<SortingState>([])
   const [tickerSearch, setTickerSearch] = useState<string>('')
   const [directionFilter, setDirectionFilter] = useState<string>('all')
+  const [pipelineStrategyFilter, setPipelineStrategyFilter] = useState<string>('all')
 
   // Calculate high-level aggregated signals stats
   const stats = useMemo(() => {
@@ -146,6 +147,23 @@ function DailySignalsPage() {
     }
   }, [signals])
 
+  // Get all unique pipeline/strategy options from the data dynamically
+  const pipelineStrategyOptions = useMemo(() => {
+    if (!signals) return []
+    const optionsSet = new Set<string>()
+    signals.forEach(row => {
+      const strategyName = row.selected_strategy || (row.trigger ? row.trigger.split(':')[0] : '')
+      const pipelineName =
+        (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
+        (row.pipeline && PIPELINE_DISPLAY_NAMES[row.pipeline]) ||
+        row.pipeline ||
+        'N/A'
+      const displayVal = `${pipelineName} / ${strategyName || 'N/A'}`
+      optionsSet.add(displayVal)
+    })
+    return Array.from(optionsSet).sort()
+  }, [signals])
+
   // Custom filter logic
   const filteredData = useMemo(() => {
     if (!signals) return []
@@ -153,9 +171,18 @@ function DailySignalsPage() {
       const matchesSearch = s.ticker.toLowerCase().includes(tickerSearch.toLowerCase())
       const matchesDirection = directionFilter === 'all' || s.direction === directionFilter
 
-      return matchesSearch && matchesDirection
+      const strategyName = s.selected_strategy || (s.trigger ? s.trigger.split(':')[0] : '')
+      const pipelineName =
+        (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
+        (s.pipeline && PIPELINE_DISPLAY_NAMES[s.pipeline]) ||
+        s.pipeline ||
+        'N/A'
+      const rowVal = `${pipelineName} / ${strategyName || 'N/A'}`
+      const matchesPipelineStrategy = pipelineStrategyFilter === 'all' || rowVal === pipelineStrategyFilter
+
+      return matchesSearch && matchesDirection && matchesPipelineStrategy
     })
-  }, [signals, tickerSearch, directionFilter])
+  }, [signals, tickerSearch, directionFilter, pipelineStrategyFilter])
 
   // Define Columns
   const columnHelper = createColumnHelper<DailySignal>()
@@ -174,6 +201,20 @@ function DailySignalsPage() {
             <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
           </Link>
         )
+      },
+    }),
+    columnHelper.accessor('signal_date', {
+      header: 'Signal Date',
+      cell: info => {
+        const val = info.getValue()
+        if (!val) return <span className="text-gray-400 font-mono">-</span>
+        const formattedDate = new Date(val).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC"
+        })
+        return <span className="font-mono text-gray-700">{formattedDate}</span>
       },
     }),
     columnHelper.accessor('direction', {
@@ -226,20 +267,6 @@ function DailySignalsPage() {
       header: 'Target Price',
       cell: info => <span className="font-mono text-emerald-600">{formatPrice(info.getValue(), 'USD')}</span>,
     }),
-    columnHelper.accessor('size', {
-      header: 'Alloc Size',
-      cell: info => {
-        const val = info.getValue()
-        return <span className="font-mono text-gray-700">{val !== null ? formatLargeNumber(val) : '-'}</span>
-      },
-    }),
-    columnHelper.accessor('risk_dollars', {
-      header: 'Risk ($)',
-      cell: info => {
-        const val = info.getValue()
-        return <span className="font-mono text-gray-700 font-medium">{val !== null ? formatPrice(val, 'USD') : '-'}</span>
-      },
-    }),
     columnHelper.accessor('win_rate', {
       header: 'Win Rate',
       cell: info => {
@@ -273,23 +300,6 @@ function DailySignalsPage() {
         )
       },
     }),
-    columnHelper.accessor('gate_pass', {
-      header: 'Gate',
-      cell: info => {
-        const val = info.getValue()
-        if (val === null) return <span className="text-gray-400 font-mono">-</span>
-        return (
-          <span
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${val
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}
-          >
-            {val ? 'PASS' : 'FAIL'}
-          </span>
-        )
-      },
-    }),
   ], [columnHelper])
 
   // Instantiate Table
@@ -319,6 +329,7 @@ function DailySignalsPage() {
   const handleResetFilters = () => {
     setTickerSearch('')
     setDirectionFilter('all')
+    setPipelineStrategyFilter('all')
     setSorting([])
   }
 
@@ -487,9 +498,28 @@ function DailySignalsPage() {
                 </select>
               </div>
 
+              {/* Pipeline / Strategy Filter Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
+                  Pipeline / Strategy:
+                </span>
+                <select
+                  value={pipelineStrategyFilter}
+                  onChange={(e) => setPipelineStrategyFilter(e.target.value)}
+                  className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
+                >
+                  <option value="all">All Pipelines / Strategies</option>
+                  {pipelineStrategyOptions.map(opt => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Reset / Actions */}
               <div className="flex items-center gap-3 sm:ml-auto ml-0">
-                {(tickerSearch || directionFilter !== 'all' || sorting.length > 0) && (
+                {(tickerSearch || directionFilter !== 'all' || pipelineStrategyFilter !== 'all' || sorting.length > 0) && (
                   <button
                     onClick={handleResetFilters}
                     className="text-xs text-gray-500 hover:text-brand-primary font-mono font-bold flex items-center gap-1 hover:underline transition-all cursor-pointer whitespace-nowrap"
