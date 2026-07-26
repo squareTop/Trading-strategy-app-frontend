@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,6 +15,9 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  CornerDownRight,
+  Calendar,
   ArrowUpRight,
   Layers,
   CheckCircle,
@@ -27,6 +30,57 @@ import {
 } from 'lucide-react'
 import { formatPercent, formatPrice } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
+
+function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSignal[], label: string): ScorecardRow {
+  const n = resolvedList.length;
+  if (n === 0) {
+    return {
+      pipeline: label,
+      resolved: 0,
+      open: openList.length,
+      win_rate: 0.0,
+      expectancy_r: 0.0,
+      profit_factor: 0.0,
+      total_r: 0.0,
+      backtest_exp_r: 0.0,
+      avg_trade_return: 0.0,
+      avg_spy_return: 0.0,
+      excess_return: 0.0,
+    };
+  }
+  const rs = resolvedList.map(s => s.realized_r).filter((x): x is number => x !== null);
+  const wins = rs.filter(x => x > 0);
+  const grossWin = rs.filter(x => x > 0).reduce((a, b) => a + b, 0);
+  const grossLoss = -rs.filter(x => x < 0).reduce((a, b) => a + b, 0);
+  const pf = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? 999.0 : 0.0;
+  const tradeReturns = resolvedList.map(s => s.trade_return).filter((x): x is number => x !== null);
+  const spyReturns = resolvedList.map(s => s.spy_return).filter((x): x is number => x !== null);
+  const excessReturns = resolvedList.map(s => s.excess_return).filter((x): x is number => x !== null);
+
+  return {
+    pipeline: label,
+    resolved: n,
+    open: openList.length,
+    win_rate: wins.length / n,
+    expectancy_r: rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0.0,
+    profit_factor: pf,
+    total_r: rs.reduce((a, b) => a + b, 0),
+    backtest_exp_r: 0.0,
+    avg_trade_return: tradeReturns.length ? tradeReturns.reduce((a, b) => a + b, 0) / tradeReturns.length : 0.0,
+    avg_spy_return: spyReturns.length ? spyReturns.reduce((a, b) => a + b, 0) / spyReturns.length : 0.0,
+    excess_return: excessReturns.length ? excessReturns.reduce((a, b) => a + b, 0) / excessReturns.length : 0.0,
+  };
+}
+
+function formatMonthLabel(yyyymm: string): string {
+  if (yyyymm === 'all') return 'All Time';
+  const [yearStr, monthStr] = yyyymm.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  if (isNaN(year) || isNaN(month)) return yyyymm;
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
 
 export interface ScorecardRow {
   pipeline: string;
@@ -101,32 +155,112 @@ function ScoreboardPage() {
   const [pipelineFilter, setPipelineFilter] = useState<string>('all')
   const [directionFilter, setDirectionFilter] = useState<string>('all')
 
-  // Calculate high-level stats from scorecard ALL row
-  const overallStats = useMemo(() => {
-    if (!data?.scorecard) return null;
-    const allRow = data.scorecard.find(row => row.pipeline === 'ALL');
-    return allRow || null;
+  // Month & Strategy Expansion State
+  const [monthFilter, setMonthFilter] = useState<string>('all')
+  const [expandedPipelines, setExpandedPipelines] = useState<Record<string, boolean>>({})
+
+  const togglePipelineExpand = (pipelineKey: string) => {
+    setExpandedPipelines(prev => ({
+      ...prev,
+      [pipelineKey]: !prev[pipelineKey]
+    }))
+  }
+
+  // Derive unique available months (YYYY-MM)
+  const availableMonths = useMemo(() => {
+    if (!data) return []
+    const allSignals = [...(data.resolved_signals || []), ...(data.open_signals || [])]
+    const monthsSet = new Set<string>()
+    allSignals.forEach(s => {
+      if (s.signal_date) {
+        const yyyymm = s.signal_date.slice(0, 7)
+        if (/^\d{4}-\d{2}$/.test(yyyymm)) {
+          monthsSet.add(yyyymm)
+        }
+      }
+    })
+    return Array.from(monthsSet).sort().reverse()
   }, [data])
 
-  const filteredResolved = useMemo(() => {
+  // Signals filtered by active month selection
+  const monthFilteredResolved = useMemo(() => {
     if (!data?.resolved_signals) return []
-    return data.resolved_signals.filter(s => {
+    if (monthFilter === 'all') return data.resolved_signals
+    return data.resolved_signals.filter(s => s.signal_date?.startsWith(monthFilter))
+  }, [data, monthFilter])
+
+  const monthFilteredOpen = useMemo(() => {
+    if (!data?.open_signals) return []
+    if (monthFilter === 'all') return data.open_signals
+    return data.open_signals.filter(s => s.signal_date?.startsWith(monthFilter))
+  }, [data, monthFilter])
+
+  // Dynamic scorecard calculation including sub-strategy breakdown
+  const dynamicScorecardData = useMemo(() => {
+    if (!data) return { pipelines: [], allRow: null }
+
+    const resolved = monthFilteredResolved
+    const open = monthFilteredOpen
+
+    const pipeKeys = Array.from(
+      new Set([...resolved.map(s => s.pipeline), ...open.map(s => s.pipeline)].filter(Boolean))
+    ).sort()
+
+    const pipelineRows = pipeKeys.map(p => {
+      const pipeResolved = resolved.filter(s => s.pipeline === p)
+      const pipeOpen = open.filter(s => s.pipeline === p)
+
+      const stratNames = Array.from(
+        new Set([
+          ...pipeResolved.map(s => s.selected_strategy || 'Default Strategy'),
+          ...pipeOpen.map(s => s.selected_strategy || 'Default Strategy')
+        ])
+      ).sort()
+
+      const strategyRows = stratNames.map(strat => {
+        const stratResolved = pipeResolved.filter(s => (s.selected_strategy || 'Default Strategy') === strat)
+        const stratOpen = pipeOpen.filter(s => (s.selected_strategy || 'Default Strategy') === strat)
+        return {
+          strategyName: strat,
+          bucket: computeBucket(stratResolved, stratOpen, strat)
+        }
+      })
+
+      return {
+        pipeline: p,
+        bucket: computeBucket(pipeResolved, pipeOpen, p),
+        strategies: strategyRows
+      }
+    })
+
+    const allRow = computeBucket(resolved, open, 'ALL')
+
+    return {
+      pipelines: pipelineRows,
+      allRow
+    }
+  }, [data, monthFilteredResolved, monthFilteredOpen])
+
+  // Overall stats for KPI grid (dynamically reflects month filter)
+  const overallStats = dynamicScorecardData.allRow
+
+  const filteredResolved = useMemo(() => {
+    return monthFilteredResolved.filter(s => {
       const matchesSearch = s.ticker.toLowerCase().includes(tickerSearch.toLowerCase())
       const matchesPipeline = pipelineFilter === 'all' || s.pipeline === pipelineFilter
       const matchesDirection = directionFilter === 'all' || s.direction === directionFilter
       return matchesSearch && matchesPipeline && matchesDirection
     })
-  }, [data, tickerSearch, pipelineFilter, directionFilter])
+  }, [monthFilteredResolved, tickerSearch, pipelineFilter, directionFilter])
 
   const filteredOpen = useMemo(() => {
-    if (!data?.open_signals) return []
-    return data.open_signals.filter(s => {
+    return monthFilteredOpen.filter(s => {
       const matchesSearch = s.ticker.toLowerCase().includes(tickerSearch.toLowerCase())
       const matchesPipeline = pipelineFilter === 'all' || s.pipeline === pipelineFilter
       const matchesDirection = directionFilter === 'all' || s.direction === directionFilter
       return matchesSearch && matchesPipeline && matchesDirection
     })
-  }, [data, tickerSearch, pipelineFilter, directionFilter])
+  }, [monthFilteredOpen, tickerSearch, pipelineFilter, directionFilter])
 
   // React Table Columns for Resolved Signals
   const resolvedColumnHelper = createColumnHelper<ScoreboardSignal>()
@@ -352,6 +486,7 @@ function ScoreboardPage() {
     setTickerSearch('')
     setPipelineFilter('all')
     setDirectionFilter('all')
+    setMonthFilter('all')
     setSorting([])
   }
 
@@ -496,15 +631,36 @@ function ScoreboardPage() {
 
             {/* Scorecard Rollup Section */}
             <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs mb-8">
-              <h2 className="font-display text-lg font-bold text-brand-dark mb-4 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-brand-primary" />
-                Pipeline Rollup Summary
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <h2 className="font-display text-lg font-bold text-brand-dark flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-brand-primary" />
+                  Pipeline Rollup Summary
+                </h2>
+
+                {/* Timeframe / Month Selector */}
+                <div className="flex items-center gap-2 bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border text-xs font-mono">
+                  <Calendar className="w-4 h-4 text-brand-primary shrink-0" />
+                  <span className="text-gray-500 font-bold uppercase text-[10px]">Timeframe:</span>
+                  <select
+                    value={monthFilter}
+                    onChange={e => setMonthFilter(e.target.value)}
+                    className="bg-transparent border-0 text-xs font-mono font-bold text-brand-dark focus:outline-hidden cursor-pointer p-0"
+                  >
+                    <option value="all">All Time ({availableMonths.length} Months)</option>
+                    {availableMonths.map(m => (
+                      <option key={m} value={m}>
+                        {formatMonthLabel(m)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs font-mono table-auto min-w-[950px]">
                   <thead>
                     <tr className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px] whitespace-nowrap">
-                      <th className="py-3 px-4 font-bold">Pipeline</th>
+                      <th className="py-3 px-4 font-bold">Pipeline / Strategy</th>
                       <th className="py-3 px-4 text-right font-bold">Resolved</th>
                       <th className="py-3 px-4 text-right font-bold">Open</th>
                       <th className="py-3 px-4 text-right font-bold">Win Rate</th>
@@ -518,47 +674,156 @@ function ScoreboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.scorecard.map((row) => {
-                      const isAll = row.pipeline === 'ALL'
+                    {/* Render each pipeline and its expandable strategies */}
+                    {dynamicScorecardData.pipelines.map((pipeGroup) => {
+                      const row = pipeGroup.bucket
+                      const isExpanded = !!expandedPipelines[row.pipeline]
+                      const hasStrategies = pipeGroup.strategies.length > 0
+
                       return (
-                        <tr
-                          key={row.pipeline}
-                          className={`border-b border-brand-border/60 hover:bg-brand-bg/30 transition-colors whitespace-nowrap ${
-                            isAll ? 'bg-brand-bg/60 font-bold border-t-2 border-brand-dark/80' : ''
-                          }`}
-                        >
-                          <td className="py-3 px-4 font-sans font-bold">
-                            {PIPELINE_DISPLAY_NAMES[row.pipeline] || row.pipeline}
-                          </td>
-                          <td className="py-3 px-4 text-right">{row.resolved}</td>
-                          <td className="py-3 px-4 text-right">{row.open}</td>
+                        <React.Fragment key={row.pipeline}>
+                          {/* Parent Pipeline Row */}
+                          <tr
+                            className={`border-b border-brand-border/60 hover:bg-brand-bg/40 transition-colors whitespace-nowrap ${
+                              isExpanded ? 'bg-brand-bg/50' : ''
+                            }`}
+                          >
+                            <td className="py-3 px-4 font-sans font-bold">
+                              <div className="flex items-center gap-2">
+                                {hasStrategies && (
+                                  <button
+                                    onClick={() => togglePipelineExpand(row.pipeline)}
+                                    className="p-1 rounded hover:bg-brand-border/60 text-gray-600 transition-colors cursor-pointer"
+                                    title={isExpanded ? 'Collapse strategy details' : 'Expand strategy details'}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-brand-primary" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                                    )}
+                                  </button>
+                                )}
+                                <span className="cursor-pointer" onClick={() => hasStrategies && togglePipelineExpand(row.pipeline)}>
+                                  {PIPELINE_DISPLAY_NAMES[row.pipeline] || row.pipeline}
+                                </span>
+                                {hasStrategies && (
+                                  <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-normal">
+                                    {pipeGroup.strategies.length} {pipeGroup.strategies.length === 1 ? 'strategy' : 'strategies'}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right font-bold">{row.resolved}</td>
+                            <td className="py-3 px-4 text-right">{row.open}</td>
+                            <td className="py-3 px-4 text-right">
+                              {row.resolved > 0 ? formatPercent(row.win_rate) : '-'}
+                            </td>
+                            <td className={`py-3 px-4 text-right font-bold ${row.expectancy_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {row.resolved > 0 ? `${row.expectancy_r >= 0 ? '+' : ''}${row.expectancy_r.toFixed(2)} R` : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              {row.resolved > 0 ? row.profit_factor.toFixed(2) : '-'}
+                            </td>
+                            <td className={`py-3 px-4 text-right font-bold ${row.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {row.resolved > 0 ? `${row.total_r >= 0 ? '+' : ''}${row.total_r.toFixed(1)} R` : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-500">
+                              {row.resolved > 0 ? `${row.backtest_exp_r >= 0 ? '+' : ''}${row.backtest_exp_r.toFixed(2)} R` : '-'}
+                            </td>
+                            <td className={`py-3 px-4 text-right font-bold ${row.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {row.resolved > 0 ? `${row.avg_trade_return >= 0 ? '+' : ''}${formatPercent(row.avg_trade_return)}` : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {row.resolved > 0 ? `${row.avg_spy_return >= 0 ? '+' : ''}${formatPercent(row.avg_spy_return)}` : '-'}
+                            </td>
+                            <td className={`py-3 px-4 text-right font-black ${row.excess_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {row.resolved > 0 ? `${row.excess_return >= 0 ? '+' : ''}${formatPercent(row.excess_return)}` : '-'}
+                            </td>
+                          </tr>
+
+                          {/* Sub-strategy rows when expanded */}
+                          {isExpanded &&
+                            pipeGroup.strategies.map((stratItem) => {
+                              const sRow = stratItem.bucket
+                              return (
+                                <tr
+                                  key={`${row.pipeline}-${stratItem.strategyName}`}
+                                  className="border-b border-brand-border/40 bg-brand-bg/30 hover:bg-brand-bg/70 transition-colors whitespace-nowrap"
+                                >
+                                  <td className="py-2.5 px-4 font-sans pl-10 text-gray-700 text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <CornerDownRight className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                                      <span className="font-mono text-xs font-semibold text-brand-dark">
+                                        {stratItem.strategyName}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">{sRow.resolved}</td>
+                                  <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">{sRow.open}</td>
+                                  <td className="py-2.5 px-4 text-right font-mono text-xs">
+                                    {sRow.resolved > 0 ? formatPercent(sRow.win_rate) : '-'}
+                                  </td>
+                                  <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.expectancy_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                                    {sRow.resolved > 0 ? `${sRow.expectancy_r >= 0 ? '+' : ''}${sRow.expectancy_r.toFixed(2)} R` : '-'}
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
+                                    {sRow.resolved > 0 ? sRow.profit_factor.toFixed(2) : '-'}
+                                  </td>
+                                  <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                                    {sRow.resolved > 0 ? `${sRow.total_r >= 0 ? '+' : ''}${sRow.total_r.toFixed(1)} R` : '-'}
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-400">-</td>
+                                  <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                                    {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
+                                    {sRow.resolved > 0 ? `${sRow.avg_spy_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_spy_return)}` : '-'}
+                                  </td>
+                                  <td className={`py-2.5 px-4 text-right font-mono text-xs font-black ${sRow.excess_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                                    {sRow.resolved > 0 ? `${sRow.excess_return >= 0 ? '+' : ''}${formatPercent(sRow.excess_return)}` : '-'}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                        </React.Fragment>
+                      )
+                    })}
+
+                    {/* Overall ALL Row */}
+                    {dynamicScorecardData.allRow && (() => {
+                      const allRow = dynamicScorecardData.allRow
+                      return (
+                        <tr className="bg-brand-bg/60 font-bold border-t-2 border-brand-dark/80 whitespace-nowrap">
+                          <td className="py-3 px-4 font-sans font-bold">All Pipelines</td>
+                          <td className="py-3 px-4 text-right">{allRow.resolved}</td>
+                          <td className="py-3 px-4 text-right">{allRow.open}</td>
                           <td className="py-3 px-4 text-right">
-                            {row.resolved > 0 ? formatPercent(row.win_rate) : '-'}
+                            {allRow.resolved > 0 ? formatPercent(allRow.win_rate) : '-'}
                           </td>
-                          <td className={`py-3 px-4 text-right font-bold ${row.expectancy_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                            {row.resolved > 0 ? `${row.expectancy_r >= 0 ? '+' : ''}${row.expectancy_r.toFixed(2)} R` : '-'}
+                          <td className={`py-3 px-4 text-right font-bold ${allRow.expectancy_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {allRow.resolved > 0 ? `${allRow.expectancy_r >= 0 ? '+' : ''}${allRow.expectancy_r.toFixed(2)} R` : '-'}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            {row.resolved > 0 ? row.profit_factor.toFixed(2) : '-'}
+                            {allRow.resolved > 0 ? allRow.profit_factor.toFixed(2) : '-'}
                           </td>
-                          <td className={`py-3 px-4 text-right font-bold ${row.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                            {row.resolved > 0 ? `${row.total_r >= 0 ? '+' : ''}${row.total_r.toFixed(1)} R` : '-'}
+                          <td className={`py-3 px-4 text-right font-bold ${allRow.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {allRow.resolved > 0 ? `${allRow.total_r >= 0 ? '+' : ''}${allRow.total_r.toFixed(1)} R` : '-'}
                           </td>
                           <td className="py-3 px-4 text-right text-gray-500">
-                            {row.resolved > 0 ? `${row.backtest_exp_r >= 0 ? '+' : ''}${row.backtest_exp_r.toFixed(2)} R` : '-'}
+                            {allRow.resolved > 0 ? `${allRow.backtest_exp_r >= 0 ? '+' : ''}${allRow.backtest_exp_r.toFixed(2)} R` : '-'}
                           </td>
-                          <td className={`py-3 px-4 text-right font-bold ${row.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                            {row.resolved > 0 ? `${row.avg_trade_return >= 0 ? '+' : ''}${formatPercent(row.avg_trade_return)}` : '-'}
+                          <td className={`py-3 px-4 text-right font-bold ${allRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {allRow.resolved > 0 ? `${allRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(allRow.avg_trade_return)}` : '-'}
                           </td>
                           <td className="py-3 px-4 text-right text-gray-600">
-                            {row.resolved > 0 ? `${row.avg_spy_return >= 0 ? '+' : ''}${formatPercent(row.avg_spy_return)}` : '-'}
+                            {allRow.resolved > 0 ? `${allRow.avg_spy_return >= 0 ? '+' : ''}${formatPercent(allRow.avg_spy_return)}` : '-'}
                           </td>
-                          <td className={`py-3 px-4 text-right font-black ${row.excess_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                            {row.resolved > 0 ? `${row.excess_return >= 0 ? '+' : ''}${formatPercent(row.excess_return)}` : '-'}
+                          <td className={`py-3 px-4 text-right font-black ${allRow.excess_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {allRow.resolved > 0 ? `${allRow.excess_return >= 0 ? '+' : ''}${formatPercent(allRow.excess_return)}` : '-'}
                           </td>
                         </tr>
                       )
-                    })}
+                    })()}
                   </tbody>
                 </table>
               </div>
