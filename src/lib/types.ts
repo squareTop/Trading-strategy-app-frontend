@@ -19,7 +19,8 @@ export interface FoxelSignalIVResponse {
   total_assets: number;
   current_debt: number;
   long_term_debt: number;
-  eps_growth: number;
+  eps_growth_yoy: number;
+  projected_eps_growth_3_5y: number;
   price_to_book_ratios_ttm: number;
   price_to_earnings_ratios_ttm: number;
   return_on_invested_capital_ttm: number;
@@ -52,7 +53,7 @@ export interface FoxelSignalIVResponse {
   debt_per_share_fcf: number;
 
   current_year: number;
-  
+
   // ETF Data Points
   is_etf?: boolean;
   exchange?: string;

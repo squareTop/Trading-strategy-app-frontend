@@ -499,10 +499,10 @@ function App() {
                     EPS Growth Rate
                   </span>
                   <span className="font-mono text-xl font-black text-brand-primary">
-                    {formatPercent(data.eps_growth)}
+                    {formatPercent(data.projected_eps_growth_3_5y)}
                   </span>
                   <span className="block text-[9px] text-gray-400 mt-1">
-                    Year-over-year growth
+                    Projected 3–5 Yr EPS Growth (Analyst Consensus)
                   </span>
                 </div>
 
@@ -819,11 +819,11 @@ function App() {
                     <Compass className="w-3.5 h-3.5 text-blue-600 animate-spin-slow" />
                     <span>Exchange Traded Fund (ETF)</span>
                   </div>
-                  
+
                   <h2 className="font-display text-2.5xl md:text-3.5xl font-black text-brand-dark mt-3 leading-tight tracking-tight">
                     {data.name}
                   </h2>
-                  
+
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2.5 text-xs text-gray-500 font-mono">
                     <span className="font-bold text-brand-primary text-sm">{data.symbol}</span>
                     <span>•</span>
@@ -907,10 +907,10 @@ function App() {
                   <p className="font-mono text-2xl font-black text-brand-dark leading-none pt-1">
                     {data.inception_date
                       ? new Date(data.inception_date).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
                       : "N/A"}
                   </p>
                 </div>
