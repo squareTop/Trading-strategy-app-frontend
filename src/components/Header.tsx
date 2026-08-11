@@ -13,8 +13,8 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <header className="border-b border-brand-border bg-white px-4 md:px-8 py-3 sticky top-0 z-40 shadow-xs">
-      <div className="max-w-360 mx-auto flex items-center justify-between gap-4">
+    <header className="border-b border-brand-border bg-white px-3 sm:px-4 md:px-8 py-2.5 sm:py-3 sticky top-0 z-40 shadow-xs">
+      <div className="max-w-360 mx-auto flex items-center justify-between gap-3 sm:gap-4">
         {/* Brand Wordmark */}
         <Link to="/" search={{ ticker: undefined }} className="flex items-center gap-2.5 hover:opacity-90 transition-opacity shrink-0">
           <svg className="w-9 h-9 shrink-0 select-none drop-shadow-[0_4px_6px_rgba(249,115,22,0.12)]" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">

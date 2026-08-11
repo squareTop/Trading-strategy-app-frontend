@@ -93,22 +93,22 @@ export default function InteractiveChart({
   const currentHovered = hoveredIndex !== null ? points[hoveredIndex] : null;
 
   return (
-    <div className="bg-white border border-brand-border rounded-xl p-6 transition-all duration-200">
+    <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 transition-all duration-200">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border pb-4 mb-6">
         <div>
           <span className="font-mono text-xs text-brand-primary font-bold uppercase tracking-wider">
             20-Year Forecasting Simulation
           </span>
-          <h4 className="font-display text-xl font-semibold text-brand-dark mt-1">
+          <h4 className="font-display text-lg sm:text-xl font-semibold text-brand-dark mt-1">
             Projection Model: {label}
           </h4>
         </div>
 
         {/* View Toggle */}
-        <div className="flex bg-brand-bg p-1 rounded-lg border border-brand-border self-start">
+        <div className="w-full sm:w-auto flex bg-brand-bg p-1 rounded-lg border border-brand-border self-start">
           <button
             onClick={() => setViewMode("pv")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${viewMode === "pv"
+            className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold text-center rounded-md transition-all ${viewMode === "pv"
                 ? "bg-white text-brand-dark shadow-sm"
                 : "text-gray-500 hover:text-brand-dark"
               }`}
@@ -117,7 +117,7 @@ export default function InteractiveChart({
           </button>
           <button
             onClick={() => setViewMode("nominal")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${viewMode === "nominal"
+            className={`flex-1 sm:flex-initial px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold text-center rounded-md transition-all ${viewMode === "nominal"
                 ? "bg-white text-brand-dark shadow-sm"
                 : "text-gray-500 hover:text-brand-dark"
               }`}

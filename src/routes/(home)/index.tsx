@@ -156,24 +156,24 @@ function App() {
   return (
     <div className="min-h-screen bg-brand-bg font-sans selection:bg-brand-primary/20 selection:text-brand-dark pb-20">
       {/* Main Terminal Frame Layout */}
-      <main className="max-w-360 mx-auto px-4 md:px-8 mt-8">
+      <main className="max-w-360 mx-auto px-3 sm:px-4 md:px-8 mt-4 sm:mt-8">
         {/* Search & Selection Card */}
-        <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
+        <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 md:p-8 shadow-xs">
           <div className="max-w-2xl">
             <span className="font-mono text-xs text-brand-primary font-bold uppercase tracking-wider block mb-1">
               Active Evaluation Terminal
             </span>
-            <h1 className="font-display text-2xl md:text-3.5xl font-extrabold text-brand-dark tracking-tight leading-none">
+            <h1 className="font-display text-xl sm:text-2xl md:text-3.5xl font-extrabold text-brand-dark tracking-tight leading-tight sm:leading-none">
               Explore Enterprise Intrinsic Valuation
             </h1>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">
               Provide a global equities ticker symbol (e.g. AAPL, AMZN, MSFT) below. Our engine pulls live filings
               and models intrinsic values via Net Income, Operating Cash Flow, and Free Cash Flow Discounting.
             </p>
           </div>
 
           {/* Form input - Precise styling round 8px inputs, 14px button with orange glow */}
-          <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-3">
+          <form onSubmit={handleSearchSubmit} className="mt-5 sm:mt-6 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                 <Search className="w-4 h-4" />
@@ -184,14 +184,14 @@ function App() {
                 placeholder="Enter stock ticker (e.g. MSFT)..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-mono font-semibold placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all text-sm uppercase"
+                className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-mono font-semibold placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all text-sm uppercase"
               />
             </div>
             <button
               id="search-btn"
               type="submit"
               disabled={showLoading}
-              className="px-6 py-3 rounded-xl bg-brand-primary text-white text-xs font-extrabold uppercase tracking-wide hover:bg-brand-primary-hover active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20"
+              className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-brand-primary text-white text-xs font-extrabold uppercase tracking-wide hover:bg-brand-primary-hover active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20 shrink-0"
             >
               {showLoading ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -209,8 +209,8 @@ function App() {
           </p>
 
           {/* Quick Tickers Selection Bar */}
-          <div className="mt-5 pt-4 border-t border-brand-border flex flex-wrap items-center gap-2">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-gray-400 mr-2">
+          <div className="mt-5 pt-4 border-t border-brand-border flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-gray-400 block sm:inline-block w-full sm:w-auto mb-1 sm:mb-0">
               Instant Profiles:
             </span>
             {POPULAR_TICKERS.map((pt) => (
@@ -223,7 +223,7 @@ function App() {
                     search: (prev) => ({ ...prev, ticker: pt.symbol }),
                   });
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all border ${ticker === pt.symbol
+                className={`px-2.5 py-1.5 sm:px-3 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all border ${ticker === pt.symbol
                   ? "bg-brand-primary text-white border-brand-primary"
                   : "bg-brand-bg text-gray-600 border-brand-border hover:border-brand-primary hover:text-brand-primary hover:bg-white"
                   }`}
@@ -283,31 +283,31 @@ function App() {
             {/* Stock Metadata Profile Card */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Profile Card Left */}
-              <div className="col-span-1 lg:col-span-2 bg-white border border-brand-border rounded-xl p-6 flex flex-col justify-between shadow-xs">
+              <div className="col-span-1 lg:col-span-2 bg-white border border-brand-border rounded-xl p-4 sm:p-6 flex flex-col justify-between shadow-xs">
                 <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
+                  <div className="flex flex-col xs:flex-row sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                    <div className="min-w-0">
                       <div className="inline-flex items-center gap-1.5 bg-brand-bg text-brand-dark text-[10px] font-mono font-bold px-2.5 py-1 rounded-sm border border-brand-border">
                         <Building2 className="w-3 h-3 text-brand-primary" />
                         <span>Corporate Profile</span>
                       </div>
-                      <h2 className="font-display text-2xl font-black text-brand-dark mt-2.5 leading-none">
+                      <h2 className="font-display text-xl sm:text-2xl font-black text-brand-dark mt-2.5 leading-tight sm:leading-none break-words">
                         {data.name}
                       </h2>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 font-mono">
+                      <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500 font-mono">
                         <span className="font-bold text-brand-primary text-sm">{data.symbol}</span>
                         <span>•</span>
-                        <span>Financial Currency: {data.financial_currency}</span>
+                        <span className="whitespace-nowrap">Financial Currency: {data.financial_currency}</span>
                         <span>•</span>
-                        <span>Exchange: {data.listing_currency}</span>
+                        <span className="whitespace-nowrap">Exchange: {data.listing_currency}</span>
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-left xs:text-right shrink-0">
                       <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-400 block">
                         Last Close Price
                       </span>
-                      <p className="font-mono text-2.5xl font-black text-brand-dark leading-none mt-1">
+                      <p className="font-mono text-2xl sm:text-2.5xl font-black text-brand-dark leading-none mt-1">
                         {formatPrice(data.last_close_price, data.listing_currency)}
                       </p>
                       <p className="text-[10px] font-mono text-gray-400 mt-1">
@@ -317,39 +317,39 @@ function App() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-brand-border">
-                  <div className="bg-brand-bg/50 p-3 rounded-lg border border-brand-border/40 text-center sm:text-left">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 pt-6 border-t border-brand-border">
+                  <div className="bg-brand-bg/50 p-2.5 sm:p-3 rounded-lg border border-brand-border/40 text-left">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-0.5 truncate">
                       System Beta (Volatility)
                     </span>
-                    <span className="font-mono text-base font-extrabold text-brand-dark">
+                    <span className="font-mono text-sm sm:text-base font-extrabold text-brand-dark">
                       {data.beta}
                     </span>
-                    <span className="block text-[9px] text-gray-400 mt-0.5">
+                    <span className="block text-[9px] text-gray-400 mt-0.5 truncate">
                       {data.beta > 1 ? "Higher volatility" : "Stable profile"}
                     </span>
                   </div>
 
-                  <div className="bg-brand-bg/50 p-3 rounded-lg border border-brand-border/40 col-span-1 text-center sm:text-left">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+                  <div className="bg-brand-bg/50 p-2.5 sm:p-3 rounded-lg border border-brand-border/40 text-left">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-0.5 truncate">
                       Hurdle / Discount Rate
                     </span>
-                    <span className="font-mono text-base font-extrabold text-[#964a1d]">
+                    <span className="font-mono text-sm sm:text-base font-extrabold text-[#964a1d]">
                       {formatPercent(data.discount_rate)}
                     </span>
-                    <span className="block text-[9px] text-gray-400 mt-0.5">
+                    <span className="block text-[9px] text-gray-400 mt-0.5 truncate">
                       Standard hurdle limit
                     </span>
                   </div>
 
-                  <div className="bg-brand-bg/50 p-3 rounded-lg border border-brand-border/40 col-span-2 sm:col-span-1 text-center sm:text-left">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+                  <div className="bg-brand-bg/50 p-2.5 sm:p-3 rounded-lg border border-brand-border/40 col-span-1 xs:col-span-2 sm:col-span-1 text-left">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-0.5 truncate">
                       Shares Outstanding
                     </span>
-                    <span className="font-mono text-base font-extrabold text-brand-dark leading-none">
+                    <span className="font-mono text-sm sm:text-base font-extrabold text-brand-dark leading-none">
                       {formatLargeNumber(data.shares_outstanding)}
                     </span>
-                    <span className="block text-[9px] text-gray-400 mt-1.5">
+                    <span className="block text-[9px] text-gray-400 mt-1 sm:mt-1.5 truncate">
                       Weighted base
                     </span>
                   </div>
@@ -357,7 +357,7 @@ function App() {
               </div>
 
               {/* Cash & Debt Adjustment Box */}
-              <div className="bg-white border border-brand-border rounded-xl p-6 flex flex-col justify-between shadow-xs">
+              <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 flex flex-col justify-between shadow-xs">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Layers className="w-4 h-4 text-brand-primary" />
@@ -367,28 +367,28 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
-                      <div>
-                        <span className="font-bold text-brand-dark block">Total Corporate Assets</span>
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">Total Corporate Assets</span>
                         <span className="text-[10px] text-gray-400 font-mono">
                           Book Value
                         </span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <strong className="font-mono text-brand-dark text-sm">
                           {formatFinancial(data.total_assets, data.listing_currency)}
                         </strong>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
-                      <div>
-                        <span className="font-bold text-brand-dark block">Cash & Liquid Equivalents</span>
-                        <span className="text-[10px] text-gray-400 font-mono">
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">Cash & Liquid Equivalents</span>
+                        <span className="text-[10px] text-gray-400 font-mono block break-all">
                           {formatFinancial(data.cash_and_equivalents, data.listing_currency)}
                         </span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <strong className="font-mono text-green-600 block">
                           +{formatPrice(data.cash_per_share_fcf, data.listing_currency)}
                         </strong>
@@ -396,22 +396,22 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-start text-xs pb-3 border-b border-brand-border/50">
-                      <div>
-                        <span className="font-bold text-brand-dark block">Total Funded Debt Load</span>
-                        <span className="text-[10px] text-gray-400 font-mono block">
+                    <div className="flex justify-between items-start text-xs pb-3 border-b border-brand-border/50 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">Total Funded Debt Load</span>
+                        <span className="text-[10px] text-gray-400 font-mono block break-all">
                           {formatFinancial(data.total_debt, data.listing_currency)}
                         </span>
                         <div className="mt-1 pl-2 border-l-2 border-brand-border space-y-0.5">
-                          <span className="text-[9px] text-gray-500 font-mono block">
+                          <span className="text-[9px] text-gray-500 font-mono block break-all">
                             Current Debt: {formatFinancial(data.current_debt, data.listing_currency)}
                           </span>
-                          <span className="text-[9px] text-gray-500 font-mono block">
+                          <span className="text-[9px] text-gray-500 font-mono block break-all">
                             Long Term Debt: {formatFinancial(data.long_term_debt, data.listing_currency)}
                           </span>
                         </div>
                       </div>
-                      <div className="text-right font-mono">
+                      <div className="text-right font-mono shrink-0">
                         <strong className="text-red-600 block">
                           -{formatPrice(data.debt_per_share_fcf, data.listing_currency)}
                         </strong>
@@ -419,12 +419,12 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-bold text-brand-dark block">Net Balance Sheet Weight</span>
+                    <div className="flex justify-between items-center text-xs gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">Net Balance Sheet Weight</span>
                         <span className="text-[10px] text-gray-400 font-mono">Adjusted equity modifier</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <strong className={`font-mono block ${(data.cash_per_share_fcf - data.debt_per_share_fcf) >= 0
                           ? "text-green-600"
                           : "text-red-700"
@@ -445,115 +445,115 @@ function App() {
             </div>
 
             {/* Key Valuation & Performance Metrics Card */}
-            <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
+            <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs">
               <div className="flex items-center gap-2 mb-6 pb-4 border-b border-brand-border">
                 <BarChart3 className="w-5 h-5 text-brand-primary" />
-                <h3 className="font-display text-base font-bold text-brand-dark uppercase tracking-wider">
+                <h3 className="font-display text-sm sm:text-base font-bold text-brand-dark uppercase tracking-wider">
                   Key Valuation & Financial Metrics (TTM)
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {/* Price to Earnings (P/E) Ratio */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Price to Earnings (P/E)
                   </span>
-                  <span className="font-mono text-xl font-black text-brand-dark">
+                  <span className="font-mono text-lg sm:text-xl font-black text-brand-dark block truncate">
                     {data.price_to_earnings_ratios_ttm ? data.price_to_earnings_ratios_ttm.toFixed(2) : "N/A"}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Trailing twelve months (TTM)
                   </span>
                 </div>
 
                 {/* Price to Book (P/B) Ratio */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Price to Book (P/B)
                   </span>
-                  <span className="font-mono text-xl font-black text-brand-dark">
+                  <span className="font-mono text-lg sm:text-xl font-black text-brand-dark block truncate">
                     {data.price_to_book_ratios_ttm ? data.price_to_book_ratios_ttm.toFixed(2) : "N/A"}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Multiple of book value
                   </span>
                 </div>
 
                 {/* Return on Invested Capital (ROIC) */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Return on Capital (ROIC)
                   </span>
-                  <span className="font-mono text-xl font-black text-emerald-700">
+                  <span className="font-mono text-lg sm:text-xl font-black text-emerald-700 block truncate">
                     {formatPercent(data.return_on_invested_capital_ttm)}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Capital allocation efficiency
                   </span>
                 </div>
 
                 {/* EPS Growth Rate */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     EPS Growth Rate
                   </span>
-                  <span className="font-mono text-xl font-black text-brand-primary">
+                  <span className="font-mono text-lg sm:text-xl font-black text-brand-primary block truncate">
                     {formatPercent(data.projected_eps_growth_3_5y)}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
-                    Projected 3–5 Yr EPS Growth (Analyst Consensus)
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
+                    Projected 3–5 Yr EPS Growth
                   </span>
                 </div>
 
                 {/* Net Income */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Net Income (TTM)
                   </span>
-                  <span className="font-mono text-lg font-bold text-brand-dark">
+                  <span className="font-mono text-sm xs:text-base sm:text-lg font-bold text-brand-dark block whitespace-nowrap truncate">
                     {formatFinancial(data.net_income, data.financial_currency)}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Earnings baseline
                   </span>
                 </div>
 
                 {/* Operating Cash Flow */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Operating Cash Flow
                   </span>
-                  <span className="font-mono text-lg font-bold text-brand-dark">
+                  <span className="font-mono text-sm xs:text-base sm:text-lg font-bold text-brand-dark block whitespace-nowrap truncate">
                     {formatFinancial(data.operating_cash_flow, data.financial_currency)}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Cash flow from operations
                   </span>
                 </div>
 
                 {/* Free Cash Flow */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Free Cash Flow
                   </span>
-                  <span className="font-mono text-lg font-bold text-brand-dark">
+                  <span className="font-mono text-sm xs:text-base sm:text-lg font-bold text-brand-dark block whitespace-nowrap truncate">
                     {formatFinancial(data.free_cash_flow, data.financial_currency)}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Discretionary cash flow
                   </span>
                 </div>
 
                 {/* Total Assets */}
-                <div className="bg-brand-bg/30 p-4 rounded-xl border border-brand-border/40">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
                     Total Assets
                   </span>
-                  <span className="font-mono text-lg font-bold text-brand-dark">
+                  <span className="font-mono text-sm xs:text-base sm:text-lg font-bold text-brand-dark block whitespace-nowrap truncate">
                     {formatFinancial(data.total_assets, data.financial_currency)}
                   </span>
-                  <span className="block text-[9px] text-gray-400 mt-1">
+                  <span className="block text-[9px] text-gray-400 mt-1 truncate">
                     Aggregate book assets
                   </span>
                 </div>
@@ -564,16 +564,16 @@ function App() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-brand-primary" />
-                <h3 className="font-display text-lg font-bold text-brand-dark">
+                <h3 className="font-display text-base sm:text-lg font-bold text-brand-dark">
                   Calculated Intrinsic Value (IV) across Methodologies
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 {/* Method 1: Free Cash Flow */}
                 <div
                   onClick={() => setActiveModel("FCF")}
-                  className={`bg-white border rounded-xl p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "FCF"
+                  className={`bg-white border rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "FCF"
                     ? "ring-2 ring-brand-primary border-transparent -translate-y-1 shadow-md"
                     : "border-brand-border hover:border-brand-primary hover:shadow-xs"
                     }`}
@@ -592,23 +592,23 @@ function App() {
                     </span>
                   </div>
 
-                  <div className="my-5">
+                  <div className="my-4 sm:my-5">
                     <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-400">
                       Calculated Intrinsic Value
                     </span>
-                    <p className="font-mono text-3xl font-black text-brand-dark leading-none mt-1">
+                    <p className="font-mono text-2.5xl sm:text-3xl font-black text-brand-dark leading-none mt-1">
                       {formatPrice(data.intrinsic_value_per_share_fcf, data.listing_currency)}
                     </p>
                   </div>
 
-                  <div className="border-t border-brand-border/50 pt-3 flex items-center justify-between">
-                    <span className="text-[11px] text-gray-500 font-mono">Market vs IV:</span>
+                  <div className="border-t border-brand-border/50 pt-3 flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[11px] text-gray-500 font-mono shrink-0">Market vs IV:</span>
                     {data.intrinsic_value_per_share_fcf > data.last_close_price ? (
-                      <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-right truncate shrink-0">
                         +{formatPercent(Math.abs(data.discount_premium_fcf))} Arbitrage
                       </span>
                     ) : (
-                      <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-right truncate shrink-0">
                         {formatPercent(Math.abs(data.discount_premium_fcf))} Premium
                       </span>
                     )}
@@ -618,7 +618,7 @@ function App() {
                 {/* Method 2: Operating Cash Flow */}
                 <div
                   onClick={() => setActiveModel("OCF")}
-                  className={`bg-white border rounded-xl p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "OCF"
+                  className={`bg-white border rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "OCF"
                     ? "ring-2 ring-brand-primary border-transparent -translate-y-1 shadow-md"
                     : "border-brand-border hover:border-brand-primary hover:shadow-xs"
                     }`}
@@ -637,23 +637,23 @@ function App() {
                     </span>
                   </div>
 
-                  <div className="my-5">
+                  <div className="my-4 sm:my-5">
                     <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-400">
                       Calculated Intrinsic Value
                     </span>
-                    <p className="font-mono text-3xl font-black text-brand-dark leading-none mt-1">
+                    <p className="font-mono text-2.5xl sm:text-3xl font-black text-brand-dark leading-none mt-1">
                       {formatPrice(data.intrinsic_value_per_share_ocf, data.listing_currency)}
                     </p>
                   </div>
 
-                  <div className="border-t border-brand-border/50 pt-3 flex items-center justify-between">
-                    <span className="text-[11px] text-gray-500 font-mono">Market vs IV:</span>
+                  <div className="border-t border-brand-border/50 pt-3 flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[11px] text-gray-500 font-mono shrink-0">Market vs IV:</span>
                     {data.intrinsic_value_per_share_ocf > data.last_close_price ? (
-                      <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-right truncate shrink-0">
                         +{formatPercent(Math.abs(data.discount_premium_ocf))} Arbitrage
                       </span>
                     ) : (
-                      <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-right truncate shrink-0">
                         {formatPercent(Math.abs(data.discount_premium_ocf))} Premium
                       </span>
                     )}
@@ -663,7 +663,7 @@ function App() {
                 {/* Method 3: Net Income */}
                 <div
                   onClick={() => setActiveModel("NI")}
-                  className={`bg-white border rounded-xl p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "NI"
+                  className={`bg-white border rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-200 relative ${activeModel === "NI"
                     ? "ring-2 ring-brand-primary border-transparent -translate-y-1 shadow-md"
                     : "border-brand-border hover:border-brand-primary hover:shadow-xs"
                     }`}
@@ -682,23 +682,23 @@ function App() {
                     </span>
                   </div>
 
-                  <div className="my-5">
+                  <div className="my-4 sm:my-5">
                     <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-400">
                       Calculated Intrinsic Value
                     </span>
-                    <p className="font-mono text-3xl font-black text-brand-dark leading-none mt-1">
+                    <p className="font-mono text-2.5xl sm:text-3xl font-black text-brand-dark leading-none mt-1">
                       {formatPrice(data.intrinsic_value_per_share_ni, data.listing_currency)}
                     </p>
                   </div>
 
-                  <div className="border-t border-brand-border/50 pt-3 flex items-center justify-between">
-                    <span className="text-[11px] text-gray-500 font-mono">Market vs IV:</span>
+                  <div className="border-t border-brand-border/50 pt-3 flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[11px] text-gray-500 font-mono shrink-0">Market vs IV:</span>
                     {data.intrinsic_value_per_share_ni > data.last_close_price ? (
-                      <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-right truncate shrink-0">
                         +{formatPercent(Math.abs(data.discount_premium_ni))} Arbitrage
                       </span>
                     ) : (
-                      <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-right truncate shrink-0">
                         {formatPercent(Math.abs(data.discount_premium_ni))} Premium
                       </span>
                     )}
@@ -708,16 +708,16 @@ function App() {
             </div>
 
             {/* Model Forecast Graphs & Calculations Details Section */}
-            <div className="bg-[#f0eadd] border border-brand-border rounded-2xl p-4 md:p-6">
-              <div className="flex items-center gap-3.5 mb-5 border-b border-brand-border pb-4">
-                <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Database className="w-5 h-5" />
+            <div className="bg-[#f0eadd] border border-brand-border rounded-2xl p-3.5 sm:p-4 md:p-6">
+              <div className="flex items-center gap-3 mb-4 sm:mb-5 border-b border-brand-border pb-4">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
+                  <Database className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <h3 className="font-display text-lg font-bold text-brand-dark leading-none">
+                <div className="min-w-0">
+                  <h3 className="font-display text-base sm:text-lg font-bold text-brand-dark leading-snug sm:leading-none truncate">
                     Deep-Dive Analysis Module: {currentModel?.label}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-[11px] sm:text-xs text-gray-500 mt-1">
                     Click any model card above to render its specific 20-year discrete projection line and math breakdown below.
                   </p>
                 </div>
@@ -760,18 +760,18 @@ function App() {
             </div>
 
             {/* API developer parameters section */}
-            <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
+            <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs">
               <button
                 onClick={() => setShowJsonDump(!showJsonDump)}
                 className="w-full flex items-center justify-between gap-3 text-brand-dark hover:text-brand-primary transition-all text-left"
               >
-                <div className="flex items-center gap-2.5">
-                  <Terminal className="w-4.5 h-4.5 text-brand-primary" />
-                  <span className="font-display font-semibold text-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Terminal className="w-4.5 h-4.5 text-brand-primary shrink-0" />
+                  <span className="font-display font-semibold text-xs sm:text-sm truncate">
                     Inspect Raw FoxelSignal API Payload (JSON)
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 font-mono text-xs text-gray-400">
+                <div className="flex items-center gap-1.5 font-mono text-xs text-gray-400 shrink-0">
                   <span>{showJsonDump ? "Hide console" : "Expand console"}</span>
                   {showJsonDump ? (
                     <ChevronDown className="w-4 h-4" />
@@ -786,19 +786,19 @@ function App() {
                   <p className="text-xs text-gray-500 mb-2">
                     Developer Interface: Real response packet extracted directly from our <code>api.foxelsignal.io/vmi</code> server route.
                   </p>
-                  <pre className="bg-[#111827] text-[#93c5fd] font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-96 border border-brand-primary/10 leading-snug">
+                  <pre className="bg-[#111827] text-[#93c5fd] font-mono text-[10px] sm:text-xs p-3 sm:p-4 rounded-lg overflow-x-auto max-h-96 border border-brand-primary/10 leading-snug">
                     <code>{JSON.stringify(data, null, 2)}</code>
                   </pre>
 
                   {/* Endpoint copyable representation */}
                   <div className="mt-4 bg-brand-bg/50 border border-brand-border/60 rounded-lg p-3 flex flex-col md:flex-row md:items-center justify-between gap-2 font-mono text-[10px] text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <span className="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase">
+                    <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase shrink-0">
                         GET
                       </span>
-                      <span className="font-bold text-brand-dark">https://api.foxelsignal.io/vmi?symbol={data.symbol}</span>
+                      <span className="font-bold text-brand-dark break-all">https://api.foxelsignal.io/vmi?symbol={data.symbol}</span>
                     </div>
-                    <div className="text-gray-400">
+                    <div className="text-gray-400 shrink-0">
                       Query ID: <span className="font-semibold text-gray-600">{data.id}</span>
                     </div>
                   </div>
@@ -812,19 +812,19 @@ function App() {
         {showData && data.is_etf && (
           <div className="mt-8 grid grid-cols-1 gap-8 animate-fade-in">
             {/* ETF Profile Overview */}
-            <div className="bg-white border border-brand-border rounded-xl p-6 md:p-8 shadow-xs">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
+            <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 md:p-8 shadow-xs">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+                <div className="min-w-0">
                   <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-[10px] font-mono font-bold px-2.5 py-1 rounded-sm border border-blue-200">
                     <Compass className="w-3.5 h-3.5 text-blue-600 animate-spin-slow" />
                     <span>Exchange Traded Fund (ETF)</span>
                   </div>
 
-                  <h2 className="font-display text-2.5xl md:text-3.5xl font-black text-brand-dark mt-3 leading-tight tracking-tight">
+                  <h2 className="font-display text-xl sm:text-2.5xl md:text-3.5xl font-black text-brand-dark mt-3 leading-tight tracking-tight break-words">
                     {data.name}
                   </h2>
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2.5 text-xs text-gray-500 font-mono">
+                  <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5 mt-2.5 text-xs text-gray-500 font-mono">
                     <span className="font-bold text-brand-primary text-sm">{data.symbol}</span>
                     <span>•</span>
                     <span>Asset Class: <strong className="text-brand-dark">{data.asset_class || "N/A"}</strong></span>
@@ -833,11 +833,11 @@ function App() {
                   </div>
                 </div>
 
-                <div className="md:text-right shrink-0 bg-brand-bg/50 p-4 rounded-xl border border-brand-border/40 min-w-44">
+                <div className="md:text-right shrink-0 bg-brand-bg/50 p-4 rounded-xl border border-brand-border/40 min-w-full sm:min-w-44">
                   <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-gray-400 block">
                     Last Close Price
                   </span>
-                  <p className="font-mono text-3xl font-black text-brand-dark leading-none mt-1">
+                  <p className="font-mono text-2.5xl sm:text-3xl font-black text-brand-dark leading-none mt-1">
                     {formatPrice(data.last_close_price, data.listing_currency)}
                   </p>
                   <p className="text-[10px] font-mono text-gray-400 mt-1">
@@ -848,19 +848,19 @@ function App() {
             </div>
 
             {/* ETF Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               {/* Expense Ratio Card */}
-              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
+              <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                    <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
                       <Percent className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate">
                       Expense Ratio
                     </span>
                   </div>
-                  <p className="font-mono text-3.5xl font-black text-brand-primary leading-none">
+                  <p className="font-mono text-2.5xl sm:text-3.5xl font-black text-brand-primary leading-none truncate">
                     {data.expense_ratio !== undefined && data.expense_ratio !== null
                       ? `${data.expense_ratio.toFixed(2)}%`
                       : "N/A"}
@@ -872,17 +872,17 @@ function App() {
               </div>
 
               {/* Assets Under Management Card */}
-              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
+              <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                       <Layers className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate">
                       Assets Under Management (AUM)
                     </span>
                   </div>
-                  <p className="font-mono text-3.5xl font-black text-emerald-700 leading-none">
+                  <p className="font-mono text-2.5xl sm:text-3.5xl font-black text-emerald-700 leading-none truncate">
                     {data.assets_under_management !== undefined && data.assets_under_management !== null
                       ? formatFinancial(data.assets_under_management, data.listing_currency)
                       : "N/A"}
@@ -894,17 +894,17 @@ function App() {
               </div>
 
               {/* Inception Date Card */}
-              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm">
+              <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs flex flex-col justify-between hover:border-brand-primary/40 transition-all hover:shadow-sm col-span-1 sm:col-span-2 md:col-span-1">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate">
                       Inception Date
                     </span>
                   </div>
-                  <p className="font-mono text-2xl font-black text-brand-dark leading-none pt-1">
+                  <p className="font-mono text-xl sm:text-2xl font-black text-brand-dark leading-none pt-1 truncate">
                     {data.inception_date
                       ? new Date(data.inception_date).toLocaleDateString("en-US", {
                         year: "numeric",
@@ -923,58 +923,58 @@ function App() {
             {/* ETF Secondary Information Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Investment Objective Card */}
-              <div className="col-span-1 lg:col-span-2 bg-[#f0eadd] border border-brand-border rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+              <div className="col-span-1 lg:col-span-2 bg-[#f0eadd] border border-brand-border rounded-2xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2.5 mb-4 border-b border-brand-border/60 pb-3">
-                    <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                    <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
                       <BookOpen className="w-4.5 h-4.5" />
                     </div>
-                    <div>
-                      <h3 className="font-display text-sm font-bold text-brand-dark uppercase tracking-wider">
+                    <div className="min-w-0">
+                      <h3 className="font-display text-sm font-bold text-brand-dark uppercase tracking-wider truncate">
                         Investment Objective & Strategy
                       </h3>
                       <p className="text-[10px] text-gray-500 font-mono">Official objective statement</p>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line">
+                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-sans whitespace-pre-line break-words">
                     {data.investment_objective || "No investment objective statement provided."}
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-brand-border/40 flex justify-between items-center text-[10px] text-gray-400 font-mono">
-                  <span>Source: FMP Stable Datasets</span>
-                  <span>Verification: Active Profile</span>
+                <div className="mt-6 pt-4 border-t border-brand-border/40 flex justify-between items-center text-[10px] text-gray-400 font-mono gap-2">
+                  <span className="truncate">Source: FMP Stable Datasets</span>
+                  <span className="shrink-0">Verification: Active Profile</span>
                 </div>
               </div>
 
               {/* Liquidity & Volatility Card */}
-              <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs flex flex-col justify-between">
+              <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-4 h-4 text-brand-primary" />
-                    <h3 className="font-display text-sm font-semibold text-brand-dark uppercase tracking-wider">
+                    <TrendingUp className="w-4 h-4 text-brand-primary shrink-0" />
+                    <h3 className="font-display text-sm font-semibold text-brand-dark uppercase tracking-wider truncate">
                       Liquidity & Risk Metrics
                     </h3>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
-                      <div>
-                        <span className="font-bold text-brand-dark block">System Beta</span>
-                        <span className="text-[10px] text-gray-400 font-mono">Volatility relative to market</span>
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">System Beta</span>
+                        <span className="text-[10px] text-gray-400 font-mono truncate block">Volatility relative to market</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <strong className="font-mono text-brand-dark text-sm">
                           {data.beta !== undefined && data.beta !== null ? data.beta.toFixed(2) : "N/A"}
                         </strong>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50">
-                      <div>
-                        <span className="font-bold text-brand-dark block">Average Volume</span>
-                        <span className="text-[10px] text-gray-400 font-mono">Daily share turnover</span>
+                    <div className="flex justify-between items-center text-xs pb-3 border-b border-brand-border/50 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">Average Volume</span>
+                        <span className="text-[10px] text-gray-400 font-mono truncate block">Daily share turnover</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <strong className="font-mono text-brand-dark text-sm">
                           {data.avg_volume !== undefined && data.avg_volume !== null
                             ? formatLargeNumber(data.avg_volume)
@@ -983,12 +983,12 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-bold text-brand-dark block">Fund Structure</span>
-                        <span className="text-[10px] text-gray-400 font-mono">Product asset structure</span>
+                    <div className="flex justify-between items-center text-xs gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-brand-dark block truncate">Fund Structure</span>
+                        <span className="text-[10px] text-gray-400 font-mono truncate block">Product asset structure</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="bg-brand-bg text-brand-dark px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border border-brand-border">
                           {data.asset_class || "ETF"}
                         </span>
@@ -1004,18 +1004,18 @@ function App() {
             </div>
 
             {/* API developer parameters section */}
-            <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
+            <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs">
               <button
                 onClick={() => setShowJsonDump(!showJsonDump)}
                 className="w-full flex items-center justify-between gap-3 text-brand-dark hover:text-brand-primary transition-all text-left"
               >
-                <div className="flex items-center gap-2.5">
-                  <Terminal className="w-4.5 h-4.5 text-brand-primary" />
-                  <span className="font-display font-semibold text-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Terminal className="w-4.5 h-4.5 text-brand-primary shrink-0" />
+                  <span className="font-display font-semibold text-xs sm:text-sm truncate">
                     Inspect Raw FoxelSignal API Payload (JSON)
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 font-mono text-xs text-gray-400">
+                <div className="flex items-center gap-1.5 font-mono text-xs text-gray-400 shrink-0">
                   <span>{showJsonDump ? "Hide console" : "Expand console"}</span>
                   {showJsonDump ? (
                     <ChevronDown className="w-4 h-4" />
@@ -1030,17 +1030,17 @@ function App() {
                   <p className="text-xs text-gray-500 mb-2">
                     Developer Interface: Real response packet extracted directly from our <code>api.foxelsignal.io/vmi</code> server route.
                   </p>
-                  <pre className="bg-[#111827] text-[#93c5fd] font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-96 border border-brand-primary/10 leading-snug">
+                  <pre className="bg-[#111827] text-[#93c5fd] font-mono text-[10px] sm:text-xs p-3 sm:p-4 rounded-lg overflow-x-auto max-h-96 border border-brand-primary/10 leading-snug">
                     <code>{JSON.stringify(data, null, 2)}</code>
                   </pre>
 
                   {/* Endpoint copyable representation */}
                   <div className="mt-4 bg-brand-bg/50 border border-brand-border/60 rounded-lg p-3 flex flex-col md:flex-row md:items-center justify-between gap-2 font-mono text-[10px] text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <span className="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase">
+                    <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase shrink-0">
                         GET
                       </span>
-                      <span className="font-bold text-brand-dark">https://api.foxelsignal.io/vmi?symbol={data.symbol}</span>
+                      <span className="font-bold text-brand-dark break-all">https://api.foxelsignal.io/vmi?symbol={data.symbol}</span>
                     </div>
                   </div>
                 </div>

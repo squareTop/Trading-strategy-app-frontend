@@ -46,11 +46,11 @@ export default function FormulaBreakdown({
   const arbitrageVal = (finalIvPerShare / lastClosePrice) - 1;
 
   return (
-    <div className="bg-white border border-brand-border rounded-xl p-6 transition-all duration-200 animate-slide-up">
+    <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 transition-all duration-200 animate-slide-up">
       {/* Title */}
       <div className="flex items-center gap-2 border-b border-brand-border pb-4 mb-6">
         <Landmark className="w-5 h-5 text-brand-primary" />
-        <h4 className="font-display text-lg font-semibold text-brand-dark">
+        <h4 className="font-display text-base sm:text-lg font-semibold text-brand-dark">
           Valuation Algorithm & Arithmetic ({modelLabel} Model)
         </h4>
       </div>
@@ -63,7 +63,7 @@ export default function FormulaBreakdown({
             1
           </div>
           <div>
-            <h5 className="font-display text-sm font-semibold text-brand-dark flex items-center gap-1.5">
+            <h5 className="font-display text-sm font-semibold text-brand-dark flex flex-wrap items-center gap-1.5">
               <span>Future Value Projection Stream (20 Years)</span>
               <span className="text-[10px] bg-brand-bg px-2 py-0.5 rounded font-mono text-gray-500 font-medium">
                 Stage 1 & 2 Rates
@@ -73,9 +73,9 @@ export default function FormulaBreakdown({
               Project the trailing {modelLabel} of {formatFinancial(baseMetricValue, currency)} over 20 years, compounding through dynamic multi-stage annual growth thresholds.
             </p>
 
-            <div className="mt-3 bg-brand-bg/60 rounded-lg p-3 font-mono text-xs flex flex-wrap gap-y-2 items-center justify-between border border-brand-border/40">
+            <div className="mt-3 bg-brand-bg/60 rounded-lg p-3 font-mono text-xs flex flex-wrap gap-y-2 items-center justify-between border border-brand-border/40 min-w-0">
               <span className="text-gray-500">Compounded Sum:</span>
-              <span className="font-bold text-brand-dark">
+              <span className="font-bold text-brand-dark break-all">
                 {formatFinancial(pv20yr, currency)} (Discounted present value)
               </span>
             </div>
@@ -95,14 +95,14 @@ export default function FormulaBreakdown({
               Divide the total projected 20-year present value of corporate funds by outstanding shares to calculate unit share equity before balance-sheet assets or debt load.
             </p>
 
-            <div className="mt-3 bg-brand-bg/60 rounded-lg p-3 font-mono text-xs flex flex-col md:flex-row md:items-center justify-between gap-2 border border-brand-border/40">
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-brand-primary font-bold">{formatFinancial(pv20yr, currency)}</span>
+            <div className="mt-3 bg-brand-bg/60 rounded-lg p-3 font-mono text-xs flex flex-col md:flex-row md:items-center justify-between gap-2 border border-brand-border/40 min-w-0">
+              <div className="flex items-center gap-1 flex-wrap min-w-0">
+                <span className="text-brand-primary font-bold break-all">{formatFinancial(pv20yr, currency)}</span>
                 <span className="text-gray-400">/</span>
-                <span className="font-semibold text-gray-600">{sharesOutstanding.toLocaleString()} Shares</span>
+                <span className="font-semibold text-gray-600 break-all">{sharesOutstanding.toLocaleString()} Shares</span>
               </div>
-              <div className="flex items-center gap-1.5 text-brand-dark">
-                <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+              <div className="flex items-center gap-1.5 text-brand-dark shrink-0">
+                <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                 <span className="font-extrabold text-brand-primary">{formatPrice(ivBeforeAdjustment, currency)}</span>
                 <span className="text-gray-400 text-[10px]">per share</span>
               </div>
@@ -125,21 +125,21 @@ export default function FormulaBreakdown({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <div className="bg-green-50 border border-green-100 rounded-lg p-3 font-mono text-xs">
-                <div className="flex justify-between items-center text-green-800">
-                  <span className="font-medium text-[10px] uppercase">Add Liquid Reserve</span>
-                  <span className="font-bold">+{formatPrice(cashPerShare, currency)}</span>
+                <div className="flex justify-between items-center text-green-800 gap-2">
+                  <span className="font-medium text-[10px] uppercase truncate">Add Liquid Reserve</span>
+                  <span className="font-bold shrink-0">+{formatPrice(cashPerShare, currency)}</span>
                 </div>
-                <div className="text-[10px] text-green-600 mt-1">
+                <div className="text-[10px] text-green-600 mt-1 break-all">
                   Based on cash reserves of {formatFinancial(cashAndEquivalents, currency)}
                 </div>
               </div>
 
               <div className="bg-red-50 border border-red-100 rounded-lg p-3 font-mono text-xs">
-                <div className="flex justify-between items-center text-red-800">
-                  <span className="font-medium text-[10px] uppercase">Deduct Net Debt Load</span>
-                  <span className="font-bold">-{formatPrice(debtPerShare, currency)}</span>
+                <div className="flex justify-between items-center text-red-800 gap-2">
+                  <span className="font-medium text-[10px] uppercase truncate">Deduct Net Debt Load</span>
+                  <span className="font-bold shrink-0">-{formatPrice(debtPerShare, currency)}</span>
                 </div>
-                <div className="text-[10px] text-red-600 mt-1">
+                <div className="text-[10px] text-red-600 mt-1 break-all">
                   Based on total debt liabilities of {formatFinancial(totalDebt, currency)}
                 </div>
               </div>
@@ -160,25 +160,25 @@ export default function FormulaBreakdown({
               Compare the final adjusted intrinsic value per share with the last close market trading price.
             </p>
 
-            <div className="mt-3 bg-brand-dark text-white rounded-xl p-5 border border-brand-primary/20">
+            <div className="mt-3 bg-brand-dark text-white rounded-xl p-4 sm:p-5 border border-brand-primary/20">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                 {/* Math */}
-                <div className="col-span-1 md:col-span-2 space-y-3 font-mono text-xs">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="text-gray-400">Core Intrinsic:</span>
-                    <span className="text-white text-right">{formatPrice(ivBeforeAdjustment, currency)}</span>
+                <div className="col-span-1 md:col-span-2 space-y-3 font-mono text-xs min-w-0">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 gap-2">
+                    <span className="text-gray-400 truncate">Core Intrinsic:</span>
+                    <span className="text-white text-right shrink-0">{formatPrice(ivBeforeAdjustment, currency)}</span>
                   </div>
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="text-green-400 font-medium">+ Cash Addition:</span>
-                    <span className="text-green-300 text-right">+{formatPrice(cashPerShare, currency)}</span>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 gap-2">
+                    <span className="text-green-400 font-medium truncate">+ Cash Addition:</span>
+                    <span className="text-green-300 text-right shrink-0">+{formatPrice(cashPerShare, currency)}</span>
                   </div>
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="text-red-400 font-medium">- Debt Obligation:</span>
-                    <span className="text-red-300 text-right">-{formatPrice(debtPerShare, currency)}</span>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 gap-2">
+                    <span className="text-red-400 font-medium truncate">- Debt Obligation:</span>
+                    <span className="text-red-300 text-right shrink-0">-{formatPrice(debtPerShare, currency)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-base pt-1">
-                    <span className="text-gray-300 font-display font-semibold">Calculated IV ({currency}):</span>
-                    <span className="text-brand-primary font-bold">{formatPrice(finalIvPerShare, currency)}</span>
+                  <div className="flex items-center justify-between text-sm sm:text-base pt-1 gap-2">
+                    <span className="text-gray-300 font-display font-semibold truncate">Calculated IV ({currency}):</span>
+                    <span className="text-brand-primary font-bold shrink-0">{formatPrice(finalIvPerShare, currency)}</span>
                   </div>
 
                   {financialCurrency && currency && financialCurrency.toUpperCase() !== currency.toUpperCase() && (
@@ -186,24 +186,24 @@ export default function FormulaBreakdown({
                       <div className="text-gray-400 font-semibold uppercase tracking-wider text-[9px]">
                         FX Translation Details
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">IV (In Financial Currency - {financialCurrency}):</span>
-                        <span className="text-white font-medium">{formatPrice(finalIvPerShare / exchangeRate, financialCurrency)}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-gray-400 truncate">IV ({financialCurrency}):</span>
+                        <span className="text-white font-medium text-right shrink-0">{formatPrice(finalIvPerShare / exchangeRate, financialCurrency)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">FX Rate Applied ({financialCurrency} → {currency}):</span>
-                        <span className="text-white font-medium">× {exchangeRate.toFixed(4)}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-gray-400 truncate">FX Rate ({financialCurrency} → {currency}):</span>
+                        <span className="text-white font-medium text-right shrink-0">× {exchangeRate.toFixed(4)}</span>
                       </div>
-                      <div className="flex justify-between border-t border-white/5 pt-1.5">
-                        <span className="text-gray-400">IV (In Exchange Currency - {currency}):</span>
-                        <span className="text-brand-primary font-bold">{formatPrice(finalIvPerShare, currency)}</span>
+                      <div className="flex justify-between border-t border-white/5 pt-1.5 gap-2">
+                        <span className="text-gray-400 truncate">IV ({currency}):</span>
+                        <span className="text-brand-primary font-bold text-right shrink-0">{formatPrice(finalIvPerShare, currency)}</span>
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Outcome Callout Box */}
-                <div className="col-span-1 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 text-center md:text-left">
+                <div className="col-span-1 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6 text-center md:text-left min-w-0">
                   <span className="text-[10px] text-gray-400 tracking-wider font-mono font-bold uppercase block">
                     Market Arbitrage
                   </span>
