@@ -39,8 +39,8 @@ export function formatPrice(value: number, currency = "USD", decimals = 2): stri
 /**
  * Formats ratio into pretty percentages.
  */
-export function formatPercent(value: number): string {
-  if (value === undefined || value === null) return "0.0%";
+export function formatPercent(value: number | null | undefined): string {
+  if (value === undefined || value === null || Number.isNaN(value)) return "N/A";
   return `${(value * 100).toFixed(2)}%`;
 }
 

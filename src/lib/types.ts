@@ -20,7 +20,7 @@ export interface FoxelSignalIVResponse {
   current_debt: number;
   long_term_debt: number;
   eps_growth_yoy: number;
-  projected_eps_growth_3_5y: number;
+  projected_eps_growth_3_5y: number | null;
   price_to_book_ratios_ttm: number;
   price_to_earnings_ratios_ttm: number;
   return_on_invested_capital_ttm: number;
