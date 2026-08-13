@@ -666,8 +666,6 @@ function ScoreboardPage() {
                       <th className="py-3 px-4 text-right font-bold">Win Rate</th>
                       <th className="py-3 px-4 text-right font-bold">Realized Exp-R</th>
                       <th className="py-3 px-4 text-right font-bold">Profit Factor</th>
-                      <th className="py-3 px-4 text-right font-bold">Total R</th>
-                      <th className="py-3 px-4 text-right font-bold">Backtest Exp-R</th>
                       <th className="py-3 px-4 text-right font-bold">Avg Return</th>
                       <th className="py-3 px-4 text-right font-bold">Avg SPY</th>
                       <th className="py-3 px-4 text-right font-bold">Alpha</th>
@@ -724,12 +722,6 @@ function ScoreboardPage() {
                             <td className="py-3 px-4 text-right">
                               {row.resolved > 0 ? row.profit_factor.toFixed(2) : '-'}
                             </td>
-                            <td className={`py-3 px-4 text-right font-bold ${row.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                              {row.resolved > 0 ? `${row.total_r >= 0 ? '+' : ''}${row.total_r.toFixed(1)} R` : '-'}
-                            </td>
-                            <td className="py-3 px-4 text-right text-gray-500">
-                              {row.resolved > 0 ? `${row.backtest_exp_r >= 0 ? '+' : ''}${row.backtest_exp_r.toFixed(2)} R` : '-'}
-                            </td>
                             <td className={`py-3 px-4 text-right font-bold ${row.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {row.resolved > 0 ? `${row.avg_trade_return >= 0 ? '+' : ''}${formatPercent(row.avg_trade_return)}` : '-'}
                             </td>
@@ -769,10 +761,6 @@ function ScoreboardPage() {
                                   <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
                                     {sRow.resolved > 0 ? sRow.profit_factor.toFixed(2) : '-'}
                                   </td>
-                                  <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                                    {sRow.resolved > 0 ? `${sRow.total_r >= 0 ? '+' : ''}${sRow.total_r.toFixed(1)} R` : '-'}
-                                  </td>
-                                  <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-400">-</td>
                                   <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                                     {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
                                   </td>
@@ -805,12 +793,6 @@ function ScoreboardPage() {
                           </td>
                           <td className="py-3 px-4 text-right">
                             {allRow.resolved > 0 ? allRow.profit_factor.toFixed(2) : '-'}
-                          </td>
-                          <td className={`py-3 px-4 text-right font-bold ${allRow.total_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                            {allRow.resolved > 0 ? `${allRow.total_r >= 0 ? '+' : ''}${allRow.total_r.toFixed(1)} R` : '-'}
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-500">
-                            {allRow.resolved > 0 ? `${allRow.backtest_exp_r >= 0 ? '+' : ''}${allRow.backtest_exp_r.toFixed(2)} R` : '-'}
                           </td>
                           <td className={`py-3 px-4 text-right font-bold ${allRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                             {allRow.resolved > 0 ? `${allRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(allRow.avg_trade_return)}` : '-'}
