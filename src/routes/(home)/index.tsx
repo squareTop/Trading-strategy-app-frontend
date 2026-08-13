@@ -496,13 +496,13 @@ function App() {
                 {/* EPS Growth Rate */}
                 <div className="bg-brand-bg/30 p-3.5 sm:p-4 rounded-xl border border-brand-border/40 min-w-0">
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 block mb-1 truncate">
-                    EPS Growth Rate
+                    EPS Growth Rate (GAAP)
                   </span>
                   <span className="font-mono text-lg sm:text-xl font-black text-brand-primary block truncate">
                     {formatPercent(data.projected_eps_growth_3_5y)}
                   </span>
                   <span className="block text-[9px] text-gray-400 mt-1 truncate">
-                    Projected 3–5 Yr EPS Growth
+                    Projected 3–5 Yr GAAP EPS Growth
                   </span>
                 </div>
 
