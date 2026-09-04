@@ -1,6 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(home)/about')({
+  head: () => ({
+    meta: [
+      {
+        title: 'About FoxelSignal | Quantitative Investing Intelligence',
+      },
+      {
+        name: 'description',
+        content: 'Learn about FoxelSignal institutional quantitative trading strategies, DCF valuation models, and automated execution pipelines.',
+      },
+    ],
+  }),
   component: AboutPage,
 })
 

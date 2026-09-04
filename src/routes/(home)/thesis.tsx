@@ -100,6 +100,17 @@ const DEFAULT_THESIS =
   'AI datacenter buildout accelerates into 2026 — compute, memory, networking, and power-delivery suppliers benefit most.'
 
 export const Route = createFileRoute('/(home)/thesis')({
+  head: () => ({
+    meta: [
+      {
+        title: 'Thesis AI — Narrative-to-Trade Engine | FoxelSignal',
+      },
+      {
+        name: 'description',
+        content: 'AI-powered macroeconomic and narrative thesis engine that extracts equities, runs multi-pipeline strategy scans, and generates actionable trade plans.',
+      },
+    ],
+  }),
   component: ThesisPage,
 })
 

@@ -54,6 +54,17 @@ export const senateQueryOptions = queryOptions({
 })
 
 export const Route = createFileRoute('/(home)/senate')({
+  head: () => ({
+    meta: [
+      {
+        title: 'Senate Trades & STOCK Act Disclosures | FoxelSignal',
+      },
+      {
+        name: 'description',
+        content: 'Real-time tracking of U.S. Senate financial disclosures, congressional insider stock trades, and post-trade performance analytics.',
+      },
+    ],
+  }),
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(senateQueryOptions).catch(() => {})
   },

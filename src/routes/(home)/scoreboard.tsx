@@ -132,6 +132,17 @@ export const scoreboardQueryOptions = queryOptions({
 })
 
 export const Route = createFileRoute('/(home)/scoreboard')({
+  head: () => ({
+    meta: [
+      {
+        title: 'Strategy Performance Scoreboard | FoxelSignal',
+      },
+      {
+        name: 'description',
+        content: 'Audited strategy performance tracking, trade expectancy metrics, win rates, and benchmark comparisons across FoxelSignal trading pipelines.',
+      },
+    ],
+  }),
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(scoreboardQueryOptions).catch(() => { });
   },

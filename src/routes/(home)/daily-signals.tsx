@@ -84,6 +84,17 @@ export const dailySignalsQueryOptions = queryOptions({
 })
 
 export const Route = createFileRoute('/(home)/daily-signals')({
+  head: () => ({
+    meta: [
+      {
+        title: 'Daily Trading Signals | FoxelSignal',
+      },
+      {
+        name: 'description',
+        content: 'Automated quantitative trading signals across Trend, Mean Reversion, and Price Action strategies with 1R equal-risk position sizing.',
+      },
+    ],
+  }),
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(dailySignalsQueryOptions).catch(() => { });
   },

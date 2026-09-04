@@ -60,6 +60,17 @@ export const Route = createFileRoute('/(home)/')({
       ticker: typeof search.ticker === 'string' ? search.ticker : undefined,
     }
   },
+  head: () => ({
+    meta: [
+      {
+        title: 'IV Valuation — DCF Intrinsic Value Models | FoxelSignal',
+      },
+      {
+        name: 'description',
+        content: 'Institutional-grade DCF intrinsic value valuation models and multi-stage free cash flow analysis for equities.',
+      },
+    ],
+  }),
   component: App,
 })
 
@@ -89,6 +100,7 @@ function App() {
       setSearchInput(urlTicker);
     }
   }, [urlTicker]);
+
 
   // Synchronize search input with the canonical symbol when data changes
   useEffect(() => {
