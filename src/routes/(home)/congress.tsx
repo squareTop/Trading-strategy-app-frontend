@@ -14,61 +14,65 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpRight,
-  X
+  X,
+  Landmark
 } from 'lucide-react'
 import { API_URL } from '../../lib/config'
 import { formatPrice } from '../../lib/utils'
 
-export interface SenateDisclosure {
+export interface CongressDisclosure {
+  chamber: 'Senate' | 'House'
+  name: string
+  firstName?: string
+  lastName?: string
+  office?: string
   symbol: string
-  senateID: string
   disclosureDate: string
   transactionDate: string
-  firstName: string
-  lastName: string
-  office: string
-  district: string
+  type: string
+  amount: string
   owner: string
   assetDescription: string
   assetType: string
-  type: string
-  amount: string
-  comment: string
+  district: string
   link: string
+  senateID?: string
+  comment?: string
   currentPrice?: number | null
   tradePrice?: number | null
   changeSinceTrade?: number | null
 }
 
-export const senateQueryOptions = queryOptions({
-  queryKey: ['senateLatest'],
-  queryFn: async () => {
-    const response = await fetch(`${API_URL}/api/senate-latest?limit=100`)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch senate disclosures: status ${response.status}`)
-    }
-    return response.json() as Promise<SenateDisclosure[]>
-  },
-  staleTime: 15 * 60 * 1000, // 15 minutes
-  refetchInterval: 30 * 60 * 1000, // 30 minutes background refetch
-})
+export const congressQueryOptions = (chamber: 'all' | 'senate' | 'house' = 'all') =>
+  queryOptions({
+    queryKey: ['congressLatest', chamber],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/congress-latest?chamber=${chamber}&limit=150`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch congress disclosures: status ${response.status}`)
+      }
+      return response.json() as Promise<CongressDisclosure[]>
+    },
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    refetchInterval: 30 * 60 * 1000, // 30 minutes background refetch
+  })
 
-export const Route = createFileRoute('/(home)/senate')({
+export const Route = createFileRoute('/(home)/congress')({
   head: () => ({
     meta: [
       {
-        title: 'Senate Trades & STOCK Act Disclosures | FoxelSignal',
+        title: 'Congress Trades & STOCK Act Disclosures | FoxelSignal',
       },
       {
         name: 'description',
-        content: 'Real-time tracking of U.S. Senate financial disclosures, congressional insider stock trades, and post-trade performance analytics.',
+        content: 'Real-time tracking of U.S. Senate and House financial disclosures, Nancy Pelosi stock trades, congressional insider trades, and post-trade performance analytics.',
       },
     ],
   }),
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(senateQueryOptions).catch(() => {})
+    await context.queryClient.ensureQueryData(congressQueryOptions('all')).catch(() => {})
   },
-  component: SenateDisclosuresPage,
+  component: CongressDisclosuresPage,
 })
 
 // Helper to calculate relative time (e.g. "1d ago", "2w ago")
@@ -109,19 +113,21 @@ function getDaysBetween(date1: string, date2: string): number | null {
   }
 }
 
-// Senator Avatar with smooth placeholder loading (no alt text title flicker)
-function SenatorAvatar({
-  senateID,
+// Politician Avatar with support for Senate image URLs and House initials
+function PoliticianAvatar({
   name,
+  senateID,
+  chamber,
   size = 'md',
 }: {
-  senateID: string
   name: string
+  senateID?: string
+  chamber: 'Senate' | 'House'
   size?: 'sm' | 'md' | 'lg'
 }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const imageUrl = `https://images.financialmodelingprep.com/senate/${senateID}.jpg`
+  const imageUrl = senateID ? `https://images.financialmodelingprep.com/senate/${senateID}.jpg` : ''
 
   const sizeClasses = {
     sm: 'w-7 h-7 text-[10px]',
@@ -129,7 +135,8 @@ function SenatorAvatar({
     lg: 'w-12 h-12 text-sm',
   }[size]
 
-  const initials = name
+  const cleanName = name.replace(/^(Hon\.|Senator|Representative|Rep\.|Sen\.)\s+/i, '').trim()
+  const initials = cleanName
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -137,20 +144,28 @@ function SenatorAvatar({
     .join('')
     .toUpperCase()
 
+  const isHouse = chamber === 'House'
+
   return (
     <div
       className={`relative ${sizeClasses} rounded-full overflow-hidden shrink-0 border border-brand-border/80 shadow-xs bg-gray-100 select-none`}
-      title={name}
+      title={`${name} (${chamber})`}
     >
       {/* Placeholder with initials rendered underneath */}
-      {(!isLoaded || hasError || !senateID) && (
-        <div className="absolute inset-0 bg-linear-to-br from-brand-primary/15 to-brand-primary/35 flex items-center justify-center font-bold font-mono text-brand-dark">
-          {initials || <User className="w-3.5 h-3.5 text-brand-dark opacity-60" />}
+      {(!isLoaded || hasError || !imageUrl) && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center font-bold font-mono ${
+            isHouse
+              ? 'bg-linear-to-br from-purple-100 to-indigo-200 text-purple-900'
+              : 'bg-linear-to-br from-brand-primary/15 to-brand-primary/35 text-brand-dark'
+          }`}
+        >
+          {initials || <User className="w-3.5 h-3.5 opacity-60" />}
         </div>
       )}
 
-      {/* Image with zero alt text to prevent browser title pop-in */}
-      {senateID && !hasError && (
+      {/* Senator Image with zero alt text to prevent browser title pop-in */}
+      {imageUrl && !hasError && (
         <img
           src={imageUrl}
           alt=""
@@ -166,29 +181,47 @@ function SenatorAvatar({
   )
 }
 
-// Company Logo with smooth placeholder loading (no alt text title flicker)
+// Company Logo with multi-tier source resolution and contrast protection
 function CompanyLogo({ symbol }: { symbol: string }) {
   const [isLoaded, setIsLoaded] = useState(false)
-  const [hasError, setHasError] = useState(false)
-  const logoUrl = `https://images.financialmodelingprep.com/symbol/${symbol}.png`
+  const [srcIndex, setSrcIndex] = useState(0)
+
+  // 1. High-contrast / brand colored logo via Parqet
+  // 2. FMP symbol logo with contrast shadow fallback
+  const sources = useMemo(() => {
+    if (!symbol) return []
+    const clean = symbol.trim().toUpperCase()
+    return [
+      `https://assets.parqet.com/logos/symbol/${clean}?format=png`,
+      `https://images.financialmodelingprep.com/symbol/${clean}.png`,
+    ]
+  }, [symbol])
+
+  const currentSrc = sources[srcIndex]
+  const hasFailedAll = srcIndex >= sources.length
+
+  const handleError = () => {
+    setSrcIndex((prev) => prev + 1)
+    setIsLoaded(false)
+  }
 
   return (
-    <div className="relative w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs select-none">
+    <div className="relative w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs select-none flex items-center justify-center">
       {/* Placeholder with ticker initials rendered underneath */}
-      {(!isLoaded || hasError || !symbol) && (
+      {(!isLoaded || hasFailedAll || !symbol) && (
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center font-mono text-[11px] font-bold text-gray-600">
-          {symbol?.slice(0, 3) || <Building2 className="w-4 h-4 text-gray-400" />}
+          {symbol?.slice(0, 4) || <Building2 className="w-4 h-4 text-gray-400" />}
         </div>
       )}
 
-      {/* Image with zero alt text to prevent browser title pop-in */}
-      {symbol && !hasError && (
+      {symbol && !hasFailedAll && currentSrc && (
         <img
-          src={logoUrl}
+          key={currentSrc}
+          src={currentSrc}
           alt=""
           onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
-          className={`absolute inset-0 w-full h-full object-contain p-1 bg-white transition-opacity duration-250 ${
+          onError={handleError}
+          className={`absolute inset-0 w-full h-full object-contain p-1.5 transition-opacity duration-200 [filter:drop-shadow(0_0_1px_rgba(0,0,0,0.3))] ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
           loading="lazy"
@@ -198,8 +231,17 @@ function CompanyLogo({ symbol }: { symbol: string }) {
   )
 }
 
-function SenateDisclosuresPage() {
-  const { data: disclosures = [], isLoading, isRefetching, refetch, dataUpdatedAt } = useQuery(senateQueryOptions)
+function CongressDisclosuresPage() {
+  // Chamber query state
+  const [selectedChamber, setSelectedChamber] = useState<'all' | 'senate' | 'house'>('all')
+
+  const {
+    data: disclosures = [],
+    isLoading,
+    isRefetching,
+    refetch,
+    dataUpdatedAt,
+  } = useQuery(congressQueryOptions(selectedChamber))
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('')
@@ -221,29 +263,46 @@ function SenateDisclosuresPage() {
     return Array.from(set).sort()
   }, [disclosures])
 
-
+  // Chamber counts
+  const { totalCount, senateCount, houseCount } = useMemo(() => {
+    let s = 0
+    let h = 0
+    disclosures.forEach((d) => {
+      if (d.chamber === 'Senate') s++
+      if (d.chamber === 'House') h++
+    })
+    return { totalCount: disclosures.length, senateCount: s, houseCount: h }
+  }, [disclosures])
 
   // Filtered disclosures
   const filteredDisclosures = useMemo(() => {
     return disclosures.filter((item) => {
-      if (typeFilter !== 'all' && item.type !== typeFilter) return false
+      // Transaction type filter
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'Purchase' && !item.type.toLowerCase().includes('purchase')) return false
+        if (typeFilter === 'Sale' && !item.type.toLowerCase().includes('sale')) return false
+        if (typeFilter === 'Exchange' && !item.type.toLowerCase().includes('exchange')) return false
+      }
+
       if (assetTypeFilter !== 'all' && item.assetType !== assetTypeFilter) return false
       if (ownerFilter !== 'all' && item.owner !== ownerFilter) return false
 
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim()
-        const fullName = `${item.firstName} ${item.lastName}`.toLowerCase()
+        const name = (item.name || '').toLowerCase()
         const office = (item.office || '').toLowerCase()
         const symbol = (item.symbol || '').toLowerCase()
         const assetDesc = (item.assetDescription || '').toLowerCase()
         const district = (item.district || '').toLowerCase()
+        const chamber = (item.chamber || '').toLowerCase()
 
         const matches =
-          fullName.includes(query) ||
+          name.includes(query) ||
           office.includes(query) ||
           symbol.includes(query) ||
           assetDesc.includes(query) ||
-          district.includes(query)
+          district.includes(query) ||
+          chamber.includes(query)
 
         if (!matches) return false
       }
@@ -286,15 +345,15 @@ function SenateDisclosuresPage() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span>Live Updates</span>
+                  <span>Live Disclosures</span>
                 </div>
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-display font-bold text-brand-dark tracking-tight">
-                Senate Financial Disclosures
+                Congressional Financial Disclosures
               </h1>
               <p className="text-gray-600 text-xs sm:text-sm mt-1 max-w-2xl">
-                Real-time tracking of U.S. Senate members&apos; stock transactions with live prices and returns since trade date. Click any ticker card to open its valuation model.
+                Real-time tracking of U.S. Senate and House of Representatives stock transactions, including Nancy Pelosi and Capitol Hill members, with live quotes and returns since trade date.
               </p>
             </div>
 
@@ -309,7 +368,7 @@ function SenateDisclosuresPage() {
                 onClick={() => refetch()}
                 disabled={isRefetching}
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-white border border-brand-border hover:border-brand-primary text-gray-700 hover:text-brand-primary transition-all shadow-xs disabled:opacity-60 cursor-pointer"
-                title="Refresh senate disclosures"
+                title="Refresh disclosures"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? 'animate-spin text-brand-primary' : ''}`} />
                 <span>{isRefetching ? 'Updating...' : 'Refresh'}</span>
@@ -317,6 +376,67 @@ function SenateDisclosuresPage() {
             </div>
           </div>
 
+          {/* Chamber Toggle Pills */}
+          <div className="flex items-center gap-2 mt-6 pt-4 border-t border-brand-border/60">
+            <span className="text-xs font-mono text-gray-400 font-semibold mr-1">Chamber:</span>
+            <button
+              onClick={() => {
+                setSelectedChamber('all')
+                setCurrentPage(1)
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                selectedChamber === 'all'
+                  ? 'bg-brand-dark text-white shadow-xs'
+                  : 'bg-brand-bg/60 hover:bg-brand-bg text-gray-600 hover:text-brand-dark border border-brand-border'
+              }`}
+            >
+              <Landmark className="w-3.5 h-3.5" />
+              <span>All Congress</span>
+              {selectedChamber === 'all' && (
+                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
+                  {totalCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedChamber('house')
+                setCurrentPage(1)
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                selectedChamber === 'house'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-brand-bg/60 hover:bg-brand-bg text-purple-800 hover:text-purple-900 border border-purple-200'
+              }`}
+            >
+              <span>🏛️ House (e.g. Pelosi)</span>
+              {selectedChamber === 'house' && (
+                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
+                  {houseCount || totalCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedChamber('senate')
+                setCurrentPage(1)
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                selectedChamber === 'senate'
+                  ? 'bg-sky-700 text-white shadow-xs'
+                  : 'bg-brand-bg/60 hover:bg-brand-bg text-sky-800 hover:text-sky-900 border border-sky-200'
+              }`}
+            >
+              <span>🏛️ Senate</span>
+              {selectedChamber === 'senate' && (
+                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
+                  {senateCount || totalCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -325,7 +445,7 @@ function SenateDisclosuresPage() {
         {/* Filter and Search Bar */}
         <div className="bg-white border border-brand-border rounded-xl p-3.5 sm:p-4 mb-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Box */}
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -334,7 +454,7 @@ function SenateDisclosuresPage() {
                 setSearchTerm(e.target.value)
                 setCurrentPage(1)
               }}
-              placeholder="Search by Senator, ticker (e.g. NVDA), company, or state..."
+              placeholder="Search by Politician (e.g. Pelosi), ticker (e.g. NVDA), company, or state..."
               className="w-full pl-9 pr-8 py-2 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-sans text-brand-dark placeholder-gray-400 focus:outline-none focus:border-brand-primary focus:bg-white transition-all"
             />
             {searchTerm && (
@@ -405,7 +525,7 @@ function SenateDisclosuresPage() {
                     ? 'bg-white text-brand-primary shadow-2xs font-bold'
                     : 'text-gray-500 hover:text-brand-dark'
                 }`}
-                title="Feed View (InsiderWave style cards)"
+                title="Feed View (Card layout)"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -467,7 +587,7 @@ function SenateDisclosuresPage() {
           <div className="bg-white border border-brand-border rounded-xl p-12 text-center my-6">
             <Filter className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <h3 className="text-base font-display font-bold text-brand-dark mb-1">
-              No Senate Disclosures Found
+              No Disclosures Found
             </h3>
             <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
               We couldn&apos;t find any disclosures matching your filter criteria. Try adjusting your search term or filters.
@@ -481,13 +601,14 @@ function SenateDisclosuresPage() {
           </div>
         )}
 
-        {/* 1. FEED VIEW (INSIDERWAVE STYLE) */}
+        {/* 1. FEED VIEW */}
         {!isLoading && viewMode === 'feed' && filteredDisclosures.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
             {paginatedDisclosures.map((item, idx) => {
-              const senatorName = item.office || `${item.firstName} ${item.lastName}`.trim()
-              const isBuy = item.type === 'Purchase'
-              const isSale = item.type === 'Sale'
+              const politicianName = item.name
+              const isBuy = item.type.toLowerCase().includes('purchase')
+              const isSale = item.type.toLowerCase().includes('sale')
+              const isHouse = item.chamber === 'House'
 
               // Performance and timing metrics
               const returnVal = item.changeSinceTrade
@@ -497,24 +618,41 @@ function SenateDisclosuresPage() {
 
               return (
                 <div
-                  key={`${item.senateID}-${item.symbol}-${item.disclosureDate}-${idx}`}
+                  key={`${item.chamber}-${item.senateID || item.name}-${item.symbol}-${item.disclosureDate}-${idx}`}
                   className="bg-white border border-brand-border hover:border-brand-primary/40 rounded-xl p-4 transition-all hover:shadow-xs flex flex-col justify-between"
                 >
                   <div>
-                    {/* Header: Senator Headshot, Name, State, Relative Time */}
+                    {/* Header: Politician Avatar, Name, Chamber Badge, District */}
                     <div className="flex items-start gap-3 mb-3">
-                      <SenatorAvatar senateID={item.senateID} name={senatorName} size="md" />
+                      <PoliticianAvatar
+                        name={politicianName}
+                        senateID={item.senateID}
+                        chamber={item.chamber}
+                        size="md"
+                      />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
                           <h3 className="text-sm font-display font-bold text-brand-dark truncate">
-                            {senatorName}
+                            {politicianName}
                           </h3>
-                          {item.district && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 shrink-0">
-                              {item.district}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Chamber Badge */}
+                            <span
+                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                isHouse
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-sky-50 text-sky-700 border-sky-200'
+                              }`}
+                            >
+                              {item.chamber}
                             </span>
-                          )}
+                            {item.district && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                                {item.district}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Relative timing metadata */}
@@ -533,7 +671,7 @@ function SenateDisclosuresPage() {
                           isBuy ? 'text-emerald-700' : isSale ? 'text-rose-700' : 'text-amber-700'
                         }`}
                       >
-                        {item.type === 'Purchase' ? 'Bought' : item.type === 'Sale' ? 'Sold' : item.type}{' '}
+                        {isBuy ? 'Bought' : isSale ? 'Sold' : item.type}{' '}
                       </span>
                       <span className="font-semibold text-brand-dark">{item.amount}</span>
                       <span className="text-gray-500"> of </span>
@@ -548,7 +686,7 @@ function SenateDisclosuresPage() {
                       </Link>
                     </div>
 
-                    {/* InsiderWave Style Asset Box - Entire Box is Clickable */}
+                    {/* Asset Box - Clickable valuation link */}
                     <Link
                       to="/"
                       search={{ ticker: item.symbol }}
@@ -579,7 +717,7 @@ function SenateDisclosuresPage() {
                         </div>
                       </div>
 
-                      {/* Right: Current Price & Return Since Trade (InsiderWave style) */}
+                      {/* Right: Current Price & Return Since Trade */}
                       <div className="text-right shrink-0">
                         <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
                           Current price
@@ -636,7 +774,7 @@ function SenateDisclosuresPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-primary transition-colors"
-                        title="View official disclosure PDF on Senate.gov"
+                        title={`View official disclosure PDF on ${isHouse ? 'House.gov' : 'Senate.gov'}`}
                       >
                         <span>Official PTR</span>
                         <ExternalLink className="w-3 h-3" />
@@ -651,14 +789,15 @@ function SenateDisclosuresPage() {
           </div>
         )}
 
-        {/* 2. TABLE VIEW (TERMINAL DATA GRID) */}
+        {/* 2. TABLE VIEW */}
         {!isLoading && viewMode === 'table' && filteredDisclosures.length > 0 && (
           <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1250px] text-left border-collapse text-xs">
+              <table className="w-full min-w-[1300px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-brand-border bg-brand-bg/60 font-mono text-[11px] uppercase tracking-wider text-gray-600 whitespace-nowrap">
-                    <th className="py-3 px-4 font-bold min-w-[200px]">Senator</th>
+                    <th className="py-3 px-4 font-bold min-w-[220px]">Politician</th>
+                    <th className="py-3 px-2.5 font-bold min-w-[90px]">Chamber</th>
                     <th className="py-3 px-3 font-bold min-w-[220px]">Symbol / Asset</th>
                     <th className="py-3 px-3 font-bold min-w-[90px]">Action</th>
                     <th className="py-3 px-3 font-bold min-w-[140px]">Amount</th>
@@ -673,25 +812,31 @@ function SenateDisclosuresPage() {
                 </thead>
                 <tbody className="divide-y divide-brand-border/60 font-sans">
                   {paginatedDisclosures.map((item, idx) => {
-                    const senatorName = item.office || `${item.firstName} ${item.lastName}`.trim()
-                    const isBuy = item.type === 'Purchase'
-                    const isSale = item.type === 'Sale'
+                    const politicianName = item.name
+                    const isBuy = item.type.toLowerCase().includes('purchase')
+                    const isSale = item.type.toLowerCase().includes('sale')
+                    const isHouse = item.chamber === 'House'
                     const returnVal = item.changeSinceTrade
                     const hasReturn = returnVal !== null && returnVal !== undefined
                     const isPositive = hasReturn && returnVal >= 0
 
                     return (
                       <tr
-                        key={`${item.senateID}-${item.symbol}-${idx}`}
+                        key={`${item.chamber}-${item.senateID || item.name}-${item.symbol}-${idx}`}
                         className="hover:bg-brand-bg/30 transition-colors"
                       >
-                        {/* Senator */}
-                        <td className="py-2.5 px-4 min-w-[200px] whitespace-nowrap">
+                        {/* Politician */}
+                        <td className="py-2.5 px-4 min-w-[220px] whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <SenatorAvatar senateID={item.senateID} name={senatorName} size="sm" />
+                            <PoliticianAvatar
+                              name={politicianName}
+                              senateID={item.senateID}
+                              chamber={item.chamber}
+                              size="sm"
+                            />
                             <div className="min-w-0">
                               <div className="font-semibold text-brand-dark flex items-center gap-1 whitespace-nowrap">
-                                <span>{senatorName}</span>
+                                <span>{politicianName}</span>
                                 {item.district && (
                                   <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-gray-100 text-gray-500 shrink-0">
                                     {item.district}
@@ -700,6 +845,19 @@ function SenateDisclosuresPage() {
                               </div>
                             </div>
                           </div>
+                        </td>
+
+                        {/* Chamber */}
+                        <td className="py-2.5 px-2.5 font-mono whitespace-nowrap">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              isHouse
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : 'bg-sky-50 text-sky-700 border-sky-200'
+                            }`}
+                          >
+                            {item.chamber}
+                          </span>
                         </td>
 
                         {/* Symbol & Company */}
@@ -761,7 +919,6 @@ function SenateDisclosuresPage() {
                                 isPositive ? 'text-emerald-600' : 'text-rose-600'
                               }`}
                             >
-                              
                               {isPositive ? '+' : ''}
                               {returnVal?.toFixed(2)}%
                             </span>

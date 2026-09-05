@@ -16,9 +16,9 @@ import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-qu
 import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
 import { Route as ApiThesisRouteImport } from './routes/api/thesis'
 import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
-import { Route as homeSenateRouteImport } from './routes/(home)/senate'
 import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
 import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
+import { Route as homeCongressRouteImport } from './routes/(home)/congress'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
 
 const HealthRoute = HealthRouteImport.update({
@@ -55,11 +55,6 @@ const homeThesisRoute = homeThesisRouteImport.update({
   path: '/thesis',
   getParentRoute: () => homeRouteRoute,
 } as any)
-const homeSenateRoute = homeSenateRouteImport.update({
-  id: '/senate',
-  path: '/senate',
-  getParentRoute: () => homeRouteRoute,
-} as any)
 const homeScoreboardRoute = homeScoreboardRouteImport.update({
   id: '/scoreboard',
   path: '/scoreboard',
@@ -68,6 +63,11 @@ const homeScoreboardRoute = homeScoreboardRouteImport.update({
 const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
   id: '/daily-signals',
   path: '/daily-signals',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homeCongressRoute = homeCongressRouteImport.update({
+  id: '/congress',
+  path: '/congress',
   getParentRoute: () => homeRouteRoute,
 } as any)
 const homeAboutRoute = homeAboutRouteImport.update({
@@ -79,9 +79,9 @@ const homeAboutRoute = homeAboutRouteImport.update({
 export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
+  '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
   '/scoreboard': typeof homeScoreboardRoute
-  '/senate': typeof homeSenateRoute
   '/thesis': typeof homeThesisRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
@@ -91,9 +91,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
+  '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
   '/scoreboard': typeof homeScoreboardRoute
-  '/senate': typeof homeSenateRoute
   '/thesis': typeof homeThesisRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
@@ -105,9 +105,9 @@ export interface FileRoutesById {
   '/(home)': typeof homeRouteRouteWithChildren
   '/health': typeof HealthRoute
   '/(home)/about': typeof homeAboutRoute
+  '/(home)/congress': typeof homeCongressRoute
   '/(home)/daily-signals': typeof homeDailySignalsRoute
   '/(home)/scoreboard': typeof homeScoreboardRoute
-  '/(home)/senate': typeof homeSenateRoute
   '/(home)/thesis': typeof homeThesisRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
@@ -119,9 +119,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/health'
     | '/about'
+    | '/congress'
     | '/daily-signals'
     | '/scoreboard'
-    | '/senate'
     | '/thesis'
     | '/api/thesis'
     | '/api/thesis-explain'
@@ -131,9 +131,9 @@ export interface FileRouteTypes {
   to:
     | '/health'
     | '/about'
+    | '/congress'
     | '/daily-signals'
     | '/scoreboard'
-    | '/senate'
     | '/thesis'
     | '/api/thesis'
     | '/api/thesis-explain'
@@ -144,9 +144,9 @@ export interface FileRouteTypes {
     | '/(home)'
     | '/health'
     | '/(home)/about'
+    | '/(home)/congress'
     | '/(home)/daily-signals'
     | '/(home)/scoreboard'
-    | '/(home)/senate'
     | '/(home)/thesis'
     | '/api/thesis'
     | '/api/thesis-explain'
@@ -213,13 +213,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeThesisRouteImport
       parentRoute: typeof homeRouteRoute
     }
-    '/(home)/senate': {
-      id: '/(home)/senate'
-      path: '/senate'
-      fullPath: '/senate'
-      preLoaderRoute: typeof homeSenateRouteImport
-      parentRoute: typeof homeRouteRoute
-    }
     '/(home)/scoreboard': {
       id: '/(home)/scoreboard'
       path: '/scoreboard'
@@ -234,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeDailySignalsRouteImport
       parentRoute: typeof homeRouteRoute
     }
+    '/(home)/congress': {
+      id: '/(home)/congress'
+      path: '/congress'
+      fullPath: '/congress'
+      preLoaderRoute: typeof homeCongressRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
     '/(home)/about': {
       id: '/(home)/about'
       path: '/about'
@@ -246,18 +246,18 @@ declare module '@tanstack/react-router' {
 
 interface homeRouteRouteChildren {
   homeAboutRoute: typeof homeAboutRoute
+  homeCongressRoute: typeof homeCongressRoute
   homeDailySignalsRoute: typeof homeDailySignalsRoute
   homeScoreboardRoute: typeof homeScoreboardRoute
-  homeSenateRoute: typeof homeSenateRoute
   homeThesisRoute: typeof homeThesisRoute
   homeIndexRoute: typeof homeIndexRoute
 }
 
 const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeAboutRoute: homeAboutRoute,
+  homeCongressRoute: homeCongressRoute,
   homeDailySignalsRoute: homeDailySignalsRoute,
   homeScoreboardRoute: homeScoreboardRoute,
-  homeSenateRoute: homeSenateRoute,
   homeThesisRoute: homeThesisRoute,
   homeIndexRoute: homeIndexRoute,
 }

@@ -7,7 +7,7 @@ const navLinks = [
   { to: '/daily-signals', label: 'Daily Signals' },
   { to: '/scoreboard', label: 'Scoreboard' },
   { to: '/thesis', label: 'Thesis AI' },
-  { to: '/senate', label: 'Senate Trades' },
+  { to: '/congress', label: 'Congress Trades' },
 ] as const
 
 export default function Header() {
