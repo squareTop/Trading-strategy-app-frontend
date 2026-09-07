@@ -9,25 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as HealthRouteImport } from './routes/health'
 import { Route as homeRouteRouteImport } from './routes/(home)/route'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as homeIndexRouteImport } from './routes/(home)/index'
-import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
-import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
-import { Route as ApiThesisRouteImport } from './routes/api/thesis'
-import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
-import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
-import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
-import { Route as homeCongressRouteImport } from './routes/(home)/congress'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
+import { Route as homeCongressRouteImport } from './routes/(home)/congress'
+import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
+import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
+import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
+import { Route as ApiThesisRouteImport } from './routes/api/thesis'
+import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
+import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
 
+const homeRouteRoute = homeRouteRouteImport.update({
+  id: '/(home)',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const homeRouteRoute = homeRouteRouteImport.update({
-  id: '/(home)',
   getParentRoute: () => rootRouteImport,
 } as any)
 const homeIndexRoute = homeIndexRouteImport.update({
@@ -35,34 +35,9 @@ const homeIndexRoute = homeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => homeRouteRoute,
 } as any)
-const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
-  id: '/demo/tanstack-query',
-  path: '/demo/tanstack-query',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiThesisExplainRoute = ApiThesisExplainRouteImport.update({
-  id: '/api/thesis-explain',
-  path: '/api/thesis-explain',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiThesisRoute = ApiThesisRouteImport.update({
-  id: '/api/thesis',
-  path: '/api/thesis',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const homeThesisRoute = homeThesisRouteImport.update({
-  id: '/thesis',
-  path: '/thesis',
-  getParentRoute: () => homeRouteRoute,
-} as any)
-const homeScoreboardRoute = homeScoreboardRouteImport.update({
-  id: '/scoreboard',
-  path: '/scoreboard',
-  getParentRoute: () => homeRouteRoute,
-} as any)
-const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
-  id: '/daily-signals',
-  path: '/daily-signals',
+const homeAboutRoute = homeAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => homeRouteRoute,
 } as any)
 const homeCongressRoute = homeCongressRouteImport.update({
@@ -70,10 +45,35 @@ const homeCongressRoute = homeCongressRouteImport.update({
   path: '/congress',
   getParentRoute: () => homeRouteRoute,
 } as any)
-const homeAboutRoute = homeAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
+  id: '/daily-signals',
+  path: '/daily-signals',
   getParentRoute: () => homeRouteRoute,
+} as any)
+const homeScoreboardRoute = homeScoreboardRouteImport.update({
+  id: '/scoreboard',
+  path: '/scoreboard',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homeThesisRoute = homeThesisRouteImport.update({
+  id: '/thesis',
+  path: '/thesis',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const ApiThesisRoute = ApiThesisRouteImport.update({
+  id: '/api/thesis',
+  path: '/api/thesis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiThesisExplainRoute = ApiThesisExplainRouteImport.update({
+  id: '/api/thesis-explain',
+  path: '/api/thesis-explain',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
+  id: '/demo/tanstack-query',
+  path: '/demo/tanstack-query',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -164,18 +164,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/health': {
-      id: '/health'
-      path: '/health'
-      fullPath: '/health'
-      preLoaderRoute: typeof HealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(home)': {
       id: '/(home)'
       path: ''
       fullPath: ''
       preLoaderRoute: typeof homeRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(home)/': {
@@ -185,46 +185,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeIndexRouteImport
       parentRoute: typeof homeRouteRoute
     }
-    '/demo/tanstack-query': {
-      id: '/demo/tanstack-query'
-      path: '/demo/tanstack-query'
-      fullPath: '/demo/tanstack-query'
-      preLoaderRoute: typeof DemoTanstackQueryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/thesis-explain': {
-      id: '/api/thesis-explain'
-      path: '/api/thesis-explain'
-      fullPath: '/api/thesis-explain'
-      preLoaderRoute: typeof ApiThesisExplainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/thesis': {
-      id: '/api/thesis'
-      path: '/api/thesis'
-      fullPath: '/api/thesis'
-      preLoaderRoute: typeof ApiThesisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(home)/thesis': {
-      id: '/(home)/thesis'
-      path: '/thesis'
-      fullPath: '/thesis'
-      preLoaderRoute: typeof homeThesisRouteImport
-      parentRoute: typeof homeRouteRoute
-    }
-    '/(home)/scoreboard': {
-      id: '/(home)/scoreboard'
-      path: '/scoreboard'
-      fullPath: '/scoreboard'
-      preLoaderRoute: typeof homeScoreboardRouteImport
-      parentRoute: typeof homeRouteRoute
-    }
-    '/(home)/daily-signals': {
-      id: '/(home)/daily-signals'
-      path: '/daily-signals'
-      fullPath: '/daily-signals'
-      preLoaderRoute: typeof homeDailySignalsRouteImport
+    '/(home)/about': {
+      id: '/(home)/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof homeAboutRouteImport
       parentRoute: typeof homeRouteRoute
     }
     '/(home)/congress': {
@@ -234,12 +199,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeCongressRouteImport
       parentRoute: typeof homeRouteRoute
     }
-    '/(home)/about': {
-      id: '/(home)/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof homeAboutRouteImport
+    '/(home)/daily-signals': {
+      id: '/(home)/daily-signals'
+      path: '/daily-signals'
+      fullPath: '/daily-signals'
+      preLoaderRoute: typeof homeDailySignalsRouteImport
       parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/scoreboard': {
+      id: '/(home)/scoreboard'
+      path: '/scoreboard'
+      fullPath: '/scoreboard'
+      preLoaderRoute: typeof homeScoreboardRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/thesis': {
+      id: '/(home)/thesis'
+      path: '/thesis'
+      fullPath: '/thesis'
+      preLoaderRoute: typeof homeThesisRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/api/thesis': {
+      id: '/api/thesis'
+      path: '/api/thesis'
+      fullPath: '/api/thesis'
+      preLoaderRoute: typeof ApiThesisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/thesis-explain': {
+      id: '/api/thesis-explain'
+      path: '/api/thesis-explain'
+      fullPath: '/api/thesis-explain'
+      preLoaderRoute: typeof ApiThesisExplainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/tanstack-query': {
+      id: '/demo/tanstack-query'
+      path: '/demo/tanstack-query'
+      fullPath: '/demo/tanstack-query'
+      preLoaderRoute: typeof DemoTanstackQueryRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
