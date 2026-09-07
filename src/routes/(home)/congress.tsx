@@ -65,7 +65,7 @@ export const Route = createFileRoute('/(home)/congress')({
       },
       {
         name: 'description',
-        content: 'Real-time tracking of U.S. Senate and House financial disclosures, Nancy Pelosi stock trades, congressional insider trades, and post-trade performance analytics.',
+        content: 'Real-time tracking of U.S. Senate and House financial disclosures, congressional stock transactions, Capitol Hill insider filings, and post-trade performance analytics.',
       },
     ],
   }),
@@ -353,7 +353,7 @@ function CongressDisclosuresPage() {
                 Congressional Financial Disclosures
               </h1>
               <p className="text-gray-600 text-xs sm:text-sm mt-1 max-w-2xl">
-                Real-time tracking of U.S. Senate and House of Representatives stock transactions, including Nancy Pelosi and Capitol Hill members, with live quotes and returns since trade date.
+                Real-time tracking of U.S. Senate and House of Representatives stock transactions across Capitol Hill members, with live quotes and returns since trade date.
               </p>
             </div>
 
@@ -410,7 +410,7 @@ function CongressDisclosuresPage() {
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-purple-800 hover:text-purple-900 border border-purple-200'
               }`}
             >
-              <span>🏛️ House (e.g. Pelosi)</span>
+              <span>🏛️ House</span>
               {selectedChamber === 'house' && (
                 <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
                   {houseCount || totalCount}
@@ -454,7 +454,7 @@ function CongressDisclosuresPage() {
                 setSearchTerm(e.target.value)
                 setCurrentPage(1)
               }}
-              placeholder="Search by Politician (e.g. Pelosi), ticker (e.g. NVDA), company, or state..."
+              placeholder="Search by politician, ticker (e.g. NVDA), company, or state..."
               className="w-full pl-9 pr-8 py-2 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-sans text-brand-dark placeholder-gray-400 focus:outline-none focus:border-brand-primary focus:bg-white transition-all"
             />
             {searchTerm && (
