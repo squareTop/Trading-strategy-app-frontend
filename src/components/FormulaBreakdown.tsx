@@ -1,8 +1,8 @@
-import { ArrowRight, HelpCircle, Landmark, ShieldAlert, TrendingUp } from "lucide-react";
+import { ArrowRight, Landmark, ShieldAlert, TrendingUp } from "lucide-react";
 import { formatFinancial, formatPrice, formatPercent } from "#/lib/utils";
 
 interface FormulaBreakdownProps {
-  symbol: string;
+  symbol?: string;
   currency: string;
   sharesOutstanding: number;
   totalDebt: number;
@@ -15,7 +15,7 @@ interface FormulaBreakdownProps {
   pv20yr: number;
   ivBeforeAdjustment: number;
   finalIvPerShare: number;
-  discountPremium: number;
+  discountPremium?: number;
   cashPerShare: number;
   debtPerShare: number;
 
@@ -24,7 +24,6 @@ interface FormulaBreakdownProps {
 }
 
 export default function FormulaBreakdown({
-  symbol,
   currency,
   sharesOutstanding,
   totalDebt,
@@ -35,7 +34,6 @@ export default function FormulaBreakdown({
   pv20yr,
   ivBeforeAdjustment,
   finalIvPerShare,
-  discountPremium,
   cashPerShare,
   debtPerShare,
   financialCurrency,

@@ -2,14 +2,25 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import React, { useState, useMemo } from 'react'
 import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
+  useTable,
+  tableFeatures,
+  columnVisibilityFeature,
+  rowSortingFeature,
+  createSortedRowModel,
+  rowPaginationFeature,
+  createPaginatedRowModel,
   flexRender,
   createColumnHelper
 } from '@tanstack/react-table'
 import type { SortingState } from '@tanstack/react-table'
+
+const features = tableFeatures({
+  columnVisibilityFeature,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+})
 import {
   Search,
   ArrowUpDown,
@@ -274,8 +285,8 @@ function ScoreboardPage() {
   }, [monthFilteredOpen, tickerSearch, pipelineFilter, directionFilter])
 
   // React Table Columns for Resolved Signals
-  const resolvedColumnHelper = createColumnHelper<ScoreboardSignal>()
-  const resolvedColumns = useMemo(() => [
+  const resolvedColumnHelper = createColumnHelper<typeof features, ScoreboardSignal>()
+  const resolvedColumns = useMemo(() => resolvedColumnHelper.columns([
     resolvedColumnHelper.accessor('ticker', {
       header: 'Ticker',
       cell: info => {
@@ -296,7 +307,7 @@ function ScoreboardPage() {
       header: 'Pipeline',
       cell: info => (
         <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-          {PIPELINE_DISPLAY_NAMES[info.getValue()] || info.getValue()}
+          {info.getValue()}
         </span>
       ),
     }),
@@ -307,7 +318,7 @@ function ScoreboardPage() {
         const isLong = dir === 'long'
         return (
           <span
-            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${isLong
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${isLong
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : 'bg-red-50 text-red-700 border-red-200'
               }`}
@@ -318,15 +329,17 @@ function ScoreboardPage() {
       },
     }),
     resolvedColumnHelper.accessor('status', {
-      header: 'Outcome',
+      header: 'Status',
       cell: info => {
         const status = info.getValue()
-        let badgeStyle = ''
-        if (status === 'target') badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold'
-        else if (status === 'stop') badgeStyle = 'bg-red-100 text-red-800 border-red-300'
-        else badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300'
+        const isTarget = status === 'target'
         return (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${badgeStyle}`}>
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${isTarget
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'bg-red-100 text-red-800'
+              }`}
+          >
             {status}
           </span>
         )
@@ -334,24 +347,24 @@ function ScoreboardPage() {
     }),
     resolvedColumnHelper.accessor('entry', {
       header: 'Entry',
-      cell: info => <span className="font-mono text-brand-dark">{formatPrice(info.getValue())}</span>,
+      cell: info => <span className="font-mono font-medium text-gray-700">{formatPrice(info.getValue(), 'USD')}</span>,
     }),
     resolvedColumnHelper.accessor('exit_price', {
       header: 'Exit',
       cell: info => {
         const val = info.getValue()
-        return <span className="font-mono text-brand-dark">{val !== null ? formatPrice(val) : '-'}</span>
+        return <span className="font-mono font-medium text-gray-700">{val != null ? formatPrice(val, 'USD') : '-'}</span>
       },
     }),
     resolvedColumnHelper.accessor('realized_r', {
       header: 'Realized R',
       cell: info => {
         const val = info.getValue()
-        if (val === null) return <span className="font-mono text-gray-400">-</span>
-        const isPos = val > 0
+        if (val == null) return <span className="text-gray-400 font-mono">-</span>
+        const isPositive = val > 0
         return (
-          <span className={`font-mono font-bold ${isPos ? 'text-emerald-600' : 'text-red-600'}`}>
-            {isPos ? `+${val.toFixed(2)} R` : `${val.toFixed(2)} R`}
+          <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+            {isPositive ? '+' : ''}{val.toFixed(2)}R
           </span>
         )
       },
@@ -360,11 +373,11 @@ function ScoreboardPage() {
       header: 'Trade Return',
       cell: info => {
         const val = info.getValue()
-        if (val === null) return <span className="font-mono text-gray-400">-</span>
-        const isPos = val > 0
+        if (val == null) return <span className="text-gray-400 font-mono">-</span>
+        const isPositive = val > 0
         return (
-          <span className={`font-mono font-bold ${isPos ? 'text-emerald-600' : 'text-red-600'}`}>
-            {isPos ? `+${formatPercent(val)}` : formatPercent(val)}
+          <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+            {isPositive ? '+' : ''}{formatPercent(val)}
           </span>
         )
       },
@@ -373,45 +386,45 @@ function ScoreboardPage() {
       header: 'SPY Return',
       cell: info => {
         const val = info.getValue()
-        if (val === null) return <span className="font-mono text-gray-400">-</span>
-        const isPos = val > 0
+        if (val == null) return <span className="text-gray-400 font-mono">-</span>
+        const isPositive = val > 0
         return (
-          <span className="font-mono text-gray-600">
-            {isPos ? `+${formatPercent(val)}` : formatPercent(val)}
+          <span className={`font-mono ${isPositive ? 'text-gray-700' : 'text-gray-500'}`}>
+            {isPositive ? '+' : ''}{formatPercent(val)}
           </span>
         )
       },
     }),
     resolvedColumnHelper.accessor('excess_return', {
-      header: 'vs SPY (Alpha)',
+      header: 'Alpha (vs SPY)',
       cell: info => {
         const val = info.getValue()
-        if (val === null) return <span className="font-mono text-gray-400">-</span>
-        const isPos = val > 0
+        if (val == null) return <span className="text-gray-400 font-mono">-</span>
+        const isPositive = val > 0
         return (
-          <span className={`font-mono font-black ${isPos ? 'text-emerald-600' : 'text-red-600'}`}>
-            {isPos ? `+${formatPercent(val)}` : formatPercent(val)}
+          <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600' : 'text-amber-600'}`}>
+            {isPositive ? '+' : ''}{formatPercent(val)}
           </span>
         )
       },
     }),
     resolvedColumnHelper.accessor('signal_date', {
-      header: 'Signaled',
+      header: 'Signal Date',
       cell: info => <span className="font-mono text-xs text-gray-500">{info.getValue()}</span>,
     }),
     resolvedColumnHelper.accessor('resolved_date', {
-      header: 'Resolved',
-      cell: info => <span className="font-mono text-xs text-gray-500">{info.getValue() || '-'}</span>,
+      header: 'Resolved Date',
+      cell: info => <span className="font-mono text-xs text-gray-500">{info.getValue() ?? '-'}</span>,
     }),
     resolvedColumnHelper.accessor('bars_held', {
       header: 'Bars',
       cell: info => <span className="font-mono text-xs text-gray-600">{info.getValue() ?? '-'}</span>,
     }),
-  ], [resolvedColumnHelper])
+  ]), [resolvedColumnHelper])
 
   // React Table Columns for Open Signals
-  const openColumnHelper = createColumnHelper<ScoreboardSignal>()
-  const openColumns = useMemo(() => [
+  const openColumnHelper = createColumnHelper<typeof features, ScoreboardSignal>()
+  const openColumns = useMemo(() => openColumnHelper.columns([
     openColumnHelper.accessor('ticker', {
       header: 'Ticker',
       cell: info => {
@@ -432,7 +445,7 @@ function ScoreboardPage() {
       header: 'Pipeline',
       cell: info => (
         <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-          {PIPELINE_DISPLAY_NAMES[info.getValue()] || info.getValue()}
+          {info.getValue()}
         </span>
       ),
     }),
@@ -443,7 +456,7 @@ function ScoreboardPage() {
         const isLong = dir === 'long'
         return (
           <span
-            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${isLong
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${isLong
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : 'bg-red-50 text-red-700 border-red-200'
               }`}
@@ -455,7 +468,7 @@ function ScoreboardPage() {
     }),
     openColumnHelper.accessor('entry', {
       header: 'Entry Price',
-      cell: info => <span className="font-mono text-brand-dark">{formatPrice(info.getValue())}</span>,
+      cell: info => <span className="font-mono font-medium text-gray-700">{formatPrice(info.getValue(), 'USD')}</span>,
     }),
     openColumnHelper.accessor('signal_date', {
       header: 'Signal Date',
@@ -465,29 +478,25 @@ function ScoreboardPage() {
       header: 'Bars Held',
       cell: info => <span className="font-mono text-xs text-gray-600">{info.getValue() ?? '-'}</span>,
     }),
-  ], [openColumnHelper])
+  ]), [openColumnHelper])
 
   // Instantiate Tables
-  const resolvedTable = useReactTable({
+  const resolvedTable = useTable({
+    features,
     data: filteredResolved,
     columns: resolvedColumns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    initialState: { pagination: { pageSize: 15 } }
+    initialState: { pagination: { pageIndex: 0, pageSize: 15 } }
   })
 
-  const openTable = useReactTable({
+  const openTable = useTable({
+    features,
     data: filteredOpen,
     columns: openColumns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    initialState: { pagination: { pageSize: 15 } }
+    initialState: { pagination: { pageIndex: 0, pageSize: 15 } }
   })
 
   const activeTable = activeTab === 'resolved' ? resolvedTable : openTable
@@ -945,12 +954,12 @@ function ScoreboardPage() {
                     <div>
                       Showing{' '}
                       <span className="font-bold text-brand-dark">
-                        {activeTable.getState().pagination.pageIndex * activeTable.getState().pagination.pageSize + 1}
+                        {activeTable.state.pagination.pageIndex * activeTable.state.pagination.pageSize + 1}
                       </span>{' '}
                       to{' '}
                       <span className="font-bold text-brand-dark">
                         {Math.min(
-                          (activeTable.getState().pagination.pageIndex + 1) * activeTable.getState().pagination.pageSize,
+                          (activeTable.state.pagination.pageIndex + 1) * activeTable.state.pagination.pageSize,
                           activeFilteredDataCount
                         )}
                       </span>{' '}

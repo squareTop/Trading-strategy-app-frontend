@@ -2,14 +2,25 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useChat } from '@tanstack/ai-react'
 import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
+  useTable,
+  tableFeatures,
+  columnVisibilityFeature,
+  rowSortingFeature,
+  createSortedRowModel,
+  rowPaginationFeature,
+  createPaginatedRowModel,
   flexRender,
   createColumnHelper,
 } from '@tanstack/react-table'
 import type { SortingState } from '@tanstack/react-table'
+
+const features = tableFeatures({
+  columnVisibilityFeature,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+})
 import {
   TrendingUp,
   TrendingDown,
@@ -114,7 +125,7 @@ export const Route = createFileRoute('/(home)/thesis')({
   component: ThesisPage,
 })
 
-const columnHelper = createColumnHelper<ThesisSignal>()
+const columnHelper = createColumnHelper<typeof features, ThesisSignal>()
 
 function restoreFromCache(entry: ThesisCacheEntry) {
   return {
@@ -380,7 +391,7 @@ function ThesisPage() {
   }, [])
 
   const columns = useMemo(
-    () => [
+    () => columnHelper.columns([
       columnHelper.accessor('ticker', {
         header: 'Ticker',
         cell: (info) => (
@@ -493,19 +504,17 @@ function ThesisPage() {
           )
         },
       }),
-    ],
+    ]),
     [],
   )
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: records,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   })
 
   const isRunning = isExtracting || step === 'analyzing' || isExplaining
@@ -899,7 +908,7 @@ function ThesisPage() {
                 {table.getPageCount() > 1 && (
                   <div className="px-4 py-4 md:px-6 border-t border-brand-border bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs font-mono text-gray-500">
                     <span>
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                      Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
                     </span>
                     <div className="flex items-center gap-2">
                       <button

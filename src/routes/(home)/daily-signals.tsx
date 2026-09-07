@@ -2,10 +2,13 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
+  useTable,
+  tableFeatures,
+  columnVisibilityFeature,
+  rowSortingFeature,
+  createSortedRowModel,
+  rowPaginationFeature,
+  createPaginatedRowModel,
   flexRender,
   createColumnHelper
 } from '@tanstack/react-table'
@@ -19,15 +22,21 @@ import {
   ChevronRight,
   ArrowUpRight,
   RefreshCw,
-  SlidersHorizontal,
-  Activity,
   Layers,
   Percent,
-  CheckCircle,
-  HelpCircle
+  CheckCircle
 } from 'lucide-react'
-import { formatPercent, formatPrice, formatLargeNumber, formatDate } from '../../lib/utils'
+import { formatPercent, formatPrice, formatDate } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
+
+const features = tableFeatures({
+  columnVisibilityFeature,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+})
+const columnHelper = createColumnHelper<typeof features, DailySignal>()
 
 export interface DailySignal {
   id: number;
@@ -216,8 +225,7 @@ function DailySignalsPage() {
   }, [signals, tickerSearch, directionFilter, pipelineStrategyFilter])
 
   // Define Columns
-  const columnHelper = createColumnHelper<DailySignal>()
-  const columns = useMemo(() => [
+  const columns = useMemo(() => columnHelper.columns([
     columnHelper.accessor('ticker', {
       header: 'Ticker',
       cell: info => {
@@ -331,21 +339,20 @@ function DailySignalsPage() {
         )
       },
     }),
-  ], [columnHelper])
+  ]), [columnHelper])
 
   // Instantiate Table
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: filteredData,
     columns,
     state: {
       sorting,
     },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
+        pageIndex: 0,
         pageSize: 10,
       },
     },
@@ -647,7 +654,7 @@ function DailySignalsPage() {
                   <div className="flex items-center gap-2">
                     <span>Show:</span>
                     <select
-                      value={table.getState().pagination.pageSize}
+                      value={table.state.pagination.pageSize}
                       onChange={e => {
                         table.setPageSize(Number(e.target.value))
                       }}
@@ -660,7 +667,7 @@ function DailySignalsPage() {
                       ))}
                     </select>
                     <span>
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                      Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
                     </span>
                   </div>
 
