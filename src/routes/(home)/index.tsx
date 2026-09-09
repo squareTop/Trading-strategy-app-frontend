@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import FormulaBreakdown from "#/components/FormulaBreakdown";
+import { TickerAutocomplete } from '#/components/TickerAutocomplete';
 import "./styles.css";
 import type { FoxelSignalIVResponse } from "../../lib/types";
 import {
@@ -186,17 +187,19 @@ function App() {
 
           {/* Form input - Precise styling round 8px inputs, 14px button with orange glow */}
           <form onSubmit={handleSearchSubmit} className="mt-5 sm:mt-6 flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                <Search className="w-4 h-4" />
-              </div>
-              <input
-                type="text"
-                autoComplete="off"
-                placeholder="Enter stock ticker (e.g. MSFT)..."
+            <div className="flex-1">
+              <TickerAutocomplete
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-mono font-semibold placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all text-sm uppercase"
+                onChange={setSearchInput}
+                onSelectTicker={(selectedSymbol) => {
+                  setSearchInput(selectedSymbol)
+                  setTicker(selectedSymbol)
+                  navigate({
+                    search: (prev) => ({ ...prev, ticker: selectedSymbol }),
+                  })
+                }}
+                placeholder="Enter stock ticker or company name (e.g. Apple, MSFT)..."
+                inputClassName="w-full pl-10 pr-9 py-2.5 sm:py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-mono font-semibold placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all text-sm uppercase"
               />
             </div>
             <button

@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../lib/auth'
 import { useWatchlist, type WatchlistItem } from '../../lib/watchlist'
 import { formatFinancial, formatPrice } from '../../lib/utils'
+import { TickerAutocomplete } from '../../components/TickerAutocomplete'
 
 export const Route = createFileRoute('/(home)/watchlist')({
   head: () => ({
@@ -155,14 +156,16 @@ function WatchlistPage() {
           }}
           className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
         >
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5 pointer-events-none" />
-            <input
-              type="text"
+          <div className="flex-1">
+            <TickerAutocomplete
               value={symbolInput}
-              onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
-              placeholder="Enter ticker (e.g. NVDA, MSFT, AAPL)..."
-              className="w-full pl-10 pr-4 py-2.5 bg-brand-bg/30 border border-brand-border rounded-xl text-xs sm:text-sm font-mono uppercase text-brand-dark focus:outline-none focus:border-brand-primary focus:bg-white transition-all"
+              onChange={setSymbolInput}
+              onSelectTicker={(selectedSymbol) => {
+                setSymbolInput(selectedSymbol)
+                handleAdd(selectedSymbol)
+              }}
+              placeholder="Enter ticker or company name (e.g. Apple, Tesla, NVDA)..."
+              inputClassName="w-full pl-10 pr-9 py-2.5 bg-brand-bg/30 border border-brand-border rounded-xl text-xs sm:text-sm font-mono text-brand-dark focus:outline-none focus:border-brand-primary focus:bg-white transition-all uppercase"
             />
           </div>
           <button

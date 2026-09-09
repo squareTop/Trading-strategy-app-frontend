@@ -153,13 +153,6 @@ export default function Header() {
                       <p className="text-[11px] text-gray-500 font-mono truncate mt-0.5">
                         {user.email}
                       </p>
-                      <div className="mt-1.5">
-                        <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-brand-bg text-gray-600 border border-brand-border">
-                          {user.oauth_provider === 'google'
-                            ? 'Google OAuth'
-                            : 'Password Auth'}
-                        </span>
-                      </div>
                     </div>
 
                     {/* Navigation items */}
