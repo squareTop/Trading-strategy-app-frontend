@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { formatPercent, formatPrice, formatDate } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
+import DailySignalsSkeleton from '../../components/skeletons/DailySignalsSkeleton'
 
 const features = tableFeatures({
   columnVisibilityFeature,
@@ -89,7 +90,8 @@ export const dailySignalsQueryOptions = queryOptions({
       throw new Error(`Failed to fetch daily signals: error status ${response.status}`);
     }
     return response.json() as Promise<DailySignalsResponse>;
-  }
+  },
+  staleTime: 60 * 1000,
 })
 
 export const Route = createFileRoute('/(home)/daily-signals')({
@@ -107,6 +109,9 @@ export const Route = createFileRoute('/(home)/daily-signals')({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(dailySignalsQueryOptions).catch(() => { });
   },
+  pendingComponent: DailySignalsSkeleton,
+  pendingMs: 50,
+  pendingMinMs: 300,
   component: DailySignalsPage,
 })
 

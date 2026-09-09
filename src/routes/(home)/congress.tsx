@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { API_URL } from '../../lib/config'
 import { formatPrice } from '../../lib/utils'
+import CongressSkeleton from '../../components/skeletons/CongressSkeleton'
 
 export interface CongressDisclosure {
   chamber: 'Senate' | 'House'
@@ -72,6 +73,9 @@ export const Route = createFileRoute('/(home)/congress')({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(congressQueryOptions('all')).catch(() => {})
   },
+  pendingComponent: CongressSkeleton,
+  pendingMs: 50,
+  pendingMinMs: 300,
   component: CongressDisclosuresPage,
 })
 

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { formatPercent, formatPrice } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
+import ScoreboardSkeleton from '../../components/skeletons/ScoreboardSkeleton'
 
 function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSignal[], label: string): ScorecardRow {
   const n = resolvedList.length;
@@ -139,7 +140,8 @@ export const scoreboardQueryOptions = queryOptions({
       throw new Error(`Failed to fetch scoreboard: error status ${response.status}`);
     }
     return response.json() as Promise<ScoreboardResponse>;
-  }
+  },
+  staleTime: 60 * 1000,
 })
 
 export const Route = createFileRoute('/(home)/scoreboard')({
@@ -157,6 +159,9 @@ export const Route = createFileRoute('/(home)/scoreboard')({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(scoreboardQueryOptions).catch(() => { });
   },
+  pendingComponent: ScoreboardSkeleton,
+  pendingMs: 50,
+  pendingMinMs: 300,
   component: ScoreboardPage,
 })
 

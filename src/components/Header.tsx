@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { useState, useRef, useEffect } from 'react'
 import {
   Menu,
@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Shield,
   Bookmark,
+  Loader2,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
@@ -42,6 +43,15 @@ export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { isNavigating, targetPath } = useRouterState({
+    select: (s) => ({
+      isNavigating: s.isLoading,
+      targetPath: s.location.pathname,
+    }),
+  })
+
+  const isPendingLink = (to: string) =>
+    isNavigating && (to === '/' ? targetPath === '/' : targetPath.startsWith(to))
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -96,23 +106,32 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-2 font-mono text-xs">
-          {navLinks.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              activeProps={{
-                className:
-                  'bg-brand-primary/10 text-brand-primary border-brand-primary/30',
-              }}
-              inactiveProps={{
-                className:
-                  'text-gray-600 hover:text-brand-primary hover:bg-brand-bg/50 border-transparent',
-              }}
-              className="px-3.5 py-2 rounded-lg font-bold uppercase tracking-wider transition-all border border-solid text-[11px] whitespace-nowrap"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const pending = isPendingLink(link.to)
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                activeProps={{
+                  className:
+                    'bg-brand-primary/10 text-brand-primary border-brand-primary/30',
+                }}
+                inactiveProps={{
+                  className: pending
+                    ? 'bg-brand-primary/5 text-brand-primary border-brand-primary/30'
+                    : 'text-gray-600 hover:text-brand-primary hover:bg-brand-bg/50 border-transparent',
+                }}
+                className={`px-3.5 py-2 rounded-lg font-bold uppercase tracking-wider transition-all border border-solid text-[11px] whitespace-nowrap inline-flex items-center gap-1.5 ${
+                  pending ? 'ring-1 ring-brand-primary/30' : ''
+                }`}
+              >
+                <span>{link.label}</span>
+                {pending && (
+                  <Loader2 className="w-3 h-3 animate-spin text-brand-primary shrink-0" />
+                )}
+              </Link>
+            )
+          })}
 
           {/* User Auth Section with Dropdown */}
           <div
@@ -216,24 +235,33 @@ export default function Header() {
       {/* Mobile Nav Dropdown */}
       {menuOpen && (
         <nav className="md:hidden mt-3 pt-3 border-t border-brand-border flex flex-col gap-1.5 font-mono text-xs animate-fade-in">
-          {navLinks.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              onClick={() => setMenuOpen(false)}
-              activeProps={{
-                className:
-                  'bg-brand-primary/10 text-brand-primary border-brand-primary/30',
-              }}
-              inactiveProps={{
-                className:
-                  'text-gray-600 hover:text-brand-primary hover:bg-brand-bg/50 border-transparent',
-              }}
-              className="px-3.5 py-2.5 rounded-lg font-bold uppercase tracking-wider transition-all border border-solid text-[11px]"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const pending = isPendingLink(link.to)
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={() => setMenuOpen(false)}
+                activeProps={{
+                  className:
+                    'bg-brand-primary/10 text-brand-primary border-brand-primary/30',
+                }}
+                inactiveProps={{
+                  className: pending
+                    ? 'bg-brand-primary/5 text-brand-primary border-brand-primary/30'
+                    : 'text-gray-600 hover:text-brand-primary hover:bg-brand-bg/50 border-transparent',
+                }}
+                className={`px-3.5 py-2.5 rounded-lg font-bold uppercase tracking-wider transition-all border border-solid text-[11px] flex items-center justify-between ${
+                  pending ? 'ring-1 ring-brand-primary/30' : ''
+                }`}
+              >
+                <span>{link.label}</span>
+                {pending && (
+                  <Loader2 className="w-3 h-3 animate-spin text-brand-primary shrink-0" />
+                )}
+              </Link>
+            )
+          })}
 
           <div className="pt-2 border-t border-brand-border">
             {!isLoading && isAuthenticated && user ? (

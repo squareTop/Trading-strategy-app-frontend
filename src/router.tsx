@@ -3,6 +3,7 @@ import { routeTree } from './routeTree.gen'
 
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { getContext } from './integrations/tanstack-query/root-provider'
+import PageSkeletonFallback from './components/skeletons/PageSkeletonFallback'
 
 export function getRouter() {
   const context = getContext()
@@ -12,7 +13,10 @@ export function getRouter() {
     context,
     scrollRestoration: true,
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    defaultPreloadStaleTime: 30_000,
+    defaultPendingMs: 50,
+    defaultPendingMinMs: 300,
+    defaultPendingComponent: PageSkeletonFallback,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient })
