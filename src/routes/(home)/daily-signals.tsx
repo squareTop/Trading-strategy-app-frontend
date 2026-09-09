@@ -697,12 +697,6 @@ function DailySignalsPage() {
             </div>
           )}
         </div>
-
-        <div className="mt-12 text-center max-w-3xl mx-auto border-t border-brand-border/40 pt-6">
-          <p className="text-[10px] text-gray-400 font-mono leading-relaxed">
-            Disclaimer: The information provided on this platform is for educational and informational purposes only and does not constitute financial, investment, or legal advice. Trading financial instruments involves significant risk of loss. Past performance is not indicative of future results. Always consult with a licensed professional before making investment decisions.
-          </p>
-        </div>
       </main>
     </div>
   )
