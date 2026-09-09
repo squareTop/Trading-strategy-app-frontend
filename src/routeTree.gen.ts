@@ -15,6 +15,10 @@ import { Route as homeIndexRouteImport } from './routes/(home)/index'
 import { Route as homeAboutRouteImport } from './routes/(home)/about'
 import { Route as homeCongressRouteImport } from './routes/(home)/congress'
 import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
+import { Route as homeLoginRouteImport } from './routes/(home)/login'
+import { Route as homePrivateRouteImport } from './routes/(home)/private'
+import { Route as homeProfileRouteImport } from './routes/(home)/profile'
+import { Route as homeRegisterRouteImport } from './routes/(home)/register'
 import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
 import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
 import { Route as ApiThesisRouteImport } from './routes/api/thesis'
@@ -50,6 +54,26 @@ const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
   path: '/daily-signals',
   getParentRoute: () => homeRouteRoute,
 } as any)
+const homeLoginRoute = homeLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homePrivateRoute = homePrivateRouteImport.update({
+  id: '/private',
+  path: '/private',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homeProfileRoute = homeProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homeRegisterRoute = homeRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 const homeScoreboardRoute = homeScoreboardRouteImport.update({
   id: '/scoreboard',
   path: '/scoreboard',
@@ -81,6 +105,10 @@ export interface FileRoutesByFullPath {
   '/about': typeof homeAboutRoute
   '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
+  '/login': typeof homeLoginRoute
+  '/private': typeof homePrivateRoute
+  '/profile': typeof homeProfileRoute
+  '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
   '/api/thesis': typeof ApiThesisRoute
@@ -93,6 +121,10 @@ export interface FileRoutesByTo {
   '/about': typeof homeAboutRoute
   '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
+  '/login': typeof homeLoginRoute
+  '/private': typeof homePrivateRoute
+  '/profile': typeof homeProfileRoute
+  '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
   '/api/thesis': typeof ApiThesisRoute
@@ -107,6 +139,10 @@ export interface FileRoutesById {
   '/(home)/about': typeof homeAboutRoute
   '/(home)/congress': typeof homeCongressRoute
   '/(home)/daily-signals': typeof homeDailySignalsRoute
+  '/(home)/login': typeof homeLoginRoute
+  '/(home)/private': typeof homePrivateRoute
+  '/(home)/profile': typeof homeProfileRoute
+  '/(home)/register': typeof homeRegisterRoute
   '/(home)/scoreboard': typeof homeScoreboardRoute
   '/(home)/thesis': typeof homeThesisRoute
   '/api/thesis': typeof ApiThesisRoute
@@ -121,6 +157,10 @@ export interface FileRouteTypes {
     | '/about'
     | '/congress'
     | '/daily-signals'
+    | '/login'
+    | '/private'
+    | '/profile'
+    | '/register'
     | '/scoreboard'
     | '/thesis'
     | '/api/thesis'
@@ -133,6 +173,10 @@ export interface FileRouteTypes {
     | '/about'
     | '/congress'
     | '/daily-signals'
+    | '/login'
+    | '/private'
+    | '/profile'
+    | '/register'
     | '/scoreboard'
     | '/thesis'
     | '/api/thesis'
@@ -146,6 +190,10 @@ export interface FileRouteTypes {
     | '/(home)/about'
     | '/(home)/congress'
     | '/(home)/daily-signals'
+    | '/(home)/login'
+    | '/(home)/private'
+    | '/(home)/profile'
+    | '/(home)/register'
     | '/(home)/scoreboard'
     | '/(home)/thesis'
     | '/api/thesis'
@@ -206,6 +254,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeDailySignalsRouteImport
       parentRoute: typeof homeRouteRoute
     }
+    '/(home)/login': {
+      id: '/(home)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof homeLoginRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/private': {
+      id: '/(home)/private'
+      path: '/private'
+      fullPath: '/private'
+      preLoaderRoute: typeof homePrivateRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/profile': {
+      id: '/(home)/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof homeProfileRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/register': {
+      id: '/(home)/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof homeRegisterRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
     '/(home)/scoreboard': {
       id: '/(home)/scoreboard'
       path: '/scoreboard'
@@ -248,6 +324,10 @@ interface homeRouteRouteChildren {
   homeAboutRoute: typeof homeAboutRoute
   homeCongressRoute: typeof homeCongressRoute
   homeDailySignalsRoute: typeof homeDailySignalsRoute
+  homeLoginRoute: typeof homeLoginRoute
+  homePrivateRoute: typeof homePrivateRoute
+  homeProfileRoute: typeof homeProfileRoute
+  homeRegisterRoute: typeof homeRegisterRoute
   homeScoreboardRoute: typeof homeScoreboardRoute
   homeThesisRoute: typeof homeThesisRoute
   homeIndexRoute: typeof homeIndexRoute
@@ -257,6 +337,10 @@ const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeAboutRoute: homeAboutRoute,
   homeCongressRoute: homeCongressRoute,
   homeDailySignalsRoute: homeDailySignalsRoute,
+  homeLoginRoute: homeLoginRoute,
+  homePrivateRoute: homePrivateRoute,
+  homeProfileRoute: homeProfileRoute,
+  homeRegisterRoute: homeRegisterRoute,
   homeScoreboardRoute: homeScoreboardRoute,
   homeThesisRoute: homeThesisRoute,
   homeIndexRoute: homeIndexRoute,
