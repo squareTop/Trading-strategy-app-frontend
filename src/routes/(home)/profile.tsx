@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   User as UserIcon,
   Mail,
@@ -8,8 +8,11 @@ import {
   Lock,
   LogOut,
   ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Send,
 } from 'lucide-react'
-import { useAuth } from '../../lib/auth'
+import { useAuth, resendVerificationEmail } from '../../lib/auth'
 import { formatDate } from '../../lib/utils'
 
 export const Route = createFileRoute('/(home)/profile')({
@@ -26,6 +29,8 @@ export const Route = createFileRoute('/(home)/profile')({
 function ProfilePage() {
   const navigate = useNavigate()
   const { user, isLoading, isAuthenticated, logout, isLoggingOut } = useAuth()
+  const [isResending, setIsResending] = useState(false)
+  const [resendStatus, setResendStatus] = useState<string | null>(null)
 
   // Route protection: redirect to login if unauthenticated
   useEffect(() => {
@@ -40,6 +45,20 @@ function ProfilePage() {
   const handleLogout = async () => {
     await logout()
     navigate({ to: '/login' })
+  }
+
+  const handleResendEmail = async () => {
+    if (!user?.email || isResending) return
+    setIsResending(true)
+    setResendStatus(null)
+    try {
+      const msg = await resendVerificationEmail(user.email)
+      setResendStatus(msg)
+    } catch {
+      setResendStatus('Failed to send verification email. Please try again.')
+    } finally {
+      setIsResending(false)
+    }
   }
 
   if (isLoading) {
@@ -99,9 +118,17 @@ function ProfilePage() {
           </p>
 
           <div className="mt-4 flex flex-wrap gap-1.5 justify-center">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-brand-bg text-[11px] font-mono font-medium text-gray-600 border border-brand-border">
-              {user.oauth_provider === 'google' ? 'Google OAuth' : 'Password Auth'}
-            </span>
+            {user.is_verified ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-mono font-semibold">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                Verified
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-mono font-semibold">
+                <AlertCircle className="w-3 h-3 text-amber-600" />
+                Unverified
+              </span>
+            )}
             {user.is_superuser && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-mono font-semibold">
                 Admin
@@ -123,6 +150,38 @@ function ProfilePage() {
 
         {/* Profile Details */}
         <div className="md:col-span-2 space-y-6">
+          {!user.is_verified && (
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-800 shadow-xs">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-bold font-sans text-amber-900 text-sm">
+                    Please verify your email address
+                  </div>
+                  <p className="mt-1 text-amber-800/90 leading-relaxed">
+                    We sent a verification link to <span className="font-semibold">{user.email}</span>. Click the link in your email to verify your account and ensure full access.
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleResendEmail}
+                      disabled={isResending}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-900 font-semibold shadow-2xs hover:bg-amber-100/60 transition disabled:opacity-50 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5 text-amber-700" />
+                      <span>{isResending ? 'Sending...' : 'Resend Verification Email'}</span>
+                    </button>
+                    {resendStatus && (
+                      <span className="font-mono text-[11px] text-amber-900">
+                        {resendStatus}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white border border-brand-border rounded-2xl p-6 shadow-xs">
             <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-400 mb-4">
               Profile Details
@@ -180,31 +239,24 @@ function ProfilePage() {
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-brand-bg/30 border border-brand-border/60">
                 <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className={`w-4 h-4 ${user.is_verified ? 'text-emerald-600' : 'text-amber-600'}`} />
                   <div>
                     <p className="font-semibold text-brand-dark">Account Status</p>
-                    <p className="text-[11px] text-gray-500">Your account is verified and active</p>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Active
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-xl bg-brand-bg/30 border border-brand-border/60">
-                <div className="flex items-center gap-2.5">
-                  <Lock className="w-4 h-4 text-brand-primary" />
-                  <div>
-                    <p className="font-semibold text-brand-dark">Authentication Method</p>
                     <p className="text-[11px] text-gray-500">
-                      {user.oauth_provider === 'google'
-                        ? 'Google Single Sign-On (OIDC)'
-                        : 'Local Credentials (Argon2id)'}
+                      {user.is_verified
+                        ? 'Your account is verified and active'
+                        : 'Your account is active (email verification pending)'}
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-brand-bg text-gray-600 border border-brand-border">
-                  {user.oauth_provider === 'google' ? 'Google' : 'Password'}
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                    user.is_verified
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}
+                >
+                  {user.is_verified ? 'Active & Verified' : 'Pending Verification'}
                 </span>
               </div>
             </div>

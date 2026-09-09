@@ -8,6 +8,7 @@ export interface User {
   full_name?: string | null
   avatar_url?: string | null
   is_active: boolean
+  is_verified: boolean
   is_superuser: boolean
   oauth_provider?: string | null
   created_at: string
@@ -64,6 +65,34 @@ export async function registerUser(creds: {
     throw new Error(data.detail || 'Registration failed')
   }
   return data.user
+}
+
+export async function verifyEmail(token: string): Promise<string> {
+  const res = await fetch(`${API_URL}/auth/verify-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ token }),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data.detail || 'Failed to verify email')
+  }
+  return data.message || 'Email verified successfully.'
+}
+
+export async function resendVerificationEmail(email: string): Promise<string> {
+  const res = await fetch(`${API_URL}/auth/resend-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email }),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data.detail || 'Failed to resend verification email')
+  }
+  return data.message || 'Verification link sent.'
 }
 
 export async function logoutUser(): Promise<void> {

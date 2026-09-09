@@ -20,6 +20,7 @@ import { Route as homeProfileRouteImport } from './routes/(home)/profile'
 import { Route as homeRegisterRouteImport } from './routes/(home)/register'
 import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
 import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
+import { Route as homeVerifyEmailRouteImport } from './routes/(home)/verify-email'
 import { Route as homeWatchlistRouteImport } from './routes/(home)/watchlist'
 import { Route as ApiThesisRouteImport } from './routes/api/thesis'
 import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
@@ -79,6 +80,11 @@ const homeThesisRoute = homeThesisRouteImport.update({
   path: '/thesis',
   getParentRoute: () => homeRouteRoute,
 } as any)
+const homeVerifyEmailRoute = homeVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 const homeWatchlistRoute = homeWatchlistRouteImport.update({
   id: '/watchlist',
   path: '/watchlist',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
+  '/verify-email': typeof homeVerifyEmailRoute
   '/watchlist': typeof homeWatchlistRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
+  '/verify-email': typeof homeVerifyEmailRoute
   '/watchlist': typeof homeWatchlistRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/(home)/register': typeof homeRegisterRoute
   '/(home)/scoreboard': typeof homeScoreboardRoute
   '/(home)/thesis': typeof homeThesisRoute
+  '/(home)/verify-email': typeof homeVerifyEmailRoute
   '/(home)/watchlist': typeof homeWatchlistRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/scoreboard'
     | '/thesis'
+    | '/verify-email'
     | '/watchlist'
     | '/api/thesis'
     | '/api/thesis-explain'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/scoreboard'
     | '/thesis'
+    | '/verify-email'
     | '/watchlist'
     | '/api/thesis'
     | '/api/thesis-explain'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/(home)/register'
     | '/(home)/scoreboard'
     | '/(home)/thesis'
+    | '/(home)/verify-email'
     | '/(home)/watchlist'
     | '/api/thesis'
     | '/api/thesis-explain'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeThesisRouteImport
       parentRoute: typeof homeRouteRoute
     }
+    '/(home)/verify-email': {
+      id: '/(home)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof homeVerifyEmailRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
     '/(home)/watchlist': {
       id: '/(home)/watchlist'
       path: '/watchlist'
@@ -329,6 +348,7 @@ interface homeRouteRouteChildren {
   homeRegisterRoute: typeof homeRegisterRoute
   homeScoreboardRoute: typeof homeScoreboardRoute
   homeThesisRoute: typeof homeThesisRoute
+  homeVerifyEmailRoute: typeof homeVerifyEmailRoute
   homeWatchlistRoute: typeof homeWatchlistRoute
   homeIndexRoute: typeof homeIndexRoute
 }
@@ -342,6 +362,7 @@ const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeRegisterRoute: homeRegisterRoute,
   homeScoreboardRoute: homeScoreboardRoute,
   homeThesisRoute: homeThesisRoute,
+  homeVerifyEmailRoute: homeVerifyEmailRoute,
   homeWatchlistRoute: homeWatchlistRoute,
   homeIndexRoute: homeIndexRoute,
 }
