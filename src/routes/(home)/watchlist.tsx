@@ -164,6 +164,7 @@ function WatchlistPage() {
                 setSymbolInput(selectedSymbol)
                 handleAdd(selectedSymbol)
               }}
+              onSubmit={() => handleAdd()}
               placeholder="Enter ticker or company name (e.g. Apple, Tesla, NVDA)..."
               inputClassName="w-full pl-10 pr-9 py-2.5 bg-brand-bg/30 border border-brand-border rounded-xl text-xs sm:text-sm font-mono text-brand-dark focus:outline-none focus:border-brand-primary focus:bg-white transition-all uppercase"
             />

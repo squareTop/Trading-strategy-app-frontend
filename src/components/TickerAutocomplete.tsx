@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Loader2 } from 'lucide-react'
 import { API_URL } from '../lib/config'
 
@@ -14,6 +14,7 @@ interface TickerAutocompleteProps {
   value: string
   onChange: (val: string) => void
   onSelectTicker: (symbol: string) => void
+  onSubmit?: () => void
   placeholder?: string
   className?: string
   inputClassName?: string
@@ -26,6 +27,7 @@ export function TickerAutocomplete({
   value,
   onChange,
   onSelectTicker,
+  onSubmit,
   placeholder = 'Enter ticker or company name...',
   className = '',
   inputClassName = '',
@@ -38,22 +40,45 @@ export function TickerAutocomplete({
   const [isUserTyping, setIsUserTyping] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const queryClient = useQueryClient()
+
+  const cancelSearch = () => {
+    setIsUserTyping(false)
+    setIsOpen(false)
+    setHighlightedIndex(-1)
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
+    queryClient.cancelQueries({ queryKey: ['stocks-search'] })
+  }
 
   // Debounce input to avoid spamming the search API
   useEffect(() => {
+    if (!isUserTyping) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
+      return
+    }
     const handler = setTimeout(() => {
       setDebouncedQuery(value.trim())
     }, 200)
+    debounceTimerRef.current = handler
     return () => clearTimeout(handler)
-  }, [value])
+  }, [value, isUserTyping])
 
   // Query search endpoint only when user has actively typed
   const { data: suggestions = [], isFetching } = useQuery({
     queryKey: ['stocks-search', debouncedQuery],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!debouncedQuery || debouncedQuery.length < 1) return []
       const res = await fetch(
-        `${API_URL}/stocks/search?query=${encodeURIComponent(debouncedQuery)}&limit=8`
+        `${API_URL}/stocks/search?query=${encodeURIComponent(debouncedQuery)}&limit=8`,
+        { signal }
       )
       if (!res.ok) return []
       return (await res.json()) as StockSearchResult[]
@@ -62,16 +87,28 @@ export function TickerAutocomplete({
     staleTime: 1000 * 60 * 10, // 10 minutes cache
   })
 
-  // Close dropdown on outside click
+  // Close and cancel suggestions on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-        setIsUserTyping(false)
+        cancelSearch()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Cancel suggestions when enclosing form is submitted (e.g. clicking execute / submit button)
+  useEffect(() => {
+    const form = inputRef.current?.form
+    if (!form) return
+
+    const handleSubmit = () => {
+      cancelSearch()
+    }
+
+    form.addEventListener('submit', handleSubmit)
+    return () => form.removeEventListener('submit', handleSubmit)
   }, [])
 
   // Open dropdown ONLY when the user is actively typing and results exist
@@ -84,14 +121,27 @@ export function TickerAutocomplete({
   }, [debouncedQuery, suggestions, isUserTyping])
 
   const handleSelect = (symbol: string) => {
-    setIsUserTyping(false)
-    setIsOpen(false)
-    setHighlightedIndex(-1)
+    cancelSearch()
     onChange(symbol)
     onSelectTicker(symbol)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      if (isOpen && highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+        e.preventDefault()
+        handleSelect(suggestions[highlightedIndex].symbol)
+      } else {
+        // User pressed Enter to submit current input directly
+        cancelSearch()
+        if (onSubmit) {
+          e.preventDefault()
+          onSubmit()
+        }
+      }
+      return
+    }
+
     if (!isOpen || suggestions.length === 0) return
 
     if (e.key === 'ArrowDown') {
@@ -100,18 +150,11 @@ export function TickerAutocomplete({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1))
-    } else if (e.key === 'Enter') {
-      if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
-        e.preventDefault()
-        handleSelect(suggestions[highlightedIndex].symbol)
-      }
     } else if (e.key === 'Escape') {
-      setIsOpen(false)
-      setIsUserTyping(false)
+      cancelSearch()
     }
   }
 
-  const inputRef = useRef<HTMLInputElement>(null)
   const isFirstFocusRef = useRef(false)
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {

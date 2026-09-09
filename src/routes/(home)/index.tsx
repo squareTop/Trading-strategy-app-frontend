@@ -49,10 +49,21 @@ export const stockDetailsQueryOptions = (symbol: string) =>
       const response = await fetch(`${API_URL}/vmi?symbol=${encodeURIComponent(symbol)}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error status ${response.status} received from system.`);
+        throw new Error(
+          errorData.detail ||
+          errorData.error ||
+          `Unable to generate intrinsic valuation for '${symbol}' (HTTP ${response.status}).`
+        );
       }
-      return response.json() as Promise<FoxelSignalIVResponse>;
+      const data = await response.json();
+      if (!data) {
+        throw new Error(
+          `Unable to generate intrinsic valuation for '${symbol}'. Company filings or analyst projections are unavailable.`
+        );
+      }
+      return data as FoxelSignalIVResponse;
     },
+    retry: false,
   });
 
 export const Route = createFileRoute('/(home)/')({
@@ -110,8 +121,8 @@ function App() {
     }
   }, [data?.symbol]);
 
-  const handleSearchSubmit = (e: React.SyntheticEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.SyntheticEvent) => {
+    if (e) e.preventDefault();
     const cleanTicker = searchInput.trim().toUpperCase();
     if (cleanTicker) {
       setTicker(cleanTicker);
@@ -198,6 +209,7 @@ function App() {
                     search: (prev) => ({ ...prev, ticker: selectedSymbol }),
                   })
                 }}
+                onSubmit={handleSearchSubmit}
                 placeholder="Enter stock ticker or company name (e.g. Apple, MSFT)..."
                 inputClassName="w-full pl-10 pr-9 py-2.5 sm:py-3 rounded-lg border border-brand-border bg-brand-bg/30 text-brand-dark font-mono font-semibold placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all text-sm uppercase"
               />
@@ -264,27 +276,41 @@ function App() {
 
         {/* Error Boundary Module */}
         {showError && (
-          <div className="mt-8 bg-red-50 border border-red-200 rounded-xl p-6 text-red-800 animate-slide-up shadow-xs">
-            <div className="flex gap-3">
-              <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-display text-base font-bold text-red-950">Query Exception Encountered</h4>
-                <p className="text-sm text-red-800 mt-1">{(error as Error).message}</p>
-                <div className="mt-4 flex gap-2">
+          <div className="mt-8 bg-red-50/70 border border-red-200 rounded-xl p-6 text-red-900 animate-slide-up shadow-xs">
+            <div className="flex items-start gap-3.5">
+              <div className="w-9 h-9 rounded-lg bg-red-100 border border-red-200 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-display text-base font-bold text-red-950">
+                    Valuation Unavailable for {ticker}
+                  </h4>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">
+                    DCF Model Uncomputable
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-red-800/90 mt-1.5 leading-relaxed font-sans">
+                  {(error as Error).message}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2.5">
                   <button
                     onClick={() => {
                       setSearchInput("AAPL");
                       setTicker("AAPL");
+                      navigate({
+                        search: (prev) => ({ ...prev, ticker: "AAPL" }),
+                      });
                     }}
-                    className="bg-red-900/10 hover:bg-red-900/25 text-red-950 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-red-900/10"
+                    className="bg-red-900/10 hover:bg-red-900/20 text-red-950 px-4 py-2 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all border border-red-900/10 cursor-pointer"
                   >
                     Reset & Load AAPL
                   </button>
                   <button
                     onClick={() => refetch()}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
+                    className="bg-brand-primary hover:bg-brand-primary-hover text-white px-4 py-2 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                   >
-                    Retry Query
+                    Retry Analysis
                   </button>
                 </div>
               </div>
