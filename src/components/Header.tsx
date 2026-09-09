@@ -7,6 +7,7 @@ import {
   User as UserIcon,
   ChevronDown,
   Shield,
+  Bookmark,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
@@ -172,12 +173,12 @@ export default function Header() {
                         <span>Profile</span>
                       </Link>
                       <Link
-                        to="/private"
+                        to="/watchlist"
                         onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
                       >
-                        <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Private Page</span>
+                        <Bookmark className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Watchlist</span>
                       </Link>
                     </div>
 
@@ -278,12 +279,12 @@ export default function Header() {
                 </Link>
 
                 <Link
-                  to="/private"
+                  to="/watchlist"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-bg text-brand-dark text-xs font-sans transition-colors"
                 >
-                  <Shield className="w-4 h-4 text-emerald-600" />
-                  <span>Private Page</span>
+                  <Bookmark className="w-4 h-4 text-emerald-600" />
+                  <span>Watchlist</span>
                 </Link>
 
                 <button

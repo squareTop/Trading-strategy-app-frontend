@@ -16,11 +16,11 @@ import { Route as homeAboutRouteImport } from './routes/(home)/about'
 import { Route as homeCongressRouteImport } from './routes/(home)/congress'
 import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
 import { Route as homeLoginRouteImport } from './routes/(home)/login'
-import { Route as homePrivateRouteImport } from './routes/(home)/private'
 import { Route as homeProfileRouteImport } from './routes/(home)/profile'
 import { Route as homeRegisterRouteImport } from './routes/(home)/register'
 import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
 import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
+import { Route as homeWatchlistRouteImport } from './routes/(home)/watchlist'
 import { Route as ApiThesisRouteImport } from './routes/api/thesis'
 import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
@@ -59,11 +59,6 @@ const homeLoginRoute = homeLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => homeRouteRoute,
 } as any)
-const homePrivateRoute = homePrivateRouteImport.update({
-  id: '/private',
-  path: '/private',
-  getParentRoute: () => homeRouteRoute,
-} as any)
 const homeProfileRoute = homeProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -82,6 +77,11 @@ const homeScoreboardRoute = homeScoreboardRouteImport.update({
 const homeThesisRoute = homeThesisRouteImport.update({
   id: '/thesis',
   path: '/thesis',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homeWatchlistRoute = homeWatchlistRouteImport.update({
+  id: '/watchlist',
+  path: '/watchlist',
   getParentRoute: () => homeRouteRoute,
 } as any)
 const ApiThesisRoute = ApiThesisRouteImport.update({
@@ -106,11 +106,11 @@ export interface FileRoutesByFullPath {
   '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
   '/login': typeof homeLoginRoute
-  '/private': typeof homePrivateRoute
   '/profile': typeof homeProfileRoute
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
+  '/watchlist': typeof homeWatchlistRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
@@ -122,11 +122,11 @@ export interface FileRoutesByTo {
   '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
   '/login': typeof homeLoginRoute
-  '/private': typeof homePrivateRoute
   '/profile': typeof homeProfileRoute
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
+  '/watchlist': typeof homeWatchlistRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
@@ -140,11 +140,11 @@ export interface FileRoutesById {
   '/(home)/congress': typeof homeCongressRoute
   '/(home)/daily-signals': typeof homeDailySignalsRoute
   '/(home)/login': typeof homeLoginRoute
-  '/(home)/private': typeof homePrivateRoute
   '/(home)/profile': typeof homeProfileRoute
   '/(home)/register': typeof homeRegisterRoute
   '/(home)/scoreboard': typeof homeScoreboardRoute
   '/(home)/thesis': typeof homeThesisRoute
+  '/(home)/watchlist': typeof homeWatchlistRoute
   '/api/thesis': typeof ApiThesisRoute
   '/api/thesis-explain': typeof ApiThesisExplainRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
@@ -158,11 +158,11 @@ export interface FileRouteTypes {
     | '/congress'
     | '/daily-signals'
     | '/login'
-    | '/private'
     | '/profile'
     | '/register'
     | '/scoreboard'
     | '/thesis'
+    | '/watchlist'
     | '/api/thesis'
     | '/api/thesis-explain'
     | '/demo/tanstack-query'
@@ -174,11 +174,11 @@ export interface FileRouteTypes {
     | '/congress'
     | '/daily-signals'
     | '/login'
-    | '/private'
     | '/profile'
     | '/register'
     | '/scoreboard'
     | '/thesis'
+    | '/watchlist'
     | '/api/thesis'
     | '/api/thesis-explain'
     | '/demo/tanstack-query'
@@ -191,11 +191,11 @@ export interface FileRouteTypes {
     | '/(home)/congress'
     | '/(home)/daily-signals'
     | '/(home)/login'
-    | '/(home)/private'
     | '/(home)/profile'
     | '/(home)/register'
     | '/(home)/scoreboard'
     | '/(home)/thesis'
+    | '/(home)/watchlist'
     | '/api/thesis'
     | '/api/thesis-explain'
     | '/demo/tanstack-query'
@@ -261,13 +261,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeLoginRouteImport
       parentRoute: typeof homeRouteRoute
     }
-    '/(home)/private': {
-      id: '/(home)/private'
-      path: '/private'
-      fullPath: '/private'
-      preLoaderRoute: typeof homePrivateRouteImport
-      parentRoute: typeof homeRouteRoute
-    }
     '/(home)/profile': {
       id: '/(home)/profile'
       path: '/profile'
@@ -294,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/thesis'
       fullPath: '/thesis'
       preLoaderRoute: typeof homeThesisRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/watchlist': {
+      id: '/(home)/watchlist'
+      path: '/watchlist'
+      fullPath: '/watchlist'
+      preLoaderRoute: typeof homeWatchlistRouteImport
       parentRoute: typeof homeRouteRoute
     }
     '/api/thesis': {
@@ -325,11 +325,11 @@ interface homeRouteRouteChildren {
   homeCongressRoute: typeof homeCongressRoute
   homeDailySignalsRoute: typeof homeDailySignalsRoute
   homeLoginRoute: typeof homeLoginRoute
-  homePrivateRoute: typeof homePrivateRoute
   homeProfileRoute: typeof homeProfileRoute
   homeRegisterRoute: typeof homeRegisterRoute
   homeScoreboardRoute: typeof homeScoreboardRoute
   homeThesisRoute: typeof homeThesisRoute
+  homeWatchlistRoute: typeof homeWatchlistRoute
   homeIndexRoute: typeof homeIndexRoute
 }
 
@@ -338,11 +338,11 @@ const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeCongressRoute: homeCongressRoute,
   homeDailySignalsRoute: homeDailySignalsRoute,
   homeLoginRoute: homeLoginRoute,
-  homePrivateRoute: homePrivateRoute,
   homeProfileRoute: homeProfileRoute,
   homeRegisterRoute: homeRegisterRoute,
   homeScoreboardRoute: homeScoreboardRoute,
   homeThesisRoute: homeThesisRoute,
+  homeWatchlistRoute: homeWatchlistRoute,
   homeIndexRoute: homeIndexRoute,
 }
 
