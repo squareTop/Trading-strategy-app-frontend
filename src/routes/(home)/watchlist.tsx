@@ -199,11 +199,10 @@ function WatchlistPage() {
                 type="button"
                 onClick={() => !alreadyIn && handleAdd(sym)}
                 disabled={alreadyIn || isAdding}
-                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold transition-all ${
-                  alreadyIn
+                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold transition-all ${alreadyIn
                     ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-default'
                     : 'bg-brand-bg/60 text-brand-dark border border-brand-border hover:border-brand-primary hover:text-brand-primary cursor-pointer'
-                }`}
+                  }`}
               >
                 {sym} {alreadyIn ? '✓' : '+'}
               </button>
@@ -278,8 +277,8 @@ function WatchlistPage() {
                   const pct = hasIv && hasPrice && item.intrinsic_value! !== 0
                     ? Math.abs((item.price! - item.intrinsic_value!) / Math.abs(item.intrinsic_value!)) * 100
                     : item.over_under_pct !== null
-                    ? Math.abs(item.over_under_pct * 100)
-                    : null
+                      ? Math.abs(item.over_under_pct * 100)
+                      : null
 
                   return (
                     <tr
@@ -313,9 +312,8 @@ function WatchlistPage() {
                       <td className="py-3.5 px-3 text-right font-mono font-semibold text-xs whitespace-nowrap">
                         {item.day_pct !== null ? (
                           <span
-                            className={`inline-flex items-center gap-0.5 ${
-                              dayPositive ? 'text-emerald-600' : 'text-rose-600'
-                            }`}
+                            className={`inline-flex items-center gap-0.5 ${dayPositive ? 'text-emerald-600' : 'text-rose-600'
+                              }`}
                           >
                             {dayPositive ? (
                               <TrendingUp className="w-3 h-3" />
@@ -346,18 +344,16 @@ function WatchlistPage() {
 
                       {/* 6. % YTD */}
                       <td
-                        className={`py-3.5 px-3 text-right font-mono font-medium text-[11px] whitespace-nowrap ${
-                          ytdPositive ? 'text-emerald-600' : 'text-rose-600'
-                        }`}
+                        className={`py-3.5 px-3 text-right font-mono font-medium text-[11px] whitespace-nowrap ${ytdPositive ? 'text-emerald-600' : 'text-rose-600'
+                          }`}
                       >
                         {formatPct(item.ytd)}
                       </td>
 
                       {/* 7. % 1Y */}
                       <td
-                        className={`py-3.5 px-3 text-right font-mono font-medium text-[11px] whitespace-nowrap ${
-                          oneYrPositive ? 'text-emerald-600' : 'text-rose-600'
-                        }`}
+                        className={`py-3.5 px-3 text-right font-mono font-medium text-[11px] whitespace-nowrap ${oneYrPositive ? 'text-emerald-600' : 'text-rose-600'
+                          }`}
                       >
                         {formatPct(item.one_yr)}
                       </td>
@@ -399,24 +395,23 @@ function WatchlistPage() {
                       <td className="py-3.5 px-3 text-right whitespace-nowrap">
                         {pct !== null ? (
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                              isUndervalued
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isUndervalued
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : isFairValue
-                                ? 'bg-gray-100 text-gray-700 border border-gray-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200'
-                            }`}
+                                  ? 'bg-gray-100 text-gray-700 border border-gray-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}
                             title={
                               isNegativeIv
-                                ? `DCF intrinsic value is negative (${formatPrice(item.intrinsic_value)}); stock is trading at a premium.`
+                                ? `DCF intrinsic value is negative (${formatPrice(item.intrinsic_value!)}); stock is trading at a premium.`
                                 : undefined
                             }
                           >
                             {isUndervalued
                               ? `${pct.toFixed(1)}% Undervalued`
                               : isFairValue
-                              ? 'Fair Value'
-                              : `${pct.toFixed(1)}% Overvalued`}
+                                ? 'Fair Value'
+                                : `${pct.toFixed(1)}% Overvalued`}
                           </span>
                         ) : (
                           <span className="text-gray-400 font-mono text-[11px]">—</span>
