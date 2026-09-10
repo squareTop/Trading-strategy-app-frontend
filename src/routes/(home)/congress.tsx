@@ -71,7 +71,7 @@ export const Route = createFileRoute('/(home)/congress')({
     ],
   }),
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(congressQueryOptions('all')).catch(() => {})
+    await context.queryClient.ensureQueryData(congressQueryOptions('all')).catch(() => { })
   },
   pendingComponent: CongressSkeleton,
   pendingMs: 50,
@@ -117,7 +117,24 @@ function getDaysBetween(date1: string, date2: string): number | null {
   }
 }
 
-// Politician Avatar with support for Senate image URLs and House initials
+// Fallback Bioguide IDs for active Congress members when upstream FMP omits senateID
+const BIOGUIDE_FALLBACKS: Record<string, string> = {
+  'cory booker': 'B001288',
+  'john fetterman': 'F000479',
+  'lloyd doggett': 'D000399',
+  'david taylor': 'T000490',
+  'michael rulli': 'R000619',
+  'nancy pelosi': 'P000197',
+  'ro khanna': 'K000389',
+  'marjorie taylor greene': 'G000596',
+  'tommy tuberville': 'T000278',
+  'markwayne mullin': 'M001190',
+  'mitch mcconnell': 'M000355',
+  'bernie sanders': 'S000033',
+  'ted cruz': 'C001098',
+}
+
+// Politician Avatar with support for Congress member headshots (Senate and House via Bioguide ID)
 function PoliticianAvatar({
   name,
   senateID,
@@ -131,15 +148,16 @@ function PoliticianAvatar({
 }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const imageUrl = senateID ? `https://images.financialmodelingprep.com/senate/${senateID}.jpg` : ''
+
+  const cleanName = name.replace(/^(Hon\.|Senator|Representative|Rep\.|Sen\.)\s+/i, '').trim()
+  const resolvedId = senateID || BIOGUIDE_FALLBACKS[cleanName.toLowerCase()]
+  const imageUrl = resolvedId ? `https://images.financialmodelingprep.com/senate/${resolvedId}.jpg` : ''
 
   const sizeClasses = {
     sm: 'w-7 h-7 text-[10px]',
     md: 'w-10 h-10 text-xs',
     lg: 'w-12 h-12 text-sm',
   }[size]
-
-  const cleanName = name.replace(/^(Hon\.|Senator|Representative|Rep\.|Sen\.)\s+/i, '').trim()
   const initials = cleanName
     .split(' ')
     .filter(Boolean)
@@ -158,11 +176,10 @@ function PoliticianAvatar({
       {/* Placeholder with initials rendered underneath */}
       {(!isLoaded || hasError || !imageUrl) && (
         <div
-          className={`absolute inset-0 flex items-center justify-center font-bold font-mono ${
-            isHouse
+          className={`absolute inset-0 flex items-center justify-center font-bold font-mono ${isHouse
               ? 'bg-linear-to-br from-purple-100 to-indigo-200 text-purple-900'
               : 'bg-linear-to-br from-brand-primary/15 to-brand-primary/35 text-brand-dark'
-          }`}
+            }`}
         >
           {initials || <User className="w-3.5 h-3.5 opacity-60" />}
         </div>
@@ -175,9 +192,8 @@ function PoliticianAvatar({
           alt=""
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-250 ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-250 ${isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
           loading="lazy"
         />
       )}
@@ -225,9 +241,8 @@ function CompanyLogo({ symbol }: { symbol: string }) {
           alt=""
           onLoad={() => setIsLoaded(true)}
           onError={handleError}
-          className={`absolute inset-0 w-full h-full object-contain p-1.5 transition-opacity duration-200 [filter:drop-shadow(0_0_1px_rgba(0,0,0,0.3))] ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 w-full h-full object-contain p-1.5 transition-opacity duration-200 [filter:drop-shadow(0_0_1px_rgba(0,0,0,0.3))] ${isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
           loading="lazy"
         />
       )}
@@ -377,11 +392,10 @@ function CongressDisclosuresPage() {
                 setSelectedChamber('all')
                 setCurrentPage(1)
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
-                selectedChamber === 'all'
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${selectedChamber === 'all'
                   ? 'bg-brand-dark text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-gray-600 hover:text-brand-dark border border-brand-border'
-              }`}
+                }`}
             >
               <Landmark className="w-3.5 h-3.5 shrink-0" />
               <span>All Congress</span>
@@ -392,11 +406,10 @@ function CongressDisclosuresPage() {
                 setSelectedChamber('house')
                 setCurrentPage(1)
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
-                selectedChamber === 'house'
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${selectedChamber === 'house'
                   ? 'bg-purple-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-purple-800 hover:text-purple-900 border border-purple-200'
-              }`}
+                }`}
             >
               <span className="shrink-0">🏛️ House</span>
             </button>
@@ -406,11 +419,10 @@ function CongressDisclosuresPage() {
                 setSelectedChamber('senate')
                 setCurrentPage(1)
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
-                selectedChamber === 'senate'
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${selectedChamber === 'senate'
                   ? 'bg-sky-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-sky-800 hover:text-sky-900 border border-sky-200'
-              }`}
+                }`}
             >
               <span className="shrink-0">🏛️ Senate</span>
             </button>
@@ -498,22 +510,20 @@ function CongressDisclosuresPage() {
             <div className="flex items-center border border-brand-border rounded-lg overflow-hidden bg-brand-bg/50 p-0.5 ml-auto sm:ml-0">
               <button
                 onClick={() => setViewMode('feed')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                  viewMode === 'feed'
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'feed'
                     ? 'bg-white text-brand-primary shadow-2xs font-bold'
                     : 'text-gray-500 hover:text-brand-dark'
-                }`}
+                  }`}
                 title="Feed View (Card layout)"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                  viewMode === 'table'
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'table'
                     ? 'bg-white text-brand-primary shadow-2xs font-bold'
                     : 'text-gray-500 hover:text-brand-dark'
-                }`}
+                  }`}
                 title="Table View (Data grid)"
               >
                 <TableIcon className="w-4 h-4" />
@@ -618,11 +628,10 @@ function CongressDisclosuresPage() {
                           <div className="flex items-center gap-1 shrink-0">
                             {/* Chamber Badge */}
                             <span
-                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${
-                                isHouse
+                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${isHouse
                                   ? 'bg-purple-50 text-purple-700 border-purple-200'
                                   : 'bg-sky-50 text-sky-700 border-sky-200'
-                              }`}
+                                }`}
                             >
                               {item.chamber}
                             </span>
@@ -646,9 +655,8 @@ function CongressDisclosuresPage() {
                     {/* Trade Headline: Bought / Sold Amount of Ticker */}
                     <div className="text-xs font-sans mb-3">
                       <span
-                        className={`font-bold ${
-                          isBuy ? 'text-emerald-700' : isSale ? 'text-rose-700' : 'text-amber-700'
-                        }`}
+                        className={`font-bold ${isBuy ? 'text-emerald-700' : isSale ? 'text-rose-700' : 'text-amber-700'
+                          }`}
                       >
                         {isBuy ? 'Bought' : isSale ? 'Sold' : item.type}{' '}
                       </span>
@@ -713,9 +721,8 @@ function CongressDisclosuresPage() {
                           </div>
                           {hasReturn ? (
                             <div
-                              className={`text-[11px] font-mono font-semibold ${
-                                isPositive ? 'text-emerald-600' : 'text-rose-600'
-                              }`}
+                              className={`text-[11px] font-mono font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'
+                                }`}
                             >
                               {`Since trade ${isPositive ? '+' : ''}${returnVal?.toFixed(2)}%`}
                             </div>
@@ -869,11 +876,10 @@ function CongressDisclosuresPage() {
                         {/* Chamber */}
                         <td className="py-2.5 px-2.5 font-mono whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
-                              isHouse
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${isHouse
                                 ? 'bg-purple-50 text-purple-700 border-purple-200'
                                 : 'bg-sky-50 text-sky-700 border-sky-200'
-                            }`}
+                              }`}
                           >
                             {item.chamber}
                           </span>
@@ -917,13 +923,12 @@ function CongressDisclosuresPage() {
                         {/* Type (Action) */}
                         <td className="py-2.5 px-3 font-mono whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                              isBuy
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${isBuy
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : isSale
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
                           >
                             {item.type}
                           </span>
@@ -948,9 +953,8 @@ function CongressDisclosuresPage() {
                         <td className="py-2.5 px-3 font-mono whitespace-nowrap">
                           {hasReturn ? (
                             <span
-                              className={`font-semibold ${
-                                isPositive ? 'text-emerald-600' : 'text-rose-600'
-                              }`}
+                              className={`font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'
+                                }`}
                             >
                               {isPositive ? '+' : ''}
                               {returnVal?.toFixed(2)}%
