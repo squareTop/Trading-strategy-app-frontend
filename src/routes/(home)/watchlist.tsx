@@ -201,7 +201,7 @@ function WatchlistPage() {
                 type="button"
                 onClick={() => !alreadyIn && handleAdd(sym)}
                 disabled={alreadyIn || isAdding}
-                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold transition-all ${alreadyIn
+                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold transition-all whitespace-nowrap ${alreadyIn
                     ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-default'
                     : 'bg-brand-bg/60 text-brand-dark border border-brand-border hover:border-brand-primary hover:text-brand-primary cursor-pointer'
                   }`}

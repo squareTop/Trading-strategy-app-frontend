@@ -229,16 +229,16 @@ export function TickerAutocomplete({
                       : 'hover:bg-brand-bg/60 text-gray-700'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                    <span className="font-mono font-bold text-xs sm:text-sm text-brand-dark bg-brand-bg/60 px-1.5 py-0.5 rounded border border-brand-border/60">
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2 flex-1">
+                    <span className="font-mono font-bold text-xs sm:text-sm text-brand-dark bg-brand-bg/60 px-1.5 py-0.5 rounded border border-brand-border/60 shrink-0 whitespace-nowrap">
                       {item.symbol}
                     </span>
-                    <span className="text-xs truncate font-sans text-gray-600 font-medium">
+                    <span className="text-xs truncate font-sans text-gray-600 font-medium min-w-0">
                       {item.name}
                     </span>
                   </div>
                   {item.exchange && (
-                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200/80 shrink-0 uppercase">
+                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200/80 shrink-0 uppercase whitespace-nowrap ml-2">
                       {item.exchange}
                     </span>
                   )}
