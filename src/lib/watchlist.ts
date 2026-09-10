@@ -66,7 +66,7 @@ export const watchlistQueryOptions = queryOptions({
 
 export function useWatchlist() {
   const queryClient = useQueryClient()
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, isRefetching, isError, error, refetch } = useQuery({
     ...watchlistQueryOptions,
     refetchInterval: (query) => {
       const items = query.state.data
@@ -97,6 +97,8 @@ export function useWatchlist() {
   return {
     watchlist: data ?? [],
     isLoading,
+    isFetching,
+    isRefetching,
     isError,
     error,
     refetch,

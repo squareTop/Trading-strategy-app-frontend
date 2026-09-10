@@ -6,7 +6,6 @@ import {
   Trash2,
   TrendingUp,
   TrendingDown,
-  Search,
   ExternalLink,
   Lock,
   Loader2,
@@ -15,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
-import { useWatchlist, type WatchlistItem } from '../../lib/watchlist'
+import { useWatchlist } from '../../lib/watchlist'
 import { formatFinancial, formatPrice } from '../../lib/utils'
 import { TickerAutocomplete } from '../../components/TickerAutocomplete'
 
@@ -50,8 +49,7 @@ function WatchlistPage() {
   const {
     watchlist,
     isLoading: isWatchlistLoading,
-    isError,
-    error,
+    isRefetching,
     addStock,
     isAdding,
     removeStock,
@@ -138,12 +136,16 @@ function WatchlistPage() {
         </div>
 
         <button
+          type="button"
           onClick={() => refetch()}
-          disabled={isWatchlistLoading}
-          className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand-border bg-white hover:bg-brand-bg text-brand-dark text-xs font-mono font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+          disabled={isRefetching || isWatchlistLoading}
+          className="self-start sm:self-auto inline-flex items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl border border-brand-border bg-white hover:border-brand-primary hover:text-brand-primary hover:bg-brand-bg active:bg-brand-bg active:border-brand-primary active:scale-95 text-brand-dark text-xs font-mono font-bold transition-all duration-150 cursor-pointer shadow-xs disabled:opacity-60 select-none touch-manipulation"
+          title="Refresh quotes"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isWatchlistLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh Quotes</span>
+          <RefreshCw
+            className={`w-3.5 h-3.5 shrink-0 ${isRefetching ? 'animate-spin text-brand-primary' : ''}`}
+          />
+          <span>{isRefetching ? 'Refreshing...' : 'Refresh Quotes'}</span>
         </button>
       </div>
 
