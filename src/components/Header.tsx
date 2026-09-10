@@ -5,8 +5,6 @@ import {
   X,
   LogOut,
   User as UserIcon,
-  ChevronDown,
-  Shield,
   Bookmark,
   Loader2,
 } from 'lucide-react'
@@ -38,11 +36,144 @@ function getInitials(user: {
   return user.email.slice(0, 2).toUpperCase()
 }
 
-export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false)
+interface UserMenuProps {
+  onOpen?: () => void
+  size?: 'sm' | 'md'
+}
+
+function UserMenu({ onOpen, size = 'md' }: UserMenuProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user, isAuthenticated, isLoading, logout } = useAuth()
+
+  // Close dropdown on click or tap outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div
+        className={`${
+          size === 'sm' ? 'w-8 h-8' : 'w-8 h-8'
+        } rounded-full bg-brand-bg/80 animate-pulse border border-brand-border`}
+      />
+    )
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+      <Link
+        to="/login"
+        search={{ redirect: undefined }}
+        className={
+          size === 'sm'
+            ? 'px-2.5 py-1.5 rounded-lg bg-brand-dark text-white hover:bg-brand-primary transition-colors font-mono font-bold text-[11px] uppercase tracking-wider shadow-xs'
+            : 'px-3.5 py-2 rounded-lg bg-brand-dark text-white hover:bg-brand-primary transition-colors font-mono font-bold text-[11px] uppercase tracking-wider shadow-xs'
+        }
+      >
+        Sign In
+      </Link>
+    )
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setDropdownOpen((prev) => {
+            const next = !prev
+            if (next && onOpen) onOpen()
+            return next
+          })
+        }}
+        className="flex items-center justify-center rounded-full hover:ring-2 hover:ring-brand-primary/40 focus:ring-2 focus:ring-brand-primary/50 transition-all cursor-pointer select-none focus:outline-none"
+        aria-expanded={dropdownOpen}
+        title={user.full_name || user.username || user.email}
+      >
+        {user.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt={user.full_name || user.email}
+            className="w-8 h-8 rounded-full object-cover border border-brand-border"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary font-mono font-bold text-xs flex items-center justify-center">
+            {getInitials(user)}
+          </div>
+        )}
+      </button>
+
+      {/* Dropdown Panel */}
+      {dropdownOpen && (
+        <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-brand-border rounded-xl shadow-lg z-50 py-1.5 animate-slide-up text-xs">
+          {/* User Header */}
+          <div className="px-3.5 py-2.5 border-b border-brand-border bg-brand-bg/30">
+            <p className="font-bold text-brand-dark truncate font-display text-xs">
+              {user.full_name || user.username || 'Member'}
+            </p>
+            <p className="text-[11px] text-gray-500 font-mono truncate mt-0.5">
+              {user.email}
+            </p>
+          </div>
+
+          {/* Navigation items */}
+          <div className="py-1">
+            <Link
+              to="/profile"
+              onClick={() => setDropdownOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
+            >
+              <UserIcon className="w-4 h-4 text-brand-primary shrink-0" />
+              <span>Profile</span>
+            </Link>
+            <Link
+              to="/watchlist"
+              onClick={() => setDropdownOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
+            >
+              <Bookmark className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Watchlist</span>
+            </Link>
+          </div>
+
+          {/* Logout button */}
+          <div className="border-t border-brand-border pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setDropdownOpen(false)
+                logout()
+              }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-rose-600 hover:bg-rose-50 transition-colors font-sans text-xs text-left cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false)
   const { isNavigating, targetPath } = useRouterState({
     select: (s) => ({
       isNavigating: s.isLoading,
@@ -52,20 +183,6 @@ export default function Header() {
 
   const isPendingLink = (to: string) =>
     isNavigating && (to === '/' ? targetPath === '/' : targetPath.startsWith(to))
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   return (
     <header className="border-b border-brand-border bg-white px-3 sm:px-4 md:px-8 py-2.5 sm:py-3 sticky top-0 z-40 shadow-xs">
@@ -133,103 +250,26 @@ export default function Header() {
             )
           })}
 
-          {/* User Auth Section with Dropdown */}
-          <div
-            className="relative ml-2 pl-4 border-l border-brand-border"
-            ref={dropdownRef}
-          >
-            {!isLoading && isAuthenticated && user ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setDropdownOpen((prev) => !prev)}
-                  className="flex items-center justify-center rounded-full hover:ring-2 hover:ring-brand-primary/40 focus:ring-2 focus:ring-brand-primary/50 transition-all cursor-pointer select-none focus:outline-none"
-                  aria-expanded={dropdownOpen}
-                  title={user.full_name || user.username || user.email}
-                >
-                  {user.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.full_name || user.email}
-                      className="w-8 h-8 rounded-full object-cover border border-brand-border"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary font-mono font-bold text-xs flex items-center justify-center">
-                      {getInitials(user)}
-                    </div>
-                  )}
-                </button>
-
-                {/* Dropdown Panel */}
-                {dropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-brand-border rounded-xl shadow-lg z-50 py-1.5 animate-slide-up text-xs">
-                    {/* User Header */}
-                    <div className="px-3.5 py-2.5 border-b border-brand-border bg-brand-bg/30">
-                      <p className="font-bold text-brand-dark truncate font-display text-xs">
-                        {user.full_name || user.username || 'Member'}
-                      </p>
-                      <p className="text-[11px] text-gray-500 font-mono truncate mt-0.5">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    {/* Navigation items */}
-                    <div className="py-1">
-                      <Link
-                        to="/profile"
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
-                      >
-                        <UserIcon className="w-4 h-4 text-brand-primary shrink-0" />
-                        <span>Profile</span>
-                      </Link>
-                      <Link
-                        to="/watchlist"
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
-                      >
-                        <Bookmark className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Watchlist</span>
-                      </Link>
-                    </div>
-
-                    {/* Logout button */}
-                    <div className="border-t border-brand-border pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(false)
-                          logout()
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-rose-600 hover:bg-rose-50 transition-colors font-sans text-xs text-left cursor-pointer"
-                      >
-                        <LogOut className="w-4 h-4 shrink-0" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : !isLoading ? (
-              <Link
-                to="/login"
-                className="px-3.5 py-2 rounded-lg bg-brand-dark text-white hover:bg-brand-primary transition-colors font-mono font-bold text-[11px] uppercase tracking-wider shadow-xs"
-              >
-                Sign In
-              </Link>
-            ) : null}
+          {/* Desktop User Menu Dropdown */}
+          <div className="relative ml-2 pl-4 border-l border-brand-border">
+            <UserMenu size="md" />
           </div>
         </nav>
 
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-brand-bg/50 hover:text-brand-dark transition-all"
-          aria-label="Toggle navigation"
-        >
-          {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {/* Mobile controls (User Menu Avatar/Sign-in + Hamburger menu) */}
+        <div className="flex items-center gap-2 md:hidden">
+          <UserMenu
+            size="sm"
+            onOpen={() => setMenuOpen(false)}
+          />
+          <button
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="p-2 rounded-lg text-gray-500 hover:bg-brand-bg/50 hover:text-brand-dark transition-all"
+            aria-label="Toggle navigation"
+          >
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Nav Dropdown */}
@@ -262,83 +302,6 @@ export default function Header() {
               </Link>
             )
           })}
-
-          <div className="pt-2 border-t border-brand-border">
-            {!isLoading && isAuthenticated && user ? (
-              <div className="flex flex-col gap-1 px-1">
-                {/* Mobile User Summary */}
-                <div className="px-3 py-2 rounded-lg bg-brand-bg/50 border border-brand-border/60 flex items-center gap-2.5 mb-1">
-                  {user.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt=""
-                      className="w-8 h-8 rounded-full object-cover border border-brand-border shrink-0"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                      {getInitials(user)}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-brand-dark text-xs truncate">
-                      {user.full_name || user.username || 'Member'}
-                    </p>
-                    <p className="text-[10px] text-gray-500 font-mono truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                </div>
-
-                <Link
-                  to="/profile"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-bg text-brand-dark text-xs font-sans transition-colors"
-                >
-                  <UserIcon className="w-4 h-4 text-brand-primary" />
-                  <span>Profile</span>
-                </Link>
-
-                <Link
-                  to="/watchlist"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-bg text-brand-dark text-xs font-sans transition-colors"
-                >
-                  <Bookmark className="w-4 h-4 text-emerald-600" />
-                  <span>Watchlist</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout()
-                    setMenuOpen(false)
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-sans transition-colors text-left cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            ) : !isLoading ? (
-              <div className="flex gap-2 px-1">
-                <Link
-                  to="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex-1 text-center py-2 rounded-lg bg-brand-dark text-white font-mono font-bold text-xs uppercase tracking-wider"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex-1 text-center py-2 rounded-lg border border-brand-border text-brand-dark font-mono font-bold text-xs uppercase tracking-wider hover:bg-brand-bg"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            ) : null}
-          </div>
         </nav>
       )}
     </header>
