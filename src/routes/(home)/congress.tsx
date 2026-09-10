@@ -267,17 +267,6 @@ function CongressDisclosuresPage() {
     return Array.from(set).sort()
   }, [disclosures])
 
-  // Chamber counts
-  const { totalCount, senateCount, houseCount } = useMemo(() => {
-    let s = 0
-    let h = 0
-    disclosures.forEach((d) => {
-      if (d.chamber === 'Senate') s++
-      if (d.chamber === 'House') h++
-    })
-    return { totalCount: disclosures.length, senateCount: s, houseCount: h }
-  }, [disclosures])
-
   // Filtered disclosures
   const filteredDisclosures = useMemo(() => {
     return disclosures.filter((item) => {
@@ -371,36 +360,31 @@ function CongressDisclosuresPage() {
               <button
                 onClick={() => refetch()}
                 disabled={isRefetching}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-white border border-brand-border hover:border-brand-primary text-gray-700 hover:text-brand-primary transition-all shadow-xs disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-white border border-brand-border hover:border-brand-primary text-gray-700 hover:text-brand-primary active:bg-brand-bg active:scale-95 transition-all shadow-xs disabled:opacity-60 cursor-pointer select-none touch-manipulation whitespace-nowrap shrink-0"
                 title="Refresh disclosures"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? 'animate-spin text-brand-primary' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRefetching ? 'animate-spin text-brand-primary' : ''}`} />
                 <span>{isRefetching ? 'Updating...' : 'Refresh'}</span>
               </button>
             </div>
           </div>
 
           {/* Chamber Toggle Pills */}
-          <div className="flex items-center gap-2 mt-6 pt-4 border-t border-brand-border/60">
-            <span className="text-xs font-mono text-gray-400 font-semibold mr-1">Chamber:</span>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-6 pt-4 border-t border-brand-border/60">
+            <span className="text-xs font-mono text-gray-400 font-semibold mr-1 shrink-0 whitespace-nowrap">Chamber:</span>
             <button
               onClick={() => {
                 setSelectedChamber('all')
                 setCurrentPage(1)
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
                 selectedChamber === 'all'
                   ? 'bg-brand-dark text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-gray-600 hover:text-brand-dark border border-brand-border'
               }`}
             >
-              <Landmark className="w-3.5 h-3.5" />
+              <Landmark className="w-3.5 h-3.5 shrink-0" />
               <span>All Congress</span>
-              {selectedChamber === 'all' && (
-                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
-                  {totalCount}
-                </span>
-              )}
             </button>
 
             <button
@@ -408,18 +392,13 @@ function CongressDisclosuresPage() {
                 setSelectedChamber('house')
                 setCurrentPage(1)
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
                 selectedChamber === 'house'
                   ? 'bg-purple-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-purple-800 hover:text-purple-900 border border-purple-200'
               }`}
             >
-              <span>🏛️ House</span>
-              {selectedChamber === 'house' && (
-                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
-                  {houseCount || totalCount}
-                </span>
-              )}
+              <span className="shrink-0">🏛️ House</span>
             </button>
 
             <button
@@ -427,18 +406,13 @@ function CongressDisclosuresPage() {
                 setSelectedChamber('senate')
                 setCurrentPage(1)
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
                 selectedChamber === 'senate'
                   ? 'bg-sky-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-sky-800 hover:text-sky-900 border border-sky-200'
               }`}
             >
-              <span>🏛️ Senate</span>
-              {selectedChamber === 'senate' && (
-                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-mono">
-                  {senateCount || totalCount}
-                </span>
-              )}
+              <span className="shrink-0">🏛️ Senate</span>
             </button>
           </div>
         </div>
@@ -619,6 +593,7 @@ function CongressDisclosuresPage() {
               const hasReturn = returnVal !== null && returnVal !== undefined
               const isPositive = hasReturn && returnVal >= 0
               const filingGap = getDaysBetween(item.transactionDate, item.disclosureDate)
+              const hasTicker = Boolean(item.symbol && item.symbol.trim() && item.symbol !== '--' && item.symbol !== 'N/A')
 
               return (
                 <div
@@ -643,7 +618,7 @@ function CongressDisclosuresPage() {
                           <div className="flex items-center gap-1 shrink-0">
                             {/* Chamber Badge */}
                             <span
-                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${
                                 isHouse
                                   ? 'bg-purple-50 text-purple-700 border-purple-200'
                                   : 'bg-sky-50 text-sky-700 border-sky-200'
@@ -652,7 +627,7 @@ function CongressDisclosuresPage() {
                               {item.chamber}
                             </span>
                             {item.district && (
-                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
                                 {item.district}
                               </span>
                             )}
@@ -679,71 +654,110 @@ function CongressDisclosuresPage() {
                       </span>
                       <span className="font-semibold text-brand-dark">{item.amount}</span>
                       <span className="text-gray-500"> of </span>
+                      {hasTicker ? (
+                        <Link
+                          to="/"
+                          search={{ ticker: item.symbol }}
+                          className="font-mono font-bold text-brand-dark hover:text-brand-primary hover:underline inline-flex items-center gap-0.5"
+                          title={`Open ${item.symbol} valuation`}
+                        >
+                          {item.symbol}
+                          <ArrowUpRight className="w-3 h-3 text-brand-primary inline" />
+                        </Link>
+                      ) : (
+                        <span className="font-semibold text-brand-dark">
+                          {item.assetDescription || item.assetType || 'Debt Security'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Asset Box - Clickable valuation link if ticker exists, or clean info box if bond/other */}
+                    {hasTicker ? (
                       <Link
                         to="/"
                         search={{ ticker: item.symbol }}
-                        className="font-mono font-bold text-brand-dark hover:text-brand-primary hover:underline inline-flex items-center gap-0.5"
-                        title={`Open ${item.symbol} valuation`}
+                        className="group bg-brand-bg/40 hover:bg-brand-bg/80 border border-brand-border/80 hover:border-brand-primary/40 rounded-xl p-3 flex items-center justify-between gap-3 mb-2 transition-all cursor-pointer block text-inherit"
+                        title={`Open ${item.symbol} Intrinsic Value model`}
                       >
-                        {item.symbol}
-                        <ArrowUpRight className="w-3 h-3 text-brand-primary inline" />
-                      </Link>
-                    </div>
+                        {/* Left: Company Logo + Symbol + Description */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CompanyLogo symbol={item.symbol} />
 
-                    {/* Asset Box - Clickable valuation link */}
-                    <Link
-                      to="/"
-                      search={{ ticker: item.symbol }}
-                      className="group bg-brand-bg/40 hover:bg-brand-bg/80 border border-brand-border/80 hover:border-brand-primary/40 rounded-xl p-3 flex items-center justify-between gap-3 mb-2 transition-all cursor-pointer block text-inherit"
-                      title={`Open ${item.symbol} Intrinsic Value model`}
-                    >
-                      {/* Left: Company Logo + Symbol + Description */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <CompanyLogo symbol={item.symbol} />
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors">
-                              {item.symbol}
-                            </span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200">
-                              {item.assetType || 'Stock'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 truncate max-w-[150px] sm:max-w-[180px]">
-                            {item.assetDescription}
-                          </p>
-                          {item.tradePrice ? (
-                            <p className="text-[10px] font-mono text-gray-400 mt-0.5">
-                              Traded at {formatPrice(item.tradePrice)}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors">
+                                {item.symbol}
+                              </span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200 shrink-0">
+                                {item.assetType || 'Stock'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 truncate max-w-[150px] sm:max-w-[180px]">
+                              {item.assetDescription}
                             </p>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      {/* Right: Current Price & Return Since Trade */}
-                      <div className="text-right shrink-0">
-                        <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
-                          Current price
-                        </div>
-                        <div className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors">
-                          {item.currentPrice ? formatPrice(item.currentPrice) : '—'}
-                        </div>
-                        {hasReturn ? (
-                          <div
-                            className={`text-[11px] font-mono font-semibold ${
-                              isPositive ? 'text-emerald-600' : 'text-rose-600'
-                            }`}
-                          >
-                            {`Since trade ${isPositive ? '+' : ''}${returnVal?.toFixed(2)}%`}
+                            {item.tradePrice ? (
+                              <p className="text-[10px] font-mono text-gray-400 mt-0.5">
+                                Traded at {formatPrice(item.tradePrice)}
+                              </p>
+                            ) : null}
                           </div>
-                        ) : (
-                          <div className="text-[10px] font-mono text-gray-400">
+                        </div>
+
+                        {/* Right: Current Price & Return Since Trade */}
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
+                            Current price
+                          </div>
+                          <div className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors">
+                            {item.currentPrice ? formatPrice(item.currentPrice) : '—'}
+                          </div>
+                          {hasReturn ? (
+                            <div
+                              className={`text-[11px] font-mono font-semibold ${
+                                isPositive ? 'text-emerald-600' : 'text-rose-600'
+                              }`}
+                            >
+                              {`Since trade ${isPositive ? '+' : ''}${returnVal?.toFixed(2)}%`}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] font-mono text-gray-400">
+                              {item.amount}
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="bg-brand-bg/40 border border-brand-border/80 rounded-xl p-3 flex items-center justify-between gap-3 mb-2">
+                        {/* Left: Building Icon + Asset Description + Type */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CompanyLogo symbol="" />
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-xs sm:text-sm text-brand-dark truncate max-w-[160px] sm:max-w-[200px]">
+                                {item.assetDescription || 'Fixed Income / Bond'}
+                              </span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200 shrink-0 whitespace-nowrap">
+                                {item.assetType || 'Bond'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-400 font-mono">
+                              No public equity ticker
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right: Filing Amount */}
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
+                            Filing value
+                          </div>
+                          <div className="font-mono font-bold text-xs sm:text-sm text-brand-dark">
                             {item.amount}
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </Link>
+                    )}
 
                     {/* Comment snippet if present */}
                     {item.comment && (
@@ -823,6 +837,7 @@ function CongressDisclosuresPage() {
                     const returnVal = item.changeSinceTrade
                     const hasReturn = returnVal !== null && returnVal !== undefined
                     const isPositive = hasReturn && returnVal >= 0
+                    const hasTicker = Boolean(item.symbol && item.symbol.trim() && item.symbol !== '--' && item.symbol !== 'N/A')
 
                     return (
                       <tr
@@ -866,23 +881,37 @@ function CongressDisclosuresPage() {
 
                         {/* Symbol & Company */}
                         <td className="py-2.5 px-3 min-w-[220px]">
-                          <Link
-                            to="/"
-                            search={{ ticker: item.symbol }}
-                            className="group flex items-center gap-2 text-inherit"
-                            title={`Open ${item.symbol} valuation`}
-                          >
-                            <CompanyLogo symbol={item.symbol} />
-                            <div className="min-w-0">
-                              <div className="font-mono font-bold text-xs text-brand-dark group-hover:text-brand-primary group-hover:underline flex items-center gap-0.5 whitespace-nowrap">
-                                {item.symbol}
-                                <ArrowUpRight className="w-2.5 h-2.5 text-brand-primary" />
+                          {hasTicker ? (
+                            <Link
+                              to="/"
+                              search={{ ticker: item.symbol }}
+                              className="group flex items-center gap-2 text-inherit"
+                              title={`Open ${item.symbol} valuation`}
+                            >
+                              <CompanyLogo symbol={item.symbol} />
+                              <div className="min-w-0">
+                                <div className="font-mono font-bold text-xs text-brand-dark group-hover:text-brand-primary group-hover:underline flex items-center gap-0.5 whitespace-nowrap">
+                                  {item.symbol}
+                                  <ArrowUpRight className="w-2.5 h-2.5 text-brand-primary" />
+                                </div>
+                                <div className="text-[10px] text-gray-500 truncate max-w-[160px]">
+                                  {item.assetDescription}
+                                </div>
                               </div>
-                              <div className="text-[10px] text-gray-500 truncate max-w-[160px]">
-                                {item.assetDescription}
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <CompanyLogo symbol="" />
+                              <div className="min-w-0">
+                                <div className="font-semibold text-xs text-brand-dark truncate max-w-[160px]">
+                                  {item.assetDescription || item.assetType}
+                                </div>
+                                <div className="text-[10px] font-mono text-gray-400">
+                                  {item.assetType || 'Bond / Debt'}
+                                </div>
                               </div>
                             </div>
-                          </Link>
+                          )}
                         </td>
 
                         {/* Type (Action) */}
