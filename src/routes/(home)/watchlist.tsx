@@ -268,7 +268,18 @@ function WatchlistPage() {
                   const dayPositive = (item.day_pct ?? 0) >= 0
                   const ytdPositive = (item.ytd ?? 0) >= 0
                   const oneYrPositive = (item.one_yr ?? 0) >= 0
-                  const isUndervalued = (item.over_under_pct ?? 0) < 0
+
+                  const hasIv = item.intrinsic_value !== null && item.intrinsic_value !== undefined
+                  const hasPrice = item.price !== null && item.price !== undefined
+                  const isNegativeIv = hasIv && item.intrinsic_value! <= 0
+                  const isUndervalued = hasIv && hasPrice && !isNegativeIv && item.intrinsic_value! > item.price!
+                  const isFairValue = hasIv && hasPrice && !isNegativeIv && item.intrinsic_value! === item.price!
+
+                  const pct = hasIv && hasPrice && item.intrinsic_value! !== 0
+                    ? Math.abs((item.price! - item.intrinsic_value!) / Math.abs(item.intrinsic_value!)) * 100
+                    : item.over_under_pct !== null
+                    ? Math.abs(item.over_under_pct * 100)
+                    : null
 
                   return (
                     <tr
@@ -386,17 +397,26 @@ function WatchlistPage() {
 
                       {/* 10. Overvalue/undervalue % */}
                       <td className="py-3.5 px-3 text-right whitespace-nowrap">
-                        {item.over_under_pct !== null ? (
+                        {pct !== null ? (
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                               isUndervalued
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : isFairValue
+                                ? 'bg-gray-100 text-gray-700 border border-gray-200'
                                 : 'bg-rose-50 text-rose-700 border border-rose-200'
                             }`}
+                            title={
+                              isNegativeIv
+                                ? `DCF intrinsic value is negative (${formatPrice(item.intrinsic_value)}); stock is trading at a premium.`
+                                : undefined
+                            }
                           >
                             {isUndervalued
-                              ? `${Math.abs(item.over_under_pct * 100).toFixed(1)}% Undervalued`
-                              : `${(item.over_under_pct * 100).toFixed(1)}% Overvalued`}
+                              ? `${pct.toFixed(1)}% Undervalued`
+                              : isFairValue
+                              ? 'Fair Value'
+                              : `${pct.toFixed(1)}% Overvalued`}
                           </span>
                         ) : (
                           <span className="text-gray-400 font-mono text-[11px]">—</span>
