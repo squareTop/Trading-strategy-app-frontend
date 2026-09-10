@@ -727,22 +727,22 @@ function CongressDisclosuresPage() {
                         </div>
                       </Link>
                     ) : (
-                      <div className="bg-brand-bg/40 border border-brand-border/80 rounded-xl p-3 flex items-center justify-between gap-3 mb-2">
+                      <div className="bg-brand-bg/40 border border-brand-border/80 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-2.5 sm:gap-3 mb-2">
                         {/* Left: Building Icon + Asset Description + Type */}
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                           <CompanyLogo symbol="" />
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold text-xs sm:text-sm text-brand-dark truncate max-w-[160px] sm:max-w-[200px]">
-                                {item.assetDescription || 'Fixed Income / Bond'}
-                              </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 mb-0.5">
                               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200 shrink-0 whitespace-nowrap">
                                 {item.assetType || 'Bond'}
                               </span>
                             </div>
-                            <p className="text-[11px] text-gray-400 font-mono">
-                              No public equity ticker
+                            <p
+                              className="font-semibold text-xs sm:text-sm text-brand-dark truncate"
+                              title={item.assetDescription}
+                            >
+                              {item.assetDescription || 'Fixed Income / Bond'}
                             </p>
                           </div>
                         </div>
@@ -752,7 +752,7 @@ function CongressDisclosuresPage() {
                           <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
                             Filing value
                           </div>
-                          <div className="font-mono font-bold text-xs sm:text-sm text-brand-dark">
+                          <div className="font-mono font-bold text-xs sm:text-sm text-brand-dark whitespace-nowrap">
                             {item.amount}
                           </div>
                         </div>
