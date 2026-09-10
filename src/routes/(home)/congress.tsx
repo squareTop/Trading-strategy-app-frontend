@@ -229,8 +229,8 @@ function CompanyLogo({ symbol }: { symbol: string }) {
     <div className="relative w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs select-none flex items-center justify-center">
       {/* Placeholder with ticker initials rendered underneath */}
       {(!isLoaded || hasFailedAll || !symbol) && (
-        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center font-mono text-[11px] font-bold text-gray-600">
-          {symbol?.slice(0, 4) || <Building2 className="w-4 h-4 text-gray-400" />}
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center font-mono text-[11px] font-bold text-gray-600 whitespace-nowrap select-none">
+          {symbol?.slice(0, 4) || <Building2 className="w-4 h-4 text-gray-400 shrink-0" />}
         </div>
       )}
 
@@ -666,11 +666,11 @@ function CongressDisclosuresPage() {
                         <Link
                           to="/"
                           search={{ ticker: item.symbol }}
-                          className="font-mono font-bold text-brand-dark hover:text-brand-primary hover:underline inline-flex items-center gap-0.5"
+                          className="font-mono font-bold text-brand-dark hover:text-brand-primary hover:underline inline-flex items-center gap-0.5 whitespace-nowrap shrink-0"
                           title={`Open ${item.symbol} valuation`}
                         >
-                          {item.symbol}
-                          <ArrowUpRight className="w-3 h-3 text-brand-primary inline" />
+                          <span className="whitespace-nowrap">{item.symbol}</span>
+                          <ArrowUpRight className="w-3 h-3 text-brand-primary inline shrink-0" />
                         </Link>
                       ) : (
                         <span className="font-semibold text-brand-dark">
@@ -692,11 +692,11 @@ function CongressDisclosuresPage() {
                           <CompanyLogo symbol={item.symbol} />
 
                           <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors">
+                            <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                              <span className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors whitespace-nowrap shrink-0">
                                 {item.symbol}
                               </span>
-                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200 shrink-0">
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200 shrink-0 whitespace-nowrap">
                                 {item.assetType || 'Stock'}
                               </span>
                             </div>
@@ -897,8 +897,8 @@ function CongressDisclosuresPage() {
                               <CompanyLogo symbol={item.symbol} />
                               <div className="min-w-0">
                                 <div className="font-mono font-bold text-xs text-brand-dark group-hover:text-brand-primary group-hover:underline flex items-center gap-0.5 whitespace-nowrap">
-                                  {item.symbol}
-                                  <ArrowUpRight className="w-2.5 h-2.5 text-brand-primary" />
+                                  <span className="whitespace-nowrap">{item.symbol}</span>
+                                  <ArrowUpRight className="w-2.5 h-2.5 text-brand-primary shrink-0" />
                                 </div>
                                 <div className="text-[10px] text-gray-500 truncate max-w-[160px]">
                                   {item.assetDescription}
