@@ -126,6 +126,7 @@ const STRATEGY_TO_PIPELINE: Record<string, string> = {
 
   // Mean Reversion
   'MR-A': 'Mean Reversion',
+  'MR-A2': 'Mean Reversion',
   'MR-B': 'Mean Reversion',
   mr_a_long: 'Mean Reversion',
   mr_a_short: 'Mean Reversion',
