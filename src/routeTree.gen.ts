@@ -16,6 +16,7 @@ import { Route as homeAboutRouteImport } from './routes/(home)/about'
 import { Route as homeCongressRouteImport } from './routes/(home)/congress'
 import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-signals'
 import { Route as homeLoginRouteImport } from './routes/(home)/login'
+import { Route as homeMonteCarloRouteImport } from './routes/(home)/monte-carlo'
 import { Route as homeProfileRouteImport } from './routes/(home)/profile'
 import { Route as homeRegisterRouteImport } from './routes/(home)/register'
 import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
@@ -58,6 +59,11 @@ const homeDailySignalsRoute = homeDailySignalsRouteImport.update({
 const homeLoginRoute = homeLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => homeRouteRoute,
+} as any)
+const homeMonteCarloRoute = homeMonteCarloRouteImport.update({
+  id: '/monte-carlo',
+  path: '/monte-carlo',
   getParentRoute: () => homeRouteRoute,
 } as any)
 const homeProfileRoute = homeProfileRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
   '/login': typeof homeLoginRoute
+  '/monte-carlo': typeof homeMonteCarloRoute
   '/profile': typeof homeProfileRoute
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/congress': typeof homeCongressRoute
   '/daily-signals': typeof homeDailySignalsRoute
   '/login': typeof homeLoginRoute
+  '/monte-carlo': typeof homeMonteCarloRoute
   '/profile': typeof homeProfileRoute
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/(home)/congress': typeof homeCongressRoute
   '/(home)/daily-signals': typeof homeDailySignalsRoute
   '/(home)/login': typeof homeLoginRoute
+  '/(home)/monte-carlo': typeof homeMonteCarloRoute
   '/(home)/profile': typeof homeProfileRoute
   '/(home)/register': typeof homeRegisterRoute
   '/(home)/scoreboard': typeof homeScoreboardRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/congress'
     | '/daily-signals'
     | '/login'
+    | '/monte-carlo'
     | '/profile'
     | '/register'
     | '/scoreboard'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/congress'
     | '/daily-signals'
     | '/login'
+    | '/monte-carlo'
     | '/profile'
     | '/register'
     | '/scoreboard'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/(home)/congress'
     | '/(home)/daily-signals'
     | '/(home)/login'
+    | '/(home)/monte-carlo'
     | '/(home)/profile'
     | '/(home)/register'
     | '/(home)/scoreboard'
@@ -271,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof homeLoginRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/monte-carlo': {
+      id: '/(home)/monte-carlo'
+      path: '/monte-carlo'
+      fullPath: '/monte-carlo'
+      preLoaderRoute: typeof homeMonteCarloRouteImport
       parentRoute: typeof homeRouteRoute
     }
     '/(home)/profile': {
@@ -344,6 +363,7 @@ interface homeRouteRouteChildren {
   homeCongressRoute: typeof homeCongressRoute
   homeDailySignalsRoute: typeof homeDailySignalsRoute
   homeLoginRoute: typeof homeLoginRoute
+  homeMonteCarloRoute: typeof homeMonteCarloRoute
   homeProfileRoute: typeof homeProfileRoute
   homeRegisterRoute: typeof homeRegisterRoute
   homeScoreboardRoute: typeof homeScoreboardRoute
@@ -358,6 +378,7 @@ const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeCongressRoute: homeCongressRoute,
   homeDailySignalsRoute: homeDailySignalsRoute,
   homeLoginRoute: homeLoginRoute,
+  homeMonteCarloRoute: homeMonteCarloRoute,
   homeProfileRoute: homeProfileRoute,
   homeRegisterRoute: homeRegisterRoute,
   homeScoreboardRoute: homeScoreboardRoute,
