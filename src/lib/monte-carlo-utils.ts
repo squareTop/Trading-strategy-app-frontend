@@ -109,7 +109,10 @@ export function niceTicks(min: number, max: number, count = 5): number[] {
   const step = mag * (err >= Math.sqrt(50) ? 10 : err >= Math.sqrt(10) ? 5 : err >= Math.sqrt(2) ? 2 : 1)
   const start = Math.ceil(min / step - 1e-9) * step
   const ticks: number[] = []
-  for (let t = start; t <= max + step * 1e-9; t += step) ticks.push(Math.round(t / step) * step)
+  for (let t = start; t <= max + step * 1e-9; t += step) {
+    const v = Math.round(t / step) * step
+    ticks.push(v === 0 ? 0 : v)
+  }
   return ticks
 }
 
