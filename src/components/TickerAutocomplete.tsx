@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, X } from 'lucide-react'
 import { API_URL } from '../lib/config'
 
 export interface StockSearchResult {
@@ -175,9 +175,9 @@ export function TickerAutocomplete({
   }
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
-      <div className="relative">
-        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+    <div ref={containerRef} className={`relative w-full ${className}`}>
+      <div className="relative w-full">
+        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           ref={inputRef}
           id={id}
@@ -201,11 +201,25 @@ export function TickerAutocomplete({
           autoFocus={autoFocus}
           className={
             inputClassName ||
-            'w-full pl-10 pr-9 py-2.5 bg-brand-bg/30 border border-brand-border rounded-xl text-xs sm:text-sm font-mono text-brand-dark focus:outline-none focus:border-brand-primary focus:bg-white transition-all'
+            'w-full pl-9 pr-8 py-2.5 bg-brand-bg/30 border border-brand-border rounded-xl text-xs sm:text-sm font-mono text-brand-dark focus:outline-none focus:border-brand-primary focus:bg-white transition-all'
           }
         />
         {isFetching && (
-          <Loader2 className="w-3.5 h-3.5 text-brand-primary animate-spin absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Loader2 className="w-3.5 h-3.5 text-brand-primary animate-spin absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        )}
+        {value && !isFetching && !disabled && (
+          <button
+            type="button"
+            onClick={() => {
+              cancelSearch()
+              onChange('')
+              onSelectTicker('')
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5 rounded-full hover:bg-gray-100 transition-colors"
+            title="Clear ticker"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         )}
       </div>
 

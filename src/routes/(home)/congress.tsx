@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   Search,
   RefreshCw,
@@ -13,15 +13,19 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ArrowUpRight,
   X,
-  Landmark
+  Landmark,
 } from 'lucide-react'
 import { API_URL } from '../../lib/config'
 import { formatPrice } from '../../lib/utils'
 import CongressSkeleton from '../../components/skeletons/CongressSkeleton'
+import { TickerAutocomplete } from '../../components/TickerAutocomplete'
 
 export interface CongressDisclosure {
+  id?: string
   chamber: 'Senate' | 'House'
   name: string
   firstName?: string
@@ -44,21 +48,120 @@ export interface CongressDisclosure {
   changeSinceTrade?: number | null
 }
 
-export const congressQueryOptions = (chamber: 'all' | 'senate' | 'house' = 'all') =>
+export interface CongressMember {
+  bioguideId: string
+  name: string
+  chamber: 'Senate' | 'House'
+  state: string
+  district: string
+  party: string
+  imageUrl: string
+  tradesCount: number
+}
+
+export interface CongressEnvelope {
+  items: CongressDisclosure[]
+  total: number
+  page: number
+  limit: number
+  total_pages: number
+}
+
+export interface CongressSearchParams {
+  chamber?: 'all' | 'senate' | 'house'
+  member?: string
+  bioguideId?: string
+  symbol?: string
+  type?: 'all' | 'Purchase' | 'Sale' | 'Exchange'
+  assetType?: string
+  owner?: string
+  dateRange?: string
+  sortBy?: 'disclosure_date' | 'transaction_date' | 'change_since_trade'
+  sortOrder?: 'desc' | 'asc'
+  page?: number
+  pageSize?: number
+  view?: 'feed' | 'table'
+}
+
+export interface CongressFilterApiParams {
+  chamber: 'all' | 'senate' | 'house'
+  bioguideId?: string
+  member?: string
+  symbol?: string
+  type?: string
+  assetType?: string
+  owner?: string
+  startDate?: string
+  endDate?: string
+  sortBy?: 'disclosure_date' | 'transaction_date' | 'change_since_trade'
+  sortOrder?: 'desc' | 'asc'
+  page: number
+  limit: number
+}
+
+export const congressQueryOptions = (params: CongressFilterApiParams) =>
   queryOptions({
-    queryKey: ['congressLatest', chamber],
+    queryKey: ['congressLatest', params],
     queryFn: async () => {
-      const response = await fetch(`${API_URL}/api/congress-latest?chamber=${chamber}&limit=150`)
+      const sp = new URLSearchParams()
+      sp.append('envelope', 'true')
+      if (params.chamber && params.chamber !== 'all') sp.append('chamber', params.chamber)
+      if (params.bioguideId) sp.append('bioguide_id', params.bioguideId)
+      if (params.member) sp.append('member', params.member)
+      if (params.symbol) sp.append('symbol', params.symbol.trim())
+      if (params.type && params.type !== 'all') sp.append('type', params.type)
+      if (params.assetType && params.assetType !== 'all') sp.append('asset_type', params.assetType)
+      if (params.owner && params.owner !== 'all') sp.append('owner', params.owner)
+      if (params.startDate) sp.append('start_date', params.startDate)
+      if (params.endDate) sp.append('end_date', params.endDate)
+      if (params.sortBy) sp.append('sort_by', params.sortBy)
+      if (params.sortOrder) sp.append('sort_order', params.sortOrder)
+      sp.append('page', String(params.page))
+      sp.append('limit', String(params.limit))
+
+      const response = await fetch(`${API_URL}/api/congress-latest?${sp.toString()}`)
       if (!response.ok) {
         throw new Error(`Failed to fetch congress disclosures: status ${response.status}`)
       }
-      return response.json() as Promise<CongressDisclosure[]>
+      return response.json() as Promise<CongressEnvelope>
     },
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    refetchInterval: 30 * 60 * 1000, // 30 minutes background refetch
+    staleTime: 5 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  })
+
+export const congressMembersQueryOptions = (query: string = '', chamber: string = 'all') =>
+  queryOptions({
+    queryKey: ['congressMembers', { query, chamber }],
+    queryFn: async () => {
+      const sp = new URLSearchParams()
+      if (query.trim()) sp.append('query', query.trim())
+      if (chamber && chamber !== 'all') sp.append('chamber', chamber)
+      sp.append('limit', '40')
+      const response = await fetch(`${API_URL}/api/congress/members?${sp.toString()}`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch congress members: status ${response.status}`)
+      }
+      return response.json() as Promise<CongressMember[]>
+    },
+    staleTime: 10 * 60 * 1000,
   })
 
 export const Route = createFileRoute('/(home)/congress')({
+  validateSearch: (search: Record<string, unknown>): CongressSearchParams => ({
+    chamber: (search.chamber as 'all' | 'senate' | 'house') || 'all',
+    member: (search.member as string) || undefined,
+    bioguideId: (search.bioguideId as string) || undefined,
+    symbol: (search.symbol as string) || undefined,
+    type: (search.type as any) || undefined,
+    assetType: (search.assetType as string) || undefined,
+    owner: (search.owner as string) || undefined,
+    dateRange: (search.dateRange as string) || undefined,
+    sortBy: (search.sortBy as any) || undefined,
+    sortOrder: (search.sortOrder as any) || undefined,
+    page: typeof search.page === 'number' ? search.page : Number(search.page) || 0,
+    pageSize: typeof search.pageSize === 'number' ? search.pageSize : Number(search.pageSize) || 24,
+    view: (search.view as 'feed' | 'table') || 'feed',
+  }),
   head: () => ({
     meta: [
       {
@@ -66,12 +169,21 @@ export const Route = createFileRoute('/(home)/congress')({
       },
       {
         name: 'description',
-        content: 'Real-time tracking of U.S. Senate and House financial disclosures, congressional stock transactions, Capitol Hill insider filings, and post-trade performance analytics.',
+        content:
+          'Real-time tracking of U.S. Senate and House financial disclosures, congressional stock transactions, Capitol Hill insider filings, and post-trade performance analytics.',
       },
     ],
   }),
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(congressQueryOptions('all')).catch(() => { })
+    await context.queryClient
+      .ensureQueryData(
+        congressQueryOptions({
+          chamber: 'all',
+          page: 0,
+          limit: 24,
+        })
+      )
+      .catch(() => {})
   },
   pendingComponent: CongressSkeleton,
   pendingMs: 50,
@@ -117,7 +229,7 @@ function getDaysBetween(date1: string, date2: string): number | null {
   }
 }
 
-// Fallback Bioguide IDs for active Congress members when upstream FMP omits senateID
+// Fallback Bioguide IDs for active Congress members
 const BIOGUIDE_FALLBACKS: Record<string, string> = {
   'cory booker': 'B001288',
   'john fetterman': 'F000479',
@@ -134,7 +246,7 @@ const BIOGUIDE_FALLBACKS: Record<string, string> = {
   'ted cruz': 'C001098',
 }
 
-// Politician Avatar with support for Congress member headshots (Senate and House via Bioguide ID)
+// Politician Avatar with headshots
 function PoliticianAvatar({
   name,
   senateID,
@@ -173,27 +285,27 @@ function PoliticianAvatar({
       className={`relative ${sizeClasses} rounded-full overflow-hidden shrink-0 border border-brand-border/80 shadow-xs bg-gray-100 select-none`}
       title={`${name} (${chamber})`}
     >
-      {/* Placeholder with initials rendered underneath */}
       {(!isLoaded || hasError || !imageUrl) && (
         <div
-          className={`absolute inset-0 flex items-center justify-center font-bold font-mono ${isHouse
+          className={`absolute inset-0 flex items-center justify-center font-bold font-mono ${
+            isHouse
               ? 'bg-linear-to-br from-purple-100 to-indigo-200 text-purple-900'
               : 'bg-linear-to-br from-brand-primary/15 to-brand-primary/35 text-brand-dark'
-            }`}
+          }`}
         >
           {initials || <User className="w-3.5 h-3.5 opacity-60" />}
         </div>
       )}
 
-      {/* Senator Image with zero alt text to prevent browser title pop-in */}
       {imageUrl && !hasError && (
         <img
           src={imageUrl}
           alt=""
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-250 ${isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-250 ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
           loading="lazy"
         />
       )}
@@ -201,13 +313,11 @@ function PoliticianAvatar({
   )
 }
 
-// Company Logo with multi-tier source resolution and contrast protection
+// Company Logo
 function CompanyLogo({ symbol }: { symbol: string }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [srcIndex, setSrcIndex] = useState(0)
 
-  // 1. High-contrast / brand colored logo via Parqet
-  // 2. FMP symbol logo with contrast shadow fallback
   const sources = useMemo(() => {
     if (!symbol) return []
     const clean = symbol.trim().toUpperCase()
@@ -227,7 +337,6 @@ function CompanyLogo({ symbol }: { symbol: string }) {
 
   return (
     <div className="relative w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs select-none flex items-center justify-center">
-      {/* Placeholder with ticker initials rendered underneath */}
       {(!isLoaded || hasFailedAll || !symbol) && (
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center font-mono text-[11px] font-bold text-gray-600 whitespace-nowrap select-none">
           {symbol?.slice(0, 4) || <Building2 className="w-4 h-4 text-gray-400 shrink-0" />}
@@ -241,8 +350,9 @@ function CompanyLogo({ symbol }: { symbol: string }) {
           alt=""
           onLoad={() => setIsLoaded(true)}
           onError={handleError}
-          className={`absolute inset-0 w-full h-full object-contain p-1.5 transition-opacity duration-200 [filter:drop-shadow(0_0_1px_rgba(0,0,0,0.3))] ${isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
+          className={`absolute inset-0 w-full h-full object-contain p-1.5 transition-opacity duration-200 [filter:drop-shadow(0_0_1px_rgba(0,0,0,0.3))] ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
           loading="lazy"
         />
       )}
@@ -251,87 +361,163 @@ function CompanyLogo({ symbol }: { symbol: string }) {
 }
 
 function CongressDisclosuresPage() {
-  // Chamber query state
-  const [selectedChamber, setSelectedChamber] = useState<'all' | 'senate' | 'house'>('all')
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+
+  // Derive all filter states from URL search params
+  const selectedChamber = search.chamber || 'all'
+  const symbol = search.symbol || ''
+  const selectedBioguideId = search.bioguideId
+  const memberName = search.member || ''
+  const typeFilter = search.type || 'all'
+  const assetTypeFilter = search.assetType || 'all'
+  const ownerFilter = search.owner || 'all'
+  const dateRangeFilter = search.dateRange || 'all'
+  const sortBy = search.sortBy || 'disclosure_date'
+  const sortOrder = search.sortOrder || 'desc'
+  const page = search.page || 0
+  const pageSize = search.pageSize || 24
+  const viewMode = search.view || 'feed'
+
+  // Local state for politician search input & dropdown
+  const [memberSearchInput, setMemberSearchInput] = useState('')
+  const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false)
+  const memberDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Helper to update URL search parameters
+  const updateSearch = (newParams: Partial<CongressSearchParams>) => {
+    navigate({
+      search: (prev) => {
+        const merged: Record<string, any> = { ...prev, ...newParams }
+        // Clean default/empty values to keep URL concise
+        if (merged.chamber === 'all') delete merged.chamber
+        if (!merged.member) delete merged.member
+        if (!merged.bioguideId) delete merged.bioguideId
+        if (!merged.symbol) delete merged.symbol
+        if (merged.type === 'all' || !merged.type) delete merged.type
+        if (merged.assetType === 'all' || !merged.assetType) delete merged.assetType
+        if (merged.owner === 'all' || !merged.owner) delete merged.owner
+        if (merged.dateRange === 'all' || !merged.dateRange) delete merged.dateRange
+        if (merged.sortBy === 'disclosure_date' || !merged.sortBy) delete merged.sortBy
+        if (merged.sortOrder === 'desc' || !merged.sortOrder) delete merged.sortOrder
+        if (merged.page === 0 || !merged.page) delete merged.page
+        if (merged.pageSize === 24 || !merged.pageSize) delete merged.pageSize
+        if (merged.view === 'feed' || !merged.view) delete merged.view
+        return merged
+      },
+      replace: true,
+    })
+  }
+
+  // Calculate start/end date from date range preset
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date()
+    if (dateRangeFilter === '30d') {
+      const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      return { startDate: past.toISOString().slice(0, 10), endDate: undefined }
+    }
+    if (dateRangeFilter === '90d') {
+      const past = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+      return { startDate: past.toISOString().slice(0, 10), endDate: undefined }
+    }
+    if (dateRangeFilter === '2026') {
+      return { startDate: '2026-01-01', endDate: '2026-12-31' }
+    }
+    if (dateRangeFilter === '2025') {
+      return { startDate: '2025-01-01', endDate: '2025-12-31' }
+    }
+    if (dateRangeFilter === '2024') {
+      return { startDate: '2024-01-01', endDate: '2024-12-31' }
+    }
+    return { startDate: undefined, endDate: undefined }
+  }, [dateRangeFilter])
+
+  // Query disclosures with server-side pagination & filters
+  const filterParams: CongressFilterApiParams = useMemo(
+    () => ({
+      chamber: selectedChamber,
+      bioguideId: selectedBioguideId,
+      member: memberName || undefined,
+      symbol: symbol ? symbol.toUpperCase().trim() : undefined,
+      type: typeFilter !== 'all' ? typeFilter : undefined,
+      assetType: assetTypeFilter !== 'all' ? assetTypeFilter : undefined,
+      owner: ownerFilter !== 'all' ? ownerFilter : undefined,
+      startDate,
+      endDate,
+      sortBy,
+      sortOrder,
+      page,
+      limit: pageSize,
+    }),
+    [
+      selectedChamber,
+      selectedBioguideId,
+      memberName,
+      symbol,
+      typeFilter,
+      assetTypeFilter,
+      ownerFilter,
+      startDate,
+      endDate,
+      sortBy,
+      sortOrder,
+      page,
+      pageSize,
+    ]
+  )
 
   const {
-    data: disclosures = [],
+    data: envelope,
     isLoading,
     isRefetching,
     refetch,
     dataUpdatedAt,
-  } = useQuery(congressQueryOptions(selectedChamber))
+  } = useQuery(congressQueryOptions(filterParams))
 
-  // Filters state
-  const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState<'all' | 'Purchase' | 'Sale' | 'Exchange'>('all')
-  const [assetTypeFilter, setAssetTypeFilter] = useState<string>('all')
-  const [ownerFilter, setOwnerFilter] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'feed' | 'table'>('feed')
+  // Query members for the member filter dropdown
+  const { data: membersList = [], isLoading: isLoadingMembers } = useQuery(
+    congressMembersQueryOptions(memberSearchInput, selectedChamber)
+  )
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 21
-
-  // Derived unique asset types
-  const assetTypes = useMemo(() => {
-    const set = new Set<string>()
-    disclosures.forEach((d) => {
-      if (d.assetType) set.add(d.assetType)
-    })
-    return Array.from(set).sort()
-  }, [disclosures])
-
-  // Filtered disclosures
-  const filteredDisclosures = useMemo(() => {
-    return disclosures.filter((item) => {
-      // Transaction type filter
-      if (typeFilter !== 'all') {
-        if (typeFilter === 'Purchase' && !item.type.toLowerCase().includes('purchase')) return false
-        if (typeFilter === 'Sale' && !item.type.toLowerCase().includes('sale')) return false
-        if (typeFilter === 'Exchange' && !item.type.toLowerCase().includes('exchange')) return false
+  // Close member dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (memberDropdownRef.current && !memberDropdownRef.current.contains(event.target as Node)) {
+        setIsMemberDropdownOpen(false)
       }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-      if (assetTypeFilter !== 'all' && item.assetType !== assetTypeFilter) return false
-      if (ownerFilter !== 'all' && item.owner !== ownerFilter) return false
-
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase().trim()
-        const name = (item.name || '').toLowerCase()
-        const office = (item.office || '').toLowerCase()
-        const symbol = (item.symbol || '').toLowerCase()
-        const assetDesc = (item.assetDescription || '').toLowerCase()
-        const district = (item.district || '').toLowerCase()
-        const chamber = (item.chamber || '').toLowerCase()
-
-        const matches =
-          name.includes(query) ||
-          office.includes(query) ||
-          symbol.includes(query) ||
-          assetDesc.includes(query) ||
-          district.includes(query) ||
-          chamber.includes(query)
-
-        if (!matches) return false
-      }
-
-      return true
-    })
-  }, [disclosures, typeFilter, assetTypeFilter, ownerFilter, searchTerm])
-
-  // Paginated disclosures
-  const totalPages = Math.ceil(filteredDisclosures.length / pageSize) || 1
-  const paginatedDisclosures = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredDisclosures.slice(start, start + pageSize)
-  }, [filteredDisclosures, currentPage, pageSize])
+  const disclosures = envelope?.items || []
+  const totalRecords = envelope?.total || 0
+  const totalPages = envelope?.total_pages || 1
 
   const handleResetFilters = () => {
-    setSearchTerm('')
-    setTypeFilter('all')
-    setAssetTypeFilter('all')
-    setOwnerFilter('all')
-    setCurrentPage(1)
+    setMemberSearchInput('')
+    navigate({
+      search: {},
+      replace: true,
+    })
+  }
+
+  const handleSelectMember = (member: CongressMember) => {
+    setMemberSearchInput('')
+    setIsMemberDropdownOpen(false)
+    updateSearch({
+      member: member.name,
+      bioguideId: member.bioguideId,
+      page: 0,
+    })
+  }
+
+  const handleClearMember = () => {
+    updateSearch({
+      member: undefined,
+      bioguideId: undefined,
+      page: 0,
+    })
   }
 
   const lastUpdatedTime = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : null
@@ -346,7 +532,7 @@ function CongressDisclosuresPage() {
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  STOCK Act Disclosures
+                  STOCK Act Historical Database
                 </span>
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 font-mono">
                   <span className="relative flex h-2 w-2">
@@ -361,11 +547,11 @@ function CongressDisclosuresPage() {
                 Congressional Financial Disclosures
               </h1>
               <p className="text-gray-600 text-xs sm:text-sm mt-1 max-w-2xl">
-                Real-time tracking of U.S. Senate and House of Representatives stock transactions across Capitol Hill members, with live quotes and returns since trade date.
+                Real-time and historical tracking of U.S. Senate and House of Representatives stock trades across Capitol Hill members, with live quotes and return analytics since trade date.
               </p>
             </div>
 
-            {/* Refresh & Last Updated Button */}
+            {/* Refresh Button & Time */}
             <div className="flex items-center gap-3 shrink-0">
               {lastUpdatedTime && (
                 <span className="hidden sm:inline text-xs text-gray-500 font-mono">
@@ -384,47 +570,45 @@ function CongressDisclosuresPage() {
             </div>
           </div>
 
-          {/* Chamber Toggle Pills */}
+          {/* Chamber Toggle Pills (Clean pills without confusing count numbers) */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-6 pt-4 border-t border-brand-border/60">
             <span className="text-xs font-mono text-gray-400 font-semibold mr-1 shrink-0 whitespace-nowrap">Chamber:</span>
+
+            {/* All Congress */}
             <button
-              onClick={() => {
-                setSelectedChamber('all')
-                setCurrentPage(1)
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${selectedChamber === 'all'
+              onClick={() => updateSearch({ chamber: 'all', page: 0 })}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
+                selectedChamber === 'all'
                   ? 'bg-brand-dark text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-gray-600 hover:text-brand-dark border border-brand-border'
-                }`}
+              }`}
             >
               <Landmark className="w-3.5 h-3.5 shrink-0" />
               <span>All Congress</span>
             </button>
 
+            {/* House */}
             <button
-              onClick={() => {
-                setSelectedChamber('house')
-                setCurrentPage(1)
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${selectedChamber === 'house'
+              onClick={() => updateSearch({ chamber: 'house', page: 0 })}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
+                selectedChamber === 'house'
                   ? 'bg-purple-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-purple-800 hover:text-purple-900 border border-purple-200'
-                }`}
+              }`}
             >
-              <span className="shrink-0">🏛️ House</span>
+              <span>🏛️ House</span>
             </button>
 
+            {/* Senate */}
             <button
-              onClick={() => {
-                setSelectedChamber('senate')
-                setCurrentPage(1)
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${selectedChamber === 'senate'
+              onClick={() => updateSearch({ chamber: 'senate', page: 0 })}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
+                selectedChamber === 'senate'
                   ? 'bg-sky-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-sky-800 hover:text-sky-900 border border-sky-200'
-                }`}
+              }`}
             >
-              <span className="shrink-0">🏛️ Senate</span>
+              <span>🏛️ Senate</span>
             </button>
           </div>
         </div>
@@ -432,98 +616,199 @@ function CongressDisclosuresPage() {
 
       {/* Main Content Area */}
       <main className="max-w-360 mx-auto px-3 sm:px-4 md:px-8 pt-6">
-        {/* Filter and Search Bar */}
-        <div className="bg-white border border-brand-border rounded-xl p-3.5 sm:p-4 mb-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1)
-              }}
-              placeholder="Search by politician, ticker (e.g. NVDA), company, or state..."
-              className="w-full pl-9 pr-8 py-2 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-sans text-brand-dark placeholder-gray-400 focus:outline-none focus:border-brand-primary focus:bg-white transition-all"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+        {/* Comprehensive Filter Bar */}
+        <div className="bg-white border border-brand-border rounded-xl p-3.5 sm:p-4 mb-6 shadow-xs space-y-3.5">
+          {/* Row 1: Politician Search Dropdown & Ticker Autocomplete with Suggestions */}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+            {/* Member Search / Dropdown Autocomplete */}
+            <div className="relative flex-1 min-w-[280px]" ref={memberDropdownRef}>
+              <div className="relative">
+                <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                {memberName ? (
+                  <div className="w-full flex items-center justify-between pl-9 pr-3 py-2 bg-brand-primary/5 border border-brand-primary/40 rounded-lg text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <PoliticianAvatar
+                        name={memberName}
+                        senateID={selectedBioguideId}
+                        chamber={selectedChamber !== 'all' ? (selectedChamber === 'senate' ? 'Senate' : 'House') : 'House'}
+                        size="sm"
+                      />
+                      <span className="font-bold text-brand-dark truncate">{memberName}</span>
+                    </div>
+                    <button
+                      onClick={handleClearMember}
+                      className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded cursor-pointer"
+                      title="Clear politician filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={memberSearchInput}
+                    onChange={(e) => {
+                      setMemberSearchInput(e.target.value)
+                      setIsMemberDropdownOpen(true)
+                    }}
+                    onFocus={() => setIsMemberDropdownOpen(true)}
+                    placeholder="Search Congress member (e.g. Pelosi, Tuberville, Ro Khanna)..."
+                    className="w-full pl-9 pr-8 py-2 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-sans text-brand-dark placeholder-gray-400 focus:outline-none focus:border-brand-primary focus:bg-white transition-all"
+                  />
+                )}
+                {memberSearchInput && !memberName && (
+                  <button
+                    onClick={() => setMemberSearchInput('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Members Dropdown Menu */}
+              {isMemberDropdownOpen && !memberName && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-brand-border rounded-xl shadow-lg z-30 max-h-72 overflow-y-auto divide-y divide-gray-100">
+                  <div className="p-2 bg-gray-50 text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wider">
+                    {memberSearchInput ? 'Matching Congress Members' : 'Most Active Stock Traders'}
+                  </div>
+                  {isLoadingMembers ? (
+                    <div className="p-4 text-center text-xs text-gray-400">Loading members...</div>
+                  ) : membersList.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-gray-400">No members found</div>
+                  ) : (
+                    membersList.map((m) => (
+                      <button
+                        key={m.bioguideId}
+                        onClick={() => handleSelectMember(m)}
+                        className="w-full px-3 py-2 text-left hover:bg-brand-bg/60 flex items-center justify-between gap-2 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <PoliticianAvatar name={m.name} senateID={m.bioguideId} chamber={m.chamber} size="sm" />
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-brand-dark truncate">{m.name}</div>
+                            <div className="text-[10px] font-mono text-gray-500">
+                              {m.chamber} • {m.party} • {m.state}{m.district ? `-${m.district}` : ''}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-full">
+                            {m.tradesCount.toLocaleString()} trades
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Ticker Autocomplete Input with Real-time Suggestions (like home page) */}
+            <div className="relative flex-1 min-w-[240px]">
+              <TickerAutocomplete
+                className="w-full"
+                value={symbol}
+                onChange={(val) => updateSearch({ symbol: val, page: 0 })}
+                onSelectTicker={(sym) => updateSearch({ symbol: sym, page: 0 })}
+                placeholder="Search stock ticker (e.g. NVDA, AAPL)..."
+                inputClassName="w-full pl-9 pr-8 py-2 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono uppercase text-brand-dark placeholder-gray-400 focus:outline-none focus:border-brand-primary focus:bg-white transition-all"
+              />
+            </div>
           </div>
 
-          {/* Controls: Type, Asset Type, Owner, View Mode */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Transaction Type Filter */}
-            <select
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value as any)
-                setCurrentPage(1)
-              }}
-              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary"
-            >
-              <option value="all">All Actions</option>
-              <option value="Purchase">Purchases (Buy)</option>
-              <option value="Sale">Sales (Sell)</option>
-              <option value="Exchange">Exchanges</option>
-            </select>
+          {/* Row 2: Secondary Filters (Action, Asset, Owner, Date Range, Sort, View Mode) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-brand-border/50">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Transaction Action */}
+              <select
+                value={typeFilter}
+                onChange={(e) => updateSearch({ type: e.target.value as any, page: 0 })}
+                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+              >
+                <option value="all">All Actions</option>
+                <option value="Purchase">Purchases (Buy)</option>
+                <option value="Sale">Sales (Sell)</option>
+                <option value="Exchange">Exchanges</option>
+              </select>
 
-            {/* Asset Type Filter */}
-            <select
-              value={assetTypeFilter}
-              onChange={(e) => {
-                setAssetTypeFilter(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary"
-            >
-              <option value="all">All Asset Types</option>
-              {assetTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+              {/* Asset Type */}
+              <select
+                value={assetTypeFilter}
+                onChange={(e) => updateSearch({ assetType: e.target.value, page: 0 })}
+                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+              >
+                <option value="all">All Asset Types</option>
+                <option value="Stock">Stock</option>
+                <option value="Option">Option</option>
+                <option value="Corporate Bond">Corporate Bond</option>
+                <option value="Municipal Security">Municipal Security</option>
+                <option value="Non-Public Stock">Non-Public Stock</option>
+              </select>
 
-            {/* Owner Filter */}
-            <select
-              value={ownerFilter}
-              onChange={(e) => {
-                setOwnerFilter(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary"
-            >
-              <option value="all">All Owners</option>
-              <option value="Self">Self</option>
-              <option value="Spouse">Spouse</option>
-              <option value="Joint">Joint</option>
-            </select>
+              {/* Owner */}
+              <select
+                value={ownerFilter}
+                onChange={(e) => updateSearch({ owner: e.target.value, page: 0 })}
+                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+              >
+                <option value="all">All Owners</option>
+                <option value="Self">Self</option>
+                <option value="Spouse">Spouse</option>
+                <option value="Joint">Joint</option>
+                <option value="Dependent">Dependent</option>
+              </select>
+
+              {/* Timeframe Presets */}
+              <select
+                value={dateRangeFilter}
+                onChange={(e) => updateSearch({ dateRange: e.target.value, page: 0 })}
+                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+              >
+                <option value="all">All Historical Time</option>
+                <option value="30d">Past 30 Days</option>
+                <option value="90d">Past 90 Days</option>
+                <option value="2026">Year 2026</option>
+                <option value="2025">Year 2025</option>
+                <option value="2024">Year 2024</option>
+              </select>
+
+              {/* Sort By Field */}
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, ord] = e.target.value.split('-') as [any, any]
+                  updateSearch({ sortBy: field, sortOrder: ord, page: 0 })
+                }}
+                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+              >
+                <option value="disclosure_date-desc">Newest Disclosed</option>
+                <option value="transaction_date-desc">Newest Traded</option>
+                <option value="change_since_trade-desc">Highest Performance</option>
+                <option value="change_since_trade-asc">Lowest Performance</option>
+              </select>
+            </div>
 
             {/* View Mode Toggle (Feed vs Table) */}
-            <div className="flex items-center border border-brand-border rounded-lg overflow-hidden bg-brand-bg/50 p-0.5 ml-auto sm:ml-0">
+            <div className="flex items-center border border-brand-border rounded-lg overflow-hidden bg-brand-bg/50 p-0.5 ml-auto">
               <button
-                onClick={() => setViewMode('feed')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'feed'
+                onClick={() => updateSearch({ view: 'feed' })}
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  viewMode === 'feed'
                     ? 'bg-white text-brand-primary shadow-2xs font-bold'
                     : 'text-gray-500 hover:text-brand-dark'
-                  }`}
+                }`}
                 title="Feed View (Card layout)"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'table'
+                onClick={() => updateSearch({ view: 'table' })}
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  viewMode === 'table'
                     ? 'bg-white text-brand-primary shadow-2xs font-bold'
                     : 'text-gray-500 hover:text-brand-dark'
-                  }`}
+                }`}
                 title="Table View (Data grid)"
               >
                 <TableIcon className="w-4 h-4" />
@@ -533,18 +818,29 @@ function CongressDisclosuresPage() {
         </div>
 
         {/* Results Counter & Active Filter Indicators */}
-        <div className="flex items-center justify-between text-xs text-gray-500 font-mono mb-3 px-1">
+        <div className="flex flex-wrap items-center justify-between text-xs text-gray-500 font-mono mb-3 px-1 gap-2">
           <div>
-            Showing <span className="font-bold text-brand-dark">{paginatedDisclosures.length}</span> of{' '}
-            <span className="font-bold text-brand-dark">{filteredDisclosures.length}</span> records
-            {searchTerm && ` for "${searchTerm}"`}
+            Showing{' '}
+            <span className="font-bold text-brand-dark">
+              {totalRecords > 0 ? page * pageSize + 1 : 0} - {Math.min((page + 1) * pageSize, totalRecords)}
+            </span>{' '}
+            of <span className="font-bold text-brand-dark">{totalRecords.toLocaleString()}</span> disclosures
+            {memberName && ` for ${memberName}`}
+            {symbol && ` for ticker "${symbol.toUpperCase()}"`}
           </div>
-          {(searchTerm || typeFilter !== 'all' || assetTypeFilter !== 'all' || ownerFilter !== 'all') && (
+
+          {(memberName ||
+            symbol ||
+            typeFilter !== 'all' ||
+            assetTypeFilter !== 'all' ||
+            ownerFilter !== 'all' ||
+            dateRangeFilter !== 'all' ||
+            sortBy !== 'disclosure_date') && (
             <button
               onClick={handleResetFilters}
               className="text-brand-primary hover:underline cursor-pointer flex items-center gap-1 font-semibold"
             >
-              Reset Filters
+              Reset All Filters
             </button>
           )}
         </div>
@@ -553,10 +849,7 @@ function CongressDisclosuresPage() {
         {isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white border border-brand-border rounded-xl p-4 animate-pulse space-y-3"
-              >
+              <div key={i} className="bg-white border border-brand-border rounded-xl p-4 animate-pulse space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-200"></div>
                   <div className="space-y-1.5 flex-1">
@@ -571,14 +864,12 @@ function CongressDisclosuresPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && filteredDisclosures.length === 0 && (
+        {!isLoading && disclosures.length === 0 && (
           <div className="bg-white border border-brand-border rounded-xl p-12 text-center my-6">
             <Filter className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-base font-display font-bold text-brand-dark mb-1">
-              No Disclosures Found
-            </h3>
+            <h3 className="text-base font-display font-bold text-brand-dark mb-1">No Disclosures Found</h3>
             <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-              We couldn&apos;t find any disclosures matching your filter criteria. Try adjusting your search term or filters.
+              We couldn&apos;t find any disclosures matching your filter criteria. Try adjusting your search term or clearing filters.
             </p>
             <button
               onClick={handleResetFilters}
@@ -590,15 +881,14 @@ function CongressDisclosuresPage() {
         )}
 
         {/* 1. FEED VIEW */}
-        {!isLoading && viewMode === 'feed' && filteredDisclosures.length > 0 && (
+        {!isLoading && viewMode === 'feed' && disclosures.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {paginatedDisclosures.map((item, idx) => {
+            {disclosures.map((item, idx) => {
               const politicianName = item.name
               const isBuy = item.type.toLowerCase().includes('purchase')
               const isSale = item.type.toLowerCase().includes('sale')
               const isHouse = item.chamber === 'House'
 
-              // Performance and timing metrics
               const returnVal = item.changeSinceTrade
               const hasReturn = returnVal !== null && returnVal !== undefined
               const isPositive = hasReturn && returnVal >= 0
@@ -613,25 +903,16 @@ function CongressDisclosuresPage() {
                   <div>
                     {/* Header: Politician Avatar, Name, Chamber Badge, District */}
                     <div className="flex items-start gap-3 mb-3">
-                      <PoliticianAvatar
-                        name={politicianName}
-                        senateID={item.senateID}
-                        chamber={item.chamber}
-                        size="md"
-                      />
+                      <PoliticianAvatar name={politicianName} senateID={item.senateID} chamber={item.chamber} size="md" />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <h3 className="text-sm font-display font-bold text-brand-dark truncate">
-                            {politicianName}
-                          </h3>
+                          <h3 className="text-sm font-display font-bold text-brand-dark truncate">{politicianName}</h3>
                           <div className="flex items-center gap-1 shrink-0">
-                            {/* Chamber Badge */}
                             <span
-                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${isHouse
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                  : 'bg-sky-50 text-sky-700 border-sky-200'
-                                }`}
+                              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${
+                                isHouse ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-sky-50 text-sky-700 border-sky-200'
+                              }`}
                             >
                               {item.chamber}
                             </span>
@@ -643,7 +924,6 @@ function CongressDisclosuresPage() {
                           </div>
                         </div>
 
-                        {/* Relative timing metadata */}
                         <div className="flex items-center gap-1.5 text-[11px] font-mono text-gray-500 mt-0.5">
                           <span>disclosed {getRelativeTime(item.disclosureDate)}</span>
                           <span>•</span>
@@ -652,12 +932,9 @@ function CongressDisclosuresPage() {
                       </div>
                     </div>
 
-                    {/* Trade Headline: Bought / Sold Amount of Ticker */}
+                    {/* Trade Headline */}
                     <div className="text-xs font-sans mb-3">
-                      <span
-                        className={`font-bold ${isBuy ? 'text-emerald-700' : isSale ? 'text-rose-700' : 'text-amber-700'
-                          }`}
-                      >
+                      <span className={`font-bold ${isBuy ? 'text-emerald-700' : isSale ? 'text-rose-700' : 'text-amber-700'}`}>
                         {isBuy ? 'Bought' : isSale ? 'Sold' : item.type}{' '}
                       </span>
                       <span className="font-semibold text-brand-dark">{item.amount}</span>
@@ -673,13 +950,11 @@ function CongressDisclosuresPage() {
                           <ArrowUpRight className="w-3 h-3 text-brand-primary inline shrink-0" />
                         </Link>
                       ) : (
-                        <span className="font-semibold text-brand-dark">
-                          {item.assetDescription || item.assetType || 'Debt Security'}
-                        </span>
+                        <span className="font-semibold text-brand-dark">{item.assetDescription || item.assetType || 'Debt Security'}</span>
                       )}
                     </div>
 
-                    {/* Asset Box - Clickable valuation link if ticker exists, or clean info box if bond/other */}
+                    {/* Asset Box */}
                     {hasTicker ? (
                       <Link
                         to="/"
@@ -687,7 +962,6 @@ function CongressDisclosuresPage() {
                         className="group bg-brand-bg/40 hover:bg-brand-bg/80 border border-brand-border/80 hover:border-brand-primary/40 rounded-xl p-3 flex items-center justify-between gap-3 mb-2 transition-all cursor-pointer block text-inherit"
                         title={`Open ${item.symbol} Intrinsic Value model`}
                       >
-                        {/* Left: Company Logo + Symbol + Description */}
                         <div className="flex items-center gap-3 min-w-0">
                           <CompanyLogo symbol={item.symbol} />
 
@@ -700,73 +974,50 @@ function CongressDisclosuresPage() {
                                 {item.assetType || 'Stock'}
                               </span>
                             </div>
-                            <p className="text-[11px] text-gray-500 truncate max-w-[150px] sm:max-w-[180px]">
-                              {item.assetDescription}
-                            </p>
+                            <p className="text-[11px] text-gray-500 truncate max-w-[150px] sm:max-w-[180px]">{item.assetDescription}</p>
                             {item.tradePrice ? (
-                              <p className="text-[10px] font-mono text-gray-400 mt-0.5">
-                                Traded at {formatPrice(item.tradePrice)}
-                              </p>
+                              <p className="text-[10px] font-mono text-gray-400 mt-0.5">Traded at {formatPrice(item.tradePrice)}</p>
                             ) : null}
                           </div>
                         </div>
 
-                        {/* Right: Current Price & Return Since Trade */}
                         <div className="text-right shrink-0">
-                          <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
-                            Current price
-                          </div>
+                          <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">Current price</div>
                           <div className="font-mono font-bold text-sm text-brand-dark group-hover:text-brand-primary transition-colors">
                             {item.currentPrice ? formatPrice(item.currentPrice) : '—'}
                           </div>
                           {hasReturn ? (
-                            <div
-                              className={`text-[11px] font-mono font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'
-                                }`}
-                            >
+                            <div className={`text-[11px] font-mono font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                               {`Since trade ${isPositive ? '+' : ''}${returnVal?.toFixed(2)}%`}
                             </div>
                           ) : (
-                            <div className="text-[10px] font-mono text-gray-400">
-                              {item.amount}
-                            </div>
+                            <div className="text-[10px] font-mono text-gray-400">{item.amount}</div>
                           )}
                         </div>
                       </Link>
                     ) : (
                       <div className="bg-brand-bg/40 border border-brand-border/80 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-2.5 sm:gap-3 mb-2">
-                        {/* Left: Building Icon + Asset Description + Type */}
                         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                           <CompanyLogo symbol="" />
-
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 mb-0.5">
                               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white text-gray-500 border border-gray-200 shrink-0 whitespace-nowrap">
                                 {item.assetType || 'Bond'}
                               </span>
                             </div>
-                            <p
-                              className="font-semibold text-xs sm:text-sm text-brand-dark truncate"
-                              title={item.assetDescription}
-                            >
+                            <p className="font-semibold text-xs sm:text-sm text-brand-dark truncate" title={item.assetDescription}>
                               {item.assetDescription || 'Fixed Income / Bond'}
                             </p>
                           </div>
                         </div>
 
-                        {/* Right: Filing Amount */}
                         <div className="text-right shrink-0">
-                          <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
-                            Filing value
-                          </div>
-                          <div className="font-mono font-bold text-xs sm:text-sm text-brand-dark whitespace-nowrap">
-                            {item.amount}
-                          </div>
+                          <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">Filing value</div>
+                          <div className="font-mono font-bold text-xs sm:text-sm text-brand-dark whitespace-nowrap">{item.amount}</div>
                         </div>
                       </div>
                     )}
 
-                    {/* Comment snippet if present */}
                     {item.comment && (
                       <p className="text-[10px] text-gray-500 italic bg-gray-50 p-1.5 rounded border border-gray-100 mb-2 truncate">
                         &quot;{item.comment}&quot;
@@ -774,7 +1025,7 @@ function CongressDisclosuresPage() {
                     )}
                   </div>
 
-                  {/* Card Footer: Owner badge, filing delay & Official PTR Doc link */}
+                  {/* Card Footer */}
                   <div className="flex items-center justify-between pt-2 border-t border-brand-border/60 text-[11px] font-mono text-gray-500 mt-1">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center gap-1">
@@ -784,10 +1035,7 @@ function CongressDisclosuresPage() {
                         </span>
                       </span>
                       {filingGap !== null && (
-                        <span
-                          className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100"
-                          title={`Disclosed ${filingGap} days after trade`}
-                        >
+                        <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
                           {filingGap}d lag
                         </span>
                       )}
@@ -815,7 +1063,7 @@ function CongressDisclosuresPage() {
         )}
 
         {/* 2. TABLE VIEW */}
-        {!isLoading && viewMode === 'table' && filteredDisclosures.length > 0 && (
+        {!isLoading && viewMode === 'table' && disclosures.length > 0 && (
           <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1300px] text-left border-collapse text-xs">
@@ -836,7 +1084,7 @@ function CongressDisclosuresPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border/60 font-sans">
-                  {paginatedDisclosures.map((item, idx) => {
+                  {disclosures.map((item, idx) => {
                     const politicianName = item.name
                     const isBuy = item.type.toLowerCase().includes('purchase')
                     const isSale = item.type.toLowerCase().includes('sale')
@@ -847,97 +1095,65 @@ function CongressDisclosuresPage() {
                     const hasTicker = Boolean(item.symbol && item.symbol.trim() && item.symbol !== '--' && item.symbol !== 'N/A')
 
                     return (
-                      <tr
-                        key={`${item.chamber}-${item.senateID || item.name}-${item.symbol}-${idx}`}
-                        className="hover:bg-brand-bg/30 transition-colors"
-                      >
+                      <tr key={`${item.chamber}-${item.name}-${idx}`} className="hover:bg-brand-bg/40 transition-colors">
                         {/* Politician */}
-                        <td className="py-2.5 px-4 min-w-[220px] whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            <PoliticianAvatar
-                              name={politicianName}
-                              senateID={item.senateID}
-                              chamber={item.chamber}
-                              size="sm"
-                            />
+                        <td className="py-2.5 px-4">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <PoliticianAvatar name={politicianName} senateID={item.senateID} chamber={item.chamber} size="sm" />
                             <div className="min-w-0">
-                              <div className="font-semibold text-brand-dark flex items-center gap-1 whitespace-nowrap">
-                                <span>{politicianName}</span>
-                                {item.district && (
-                                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-gray-100 text-gray-500 shrink-0">
-                                    {item.district}
-                                  </span>
-                                )}
-                              </div>
+                              <div className="font-bold text-brand-dark truncate">{politicianName}</div>
+                              {item.district && <div className="text-[10px] font-mono text-gray-500">{item.district}</div>}
                             </div>
                           </div>
                         </td>
 
                         {/* Chamber */}
-                        <td className="py-2.5 px-2.5 font-mono whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${isHouse
-                                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                : 'bg-sky-50 text-sky-700 border-sky-200'
-                              }`}
+                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                              isHouse ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-sky-50 text-sky-700 border-sky-200'
+                            }`}
                           >
                             {item.chamber}
                           </span>
                         </td>
 
-                        {/* Symbol & Company */}
-                        <td className="py-2.5 px-3 min-w-[220px]">
-                          {hasTicker ? (
-                            <Link
-                              to="/"
-                              search={{ ticker: item.symbol }}
-                              className="group flex items-center gap-2 text-inherit"
-                              title={`Open ${item.symbol} valuation`}
-                            >
-                              <CompanyLogo symbol={item.symbol} />
-                              <div className="min-w-0">
-                                <div className="font-mono font-bold text-xs text-brand-dark group-hover:text-brand-primary group-hover:underline flex items-center gap-0.5 whitespace-nowrap">
-                                  <span className="whitespace-nowrap">{item.symbol}</span>
-                                  <ArrowUpRight className="w-2.5 h-2.5 text-brand-primary shrink-0" />
-                                </div>
-                                <div className="text-[10px] text-gray-500 truncate max-w-[160px]">
-                                  {item.assetDescription}
-                                </div>
-                              </div>
-                            </Link>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <CompanyLogo symbol="" />
-                              <div className="min-w-0">
-                                <div className="font-semibold text-xs text-brand-dark truncate max-w-[160px]">
-                                  {item.assetDescription || item.assetType}
-                                </div>
-                                <div className="text-[10px] font-mono text-gray-400">
-                                  {item.assetType || 'Bond / Debt'}
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                        {/* Symbol / Asset */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {hasTicker ? (
+                              <Link
+                                to="/"
+                                search={{ ticker: item.symbol }}
+                                className="font-mono font-bold text-brand-dark hover:text-brand-primary hover:underline inline-flex items-center gap-0.5 shrink-0"
+                              >
+                                <span>{item.symbol}</span>
+                                <ArrowUpRight className="w-3 h-3 text-brand-primary" />
+                              </Link>
+                            ) : null}
+                            <span className="text-[11px] text-gray-600 truncate max-w-[160px]" title={item.assetDescription}>
+                              {item.assetDescription || item.assetType}
+                            </span>
+                          </div>
                         </td>
 
-                        {/* Type (Action) */}
-                        <td className="py-2.5 px-3 font-mono whitespace-nowrap">
+                        {/* Action */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${isBuy
-                                ? 'bg-emerald-100 text-emerald-800'
+                            className={`font-mono text-[11px] font-bold px-1.5 py-0.5 rounded ${
+                              isBuy
+                                ? 'bg-emerald-50 text-emerald-700'
                                 : isSale
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
+                                ? 'bg-rose-50 text-rose-700'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}
                           >
-                            {item.type}
+                            {isBuy ? 'BUY' : isSale ? 'SELL' : item.type}
                           </span>
                         </td>
 
                         {/* Amount */}
-                        <td className="py-2.5 px-3 font-mono font-semibold text-gray-800 whitespace-nowrap">
-                          {item.amount}
-                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-gray-700 whitespace-nowrap">{item.amount}</td>
 
                         {/* Trade Price */}
                         <td className="py-2.5 px-3 font-mono text-gray-600 whitespace-nowrap">
@@ -945,17 +1161,14 @@ function CongressDisclosuresPage() {
                         </td>
 
                         {/* Current Price */}
-                        <td className="py-2.5 px-3 font-mono font-semibold text-brand-dark whitespace-nowrap">
+                        <td className="py-2.5 px-3 font-mono font-bold text-brand-dark whitespace-nowrap">
                           {item.currentPrice ? formatPrice(item.currentPrice) : '—'}
                         </td>
 
-                        {/* Return Since Trade */}
+                        {/* Return */}
                         <td className="py-2.5 px-3 font-mono whitespace-nowrap">
                           {hasReturn ? (
-                            <span
-                              className={`font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'
-                                }`}
-                            >
+                            <span className={`font-semibold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                               {isPositive ? '+' : ''}
                               {returnVal?.toFixed(2)}%
                             </span>
@@ -965,27 +1178,21 @@ function CongressDisclosuresPage() {
                         </td>
 
                         {/* Owner */}
-                        <td className="py-2.5 px-3 font-mono text-gray-600 text-[11px] whitespace-nowrap">
-                          {item.owner || 'Self'}
-                        </td>
+                        <td className="py-2.5 px-3 font-mono text-gray-600 text-[11px] whitespace-nowrap">{item.owner || 'Self'}</td>
 
                         {/* Traded Date */}
                         <td className="py-2.5 px-3 font-mono text-[11px] text-gray-600 whitespace-nowrap">
                           <div>{item.transactionDate}</div>
-                          <div className="text-[9px] text-gray-400">
-                            {getRelativeTime(item.transactionDate)}
-                          </div>
+                          <div className="text-[9px] text-gray-400">{getRelativeTime(item.transactionDate)}</div>
                         </td>
 
                         {/* Disclosure Date */}
                         <td className="py-2.5 px-3 font-mono text-[11px] text-gray-600 whitespace-nowrap">
                           <div>{item.disclosureDate}</div>
-                          <div className="text-[9px] text-gray-400">
-                            {getRelativeTime(item.disclosureDate)}
-                          </div>
+                          <div className="text-[9px] text-gray-400">{getRelativeTime(item.disclosureDate)}</div>
                         </td>
 
-                        {/* Official Document Link */}
+                        {/* Official Doc */}
                         <td className="py-2.5 px-4 text-right font-mono whitespace-nowrap">
                           {item.link ? (
                             <a
@@ -1010,30 +1217,120 @@ function CongressDisclosuresPage() {
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {!isLoading && filteredDisclosures.length > pageSize && (
-          <div className="flex items-center justify-between mt-6 bg-white border border-brand-border rounded-xl px-4 py-3 shadow-xs">
-            <span className="text-xs text-gray-500 font-mono">
-              Page <span className="font-bold text-brand-dark">{currentPage}</span> of{' '}
-              <span className="font-bold text-brand-dark">{totalPages}</span>
-            </span>
+        {/* Server-Side Pagination Bar */}
+        {totalRecords > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white border border-brand-border rounded-xl px-4 py-3 shadow-xs">
+            {/* Page Size & Status */}
+            <div className="flex items-center gap-3 text-xs text-gray-500 font-mono">
+              <span>
+                Page <span className="font-bold text-brand-dark">{page + 1}</span> of{' '}
+                <span className="font-bold text-brand-dark">{totalPages.toLocaleString()}</span>
+              </span>
+              <span className="text-gray-300">•</span>
+              <div className="flex items-center gap-1.5">
+                <span>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => updateSearch({ pageSize: Number(e.target.value), page: 0 })}
+                  className="px-2 py-0.5 bg-brand-bg/60 border border-brand-border rounded text-xs font-mono font-bold text-brand-dark focus:outline-none cursor-pointer"
+                >
+                  <option value={24}>24</option>
+                  <option value={48}>48</option>
+                  <option value={96}>96</option>
+                </select>
+              </div>
+            </div>
 
-            <div className="flex items-center gap-2">
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              {/* First Page */}
               <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                onClick={() => updateSearch({ page: 0 })}
+                disabled={page === 0}
+                className="p-1.5 rounded-lg border border-brand-border text-gray-600 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                title="First page"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* Prev Page */}
+              <button
+                onClick={() => updateSearch({ page: Math.max(0, page - 1) })}
+                disabled={page === 0}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                Previous
+                <span className="hidden sm:inline">Prev</span>
               </button>
+
+              {/* Page Number Chips */}
+              {(() => {
+                const pagesToShow: (number | string)[] = []
+                const maxButtons = 5
+                let startPage = Math.max(0, page - 2)
+                let endPage = Math.min(totalPages - 1, startPage + maxButtons - 1)
+
+                if (endPage - startPage < maxButtons - 1) {
+                  startPage = Math.max(0, endPage - maxButtons + 1)
+                }
+
+                if (startPage > 0) {
+                  pagesToShow.push(0)
+                  if (startPage > 1) pagesToShow.push('...')
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                  pagesToShow.push(i)
+                }
+
+                if (endPage < totalPages - 1) {
+                  if (endPage < totalPages - 2) pagesToShow.push('...')
+                  pagesToShow.push(totalPages - 1)
+                }
+
+                return pagesToShow.map((pNum, index) => {
+                  if (typeof pNum === 'string') {
+                    return (
+                      <span key={`ellipsis-${index}`} className="px-1.5 text-xs text-gray-400 font-mono">
+                        ...
+                      </span>
+                    )
+                  }
+                  const isCurrent = pNum === page
+                  return (
+                    <button
+                      key={pNum}
+                      onClick={() => updateSearch({ page: pNum })}
+                      className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                        isCurrent
+                          ? 'bg-brand-primary text-white shadow-xs'
+                          : 'border border-brand-border text-gray-700 hover:bg-brand-bg'
+                      }`}
+                    >
+                      {pNum + 1}
+                    </button>
+                  )
+                })
+              })()}
+
+              {/* Next Page */}
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                onClick={() => updateSearch({ page: Math.min(totalPages - 1, page + 1) })}
+                disabled={page >= totalPages - 1}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
                 <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                onClick={() => updateSearch({ page: totalPages - 1 })}
+                disabled={page >= totalPages - 1}
+                className="p-1.5 rounded-lg border border-brand-border text-gray-600 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                title="Last page"
+              >
+                <ChevronsRight className="w-4 h-4" />
               </button>
             </div>
           </div>
