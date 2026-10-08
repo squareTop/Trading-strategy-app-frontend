@@ -571,13 +571,13 @@ function CongressDisclosuresPage() {
           </div>
 
           {/* Chamber Toggle Pills (Clean pills without confusing count numbers) */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-6 pt-4 border-t border-brand-border/60">
+          <div className="flex items-center gap-1.5 sm:gap-2 mt-6 pt-4 border-t border-brand-border/60 overflow-x-auto">
             <span className="text-xs font-mono text-gray-400 font-semibold mr-1 shrink-0 whitespace-nowrap">Chamber:</span>
 
             {/* All Congress */}
             <button
               onClick={() => updateSearch({ chamber: 'all', page: 0 })}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
                 selectedChamber === 'all'
                   ? 'bg-brand-dark text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-gray-600 hover:text-brand-dark border border-brand-border'
@@ -590,7 +590,7 @@ function CongressDisclosuresPage() {
             {/* House */}
             <button
               onClick={() => updateSearch({ chamber: 'house', page: 0 })}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
                 selectedChamber === 'house'
                   ? 'bg-purple-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-purple-800 hover:text-purple-900 border border-purple-200'
@@ -602,7 +602,7 @@ function CongressDisclosuresPage() {
             {/* Senate */}
             <button
               onClick={() => updateSearch({ chamber: 'senate', page: 0 })}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap select-none ${
                 selectedChamber === 'senate'
                   ? 'bg-sky-700 text-white shadow-xs'
                   : 'bg-brand-bg/60 hover:bg-brand-bg text-sky-800 hover:text-sky-900 border border-sky-200'
@@ -718,79 +718,77 @@ function CongressDisclosuresPage() {
           </div>
 
           {/* Row 2: Secondary Filters (Action, Asset, Owner, Date Range, Sort, View Mode) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-brand-border/50">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Transaction Action */}
-              <select
-                value={typeFilter}
-                onChange={(e) => updateSearch({ type: e.target.value as any, page: 0 })}
-                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
-              >
-                <option value="all">All Actions</option>
-                <option value="Purchase">Purchases (Buy)</option>
-                <option value="Sale">Sales (Sell)</option>
-                <option value="Exchange">Exchanges</option>
-              </select>
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-brand-border/50">
+            {/* Transaction Action */}
+            <select
+              value={typeFilter}
+              onChange={(e) => updateSearch({ type: e.target.value as any, page: 0 })}
+              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+            >
+              <option value="all">All Actions</option>
+              <option value="Purchase">Purchases (Buy)</option>
+              <option value="Sale">Sales (Sell)</option>
+              <option value="Exchange">Exchanges</option>
+            </select>
 
-              {/* Asset Type */}
-              <select
-                value={assetTypeFilter}
-                onChange={(e) => updateSearch({ assetType: e.target.value, page: 0 })}
-                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
-              >
-                <option value="all">All Asset Types</option>
-                <option value="Stock">Stock</option>
-                <option value="Option">Option</option>
-                <option value="Corporate Bond">Corporate Bond</option>
-                <option value="Municipal Security">Municipal Security</option>
-                <option value="Non-Public Stock">Non-Public Stock</option>
-              </select>
+            {/* Asset Type */}
+            <select
+              value={assetTypeFilter}
+              onChange={(e) => updateSearch({ assetType: e.target.value, page: 0 })}
+              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+            >
+              <option value="all">All Asset Types</option>
+              <option value="Stock">Stock</option>
+              <option value="Option">Option</option>
+              <option value="Corporate Bond">Corporate Bond</option>
+              <option value="Municipal Security">Municipal Security</option>
+              <option value="Non-Public Stock">Non-Public Stock</option>
+            </select>
 
-              {/* Owner */}
-              <select
-                value={ownerFilter}
-                onChange={(e) => updateSearch({ owner: e.target.value, page: 0 })}
-                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
-              >
-                <option value="all">All Owners</option>
-                <option value="Self">Self</option>
-                <option value="Spouse">Spouse</option>
-                <option value="Joint">Joint</option>
-                <option value="Dependent">Dependent</option>
-              </select>
+            {/* Owner */}
+            <select
+              value={ownerFilter}
+              onChange={(e) => updateSearch({ owner: e.target.value, page: 0 })}
+              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+            >
+              <option value="all">All Owners</option>
+              <option value="Self">Self</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Joint">Joint</option>
+              <option value="Dependent">Dependent</option>
+            </select>
 
-              {/* Timeframe Presets */}
-              <select
-                value={dateRangeFilter}
-                onChange={(e) => updateSearch({ dateRange: e.target.value, page: 0 })}
-                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
-              >
-                <option value="all">All Historical Time</option>
-                <option value="30d">Past 30 Days</option>
-                <option value="90d">Past 90 Days</option>
-                <option value="2026">Year 2026</option>
-                <option value="2025">Year 2025</option>
-                <option value="2024">Year 2024</option>
-              </select>
+            {/* Timeframe Presets */}
+            <select
+              value={dateRangeFilter}
+              onChange={(e) => updateSearch({ dateRange: e.target.value, page: 0 })}
+              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+            >
+              <option value="all">All Historical Time</option>
+              <option value="30d">Past 30 Days</option>
+              <option value="90d">Past 90 Days</option>
+              <option value="2026">Year 2026</option>
+              <option value="2025">Year 2025</option>
+              <option value="2024">Year 2024</option>
+            </select>
 
-              {/* Sort By Field */}
-              <select
-                value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [field, ord] = e.target.value.split('-') as [any, any]
-                  updateSearch({ sortBy: field, sortOrder: ord, page: 0 })
-                }}
-                className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
-              >
-                <option value="disclosure_date-desc">Newest Disclosed</option>
-                <option value="transaction_date-desc">Newest Traded</option>
-                <option value="change_since_trade-desc">Highest Performance</option>
-                <option value="change_since_trade-asc">Lowest Performance</option>
-              </select>
-            </div>
+            {/* Sort By Field */}
+            <select
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [field, ord] = e.target.value.split('-') as [any, any]
+                updateSearch({ sortBy: field, sortOrder: ord, page: 0 })
+              }}
+              className="px-2.5 py-1.5 bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-mono font-medium text-gray-700 focus:outline-none focus:border-brand-primary cursor-pointer"
+            >
+              <option value="disclosure_date-desc">Newest Disclosed</option>
+              <option value="transaction_date-desc">Newest Traded</option>
+              <option value="change_since_trade-desc">Highest Performance</option>
+              <option value="change_since_trade-asc">Lowest Performance</option>
+            </select>
 
             {/* View Mode Toggle (Feed vs Table) */}
-            <div className="flex items-center border border-brand-border rounded-lg overflow-hidden bg-brand-bg/50 p-0.5 ml-auto">
+            <div className="flex items-center border border-brand-border rounded-lg overflow-hidden bg-brand-bg/50 p-0.5 sm:ml-auto">
               <button
                 onClick={() => updateSearch({ view: 'feed' })}
                 className={`p-1.5 rounded-md transition-all cursor-pointer ${
@@ -1247,7 +1245,7 @@ function CongressDisclosuresPage() {
               <button
                 onClick={() => updateSearch({ page: 0 })}
                 disabled={page === 0}
-                className="p-1.5 rounded-lg border border-brand-border text-gray-600 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="hidden sm:inline-flex p-1.5 rounded-lg border border-brand-border text-gray-600 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                 title="First page"
               >
                 <ChevronsLeft className="w-4 h-4" />
@@ -1257,7 +1255,7 @@ function CongressDisclosuresPage() {
               <button
                 onClick={() => updateSearch({ page: Math.max(0, page - 1) })}
                 disabled={page === 0}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Prev</span>
@@ -1266,8 +1264,8 @@ function CongressDisclosuresPage() {
               {/* Page Number Chips */}
               {(() => {
                 const pagesToShow: (number | string)[] = []
-                const maxButtons = 5
-                let startPage = Math.max(0, page - 2)
+                const maxButtons = 3
+                let startPage = Math.max(0, page - 1)
                 let endPage = Math.min(totalPages - 1, startPage + maxButtons - 1)
 
                 if (endPage - startPage < maxButtons - 1) {
@@ -1291,7 +1289,7 @@ function CongressDisclosuresPage() {
                 return pagesToShow.map((pNum, index) => {
                   if (typeof pNum === 'string') {
                     return (
-                      <span key={`ellipsis-${index}`} className="px-1.5 text-xs text-gray-400 font-mono">
+                      <span key={`ellipsis-${index}`} className="px-1 text-xs text-gray-400 font-mono">
                         ...
                       </span>
                     )
@@ -1301,7 +1299,7 @@ function CongressDisclosuresPage() {
                     <button
                       key={pNum}
                       onClick={() => updateSearch({ page: pNum })}
-                      className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      className={`min-w-[30px] sm:min-w-[32px] h-8 px-1.5 sm:px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                         isCurrent
                           ? 'bg-brand-primary text-white shadow-xs'
                           : 'border border-brand-border text-gray-700 hover:bg-brand-bg'
@@ -1317,7 +1315,7 @@ function CongressDisclosuresPage() {
               <button
                 onClick={() => updateSearch({ page: Math.min(totalPages - 1, page + 1) })}
                 disabled={page >= totalPages - 1}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-mono font-semibold text-gray-700 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
               >
                 <span className="hidden sm:inline">Next</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -1327,7 +1325,7 @@ function CongressDisclosuresPage() {
               <button
                 onClick={() => updateSearch({ page: totalPages - 1 })}
                 disabled={page >= totalPages - 1}
-                className="p-1.5 rounded-lg border border-brand-border text-gray-600 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="hidden sm:inline-flex p-1.5 rounded-lg border border-brand-border text-gray-600 hover:bg-brand-bg disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                 title="Last page"
               >
                 <ChevronsRight className="w-4 h-4" />
