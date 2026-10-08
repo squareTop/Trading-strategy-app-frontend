@@ -55,7 +55,7 @@ export interface CongressMember {
   state: string
   district: string
   party: string
-  imageUrl: string
+  imageUrl?: string
   tradesCount: number
 }
 
@@ -252,18 +252,46 @@ function PoliticianAvatar({
   senateID,
   chamber,
   size = 'md',
+  imageUrl: customImageUrl,
 }: {
   name: string
   senateID?: string
   chamber: 'Senate' | 'House'
   size?: 'sm' | 'md' | 'lg'
+  imageUrl?: string
 }) {
   const [isLoaded, setIsLoaded] = useState(false)
-  const [hasError, setHasError] = useState(false)
+  const [srcIndex, setSrcIndex] = useState(0)
 
   const cleanName = name.replace(/^(Hon\.|Senator|Representative|Rep\.|Sen\.)\s+/i, '').trim()
   const resolvedId = senateID || BIOGUIDE_FALLBACKS[cleanName.toLowerCase()]
-  const imageUrl = resolvedId ? `https://images.financialmodelingprep.com/senate/${resolvedId}.jpg` : ''
+
+  const sources = useMemo(() => {
+    const list: string[] = []
+    if (resolvedId) {
+      // Primary: Official pre-scaled 225x275 portrait (~50KB, GitHub/Fastly CDN)
+      list.push(`https://unitedstates.github.io/images/congress/225x275/${resolvedId}.jpg`)
+      // Fallback: Financial Modeling Prep headshot
+      list.push(`https://images.financialmodelingprep.com/senate/${resolvedId}.jpg`)
+    }
+    if (customImageUrl && !list.includes(customImageUrl)) {
+      list.push(customImageUrl)
+    }
+    return list
+  }, [resolvedId, customImageUrl])
+
+  useEffect(() => {
+    setSrcIndex(0)
+    setIsLoaded(false)
+  }, [resolvedId, customImageUrl])
+
+  const currentSrc = sources[srcIndex]
+  const hasFailedAll = !sources.length || srcIndex >= sources.length
+
+  const handleError = () => {
+    setSrcIndex((prev) => prev + 1)
+    setIsLoaded(false)
+  }
 
   const sizeClasses = {
     sm: 'w-7 h-7 text-[10px]',
@@ -285,7 +313,7 @@ function PoliticianAvatar({
       className={`relative ${sizeClasses} rounded-full overflow-hidden shrink-0 border border-brand-border/80 shadow-xs bg-gray-100 select-none`}
       title={`${name} (${chamber})`}
     >
-      {(!isLoaded || hasError || !imageUrl) && (
+      {(!isLoaded || hasFailedAll || !currentSrc) && (
         <div
           className={`absolute inset-0 flex items-center justify-center font-bold font-mono ${
             isHouse
@@ -297,16 +325,18 @@ function PoliticianAvatar({
         </div>
       )}
 
-      {imageUrl && !hasError && (
+      {currentSrc && !hasFailedAll && (
         <img
-          src={imageUrl}
+          key={currentSrc}
+          src={currentSrc}
           alt=""
+          loading="lazy"
+          decoding="async"
           onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-250 ${
+          onError={handleError}
+          className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-200 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
-          loading="lazy"
         />
       )}
     </div>
