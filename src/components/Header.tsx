@@ -6,6 +6,7 @@ import {
   LogOut,
   User as UserIcon,
   Bookmark,
+  Dices,
   Loader2,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
@@ -14,7 +15,6 @@ const navLinks = [
   { to: '/', label: 'IV Valuation' },
   { to: '/daily-signals', label: 'Daily Signals' },
   { to: '/scoreboard', label: 'Scoreboard' },
-  { to: '/monte-carlo', label: 'Monte Carlo' },
   { to: '/thesis', label: 'Thesis AI' },
   { to: '/congress', label: 'Congress Trades' },
 ] as const
@@ -150,6 +150,15 @@ function UserMenu({ onOpen, size = 'md' }: UserMenuProps) {
             >
               <Bookmark className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Watchlist</span>
+            </Link>
+            <Link
+              to="/monte-carlo"
+              search={{ run: undefined }}
+              onClick={() => setDropdownOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
+            >
+              <Dices className="w-4 h-4 text-purple-600 shrink-0" />
+              <span>Monte Carlo</span>
             </Link>
           </div>
 
