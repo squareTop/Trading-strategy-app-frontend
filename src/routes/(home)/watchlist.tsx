@@ -26,9 +26,12 @@ import { TickerAutocomplete } from '../../components/TickerAutocomplete'
 export type ValuationFilterType = 'all' | 'undervalued' | 'deep_value' | 'fair_value' | 'overvalued'
 export type DrawdownFilterType = 'all' | 'near_high' | 'pullback_10' | 'pullback_20'
 export type PerformanceFilterType = 'all' | 'green_day' | 'red_day' | 'green_ytd' | 'green_1y'
+export type SignalFilterType = 'all' | 'active' | 'long' | 'short' | 'none'
 
 export type SortField =
   | 'symbol'
+  | 'sector'
+  | 'signal'
   | 'price'
   | 'day_pct'
   | 'market_cap'
@@ -44,6 +47,8 @@ export type SortDirection = 'asc' | 'desc'
 
 export interface WatchlistSearchParams {
   q?: string
+  sector?: string
+  signal?: SignalFilterType
   valuation?: ValuationFilterType
   drawdown?: DrawdownFilterType
   momentum?: PerformanceFilterType
@@ -54,6 +59,8 @@ export interface WatchlistSearchParams {
 export const Route = createFileRoute('/(home)/watchlist')({
   validateSearch: (search: Record<string, unknown>): WatchlistSearchParams => ({
     q: (search.q as string) || undefined,
+    sector: (search.sector as string) || undefined,
+    signal: (search.signal as SignalFilterType) || undefined,
     valuation: (search.valuation as ValuationFilterType) || undefined,
     drawdown: (search.drawdown as DrawdownFilterType) || undefined,
     momentum: (search.momentum as PerformanceFilterType) || undefined,
@@ -143,6 +150,8 @@ function WatchlistPage() {
   const search = Route.useSearch()
 
   const searchQuery = search.q || ''
+  const sectorFilter = search.sector || 'all'
+  const signalFilter = search.signal || 'all'
   const valuationFilter = search.valuation || 'all'
   const drawdownFilter = search.drawdown || 'all'
   const performanceFilter = search.momentum || 'all'
@@ -163,6 +172,8 @@ function WatchlistPage() {
       search: (prev) => {
         const merged: Record<string, any> = { ...prev, ...newParams }
         if (!merged.q || !merged.q.trim()) delete merged.q
+        if (merged.sector === 'all' || !merged.sector) delete merged.sector
+        if (merged.signal === 'all' || !merged.signal) delete merged.signal
         if (merged.valuation === 'all' || !merged.valuation) delete merged.valuation
         if (merged.drawdown === 'all' || !merged.drawdown) delete merged.drawdown
         if (merged.momentum === 'all' || !merged.momentum) delete merged.momentum
@@ -184,9 +195,28 @@ function WatchlistPage() {
     return () => clearTimeout(timer)
   }, [searchInput, searchQuery])
 
+  // Dynamic sectors present in current user watchlist
+  const availableSectors = useMemo(() => {
+    const set = new Set<string>()
+    watchlist.forEach((item) => {
+      if (item.sector && item.sector.trim()) {
+        set.add(item.sector.trim())
+      }
+    })
+    return Array.from(set).sort()
+  }, [watchlist])
+
   const handleClearSearch = () => {
     setSearchInput('')
     updateSearch({ q: undefined })
+  }
+
+  const handleSectorChange = (val: string) => {
+    updateSearch({ sector: val === 'all' ? undefined : val })
+  }
+
+  const handleSignalChange = (val: SignalFilterType) => {
+    updateSearch({ signal: val === 'all' ? undefined : val })
   }
 
   const handleValuationChange = (val: ValuationFilterType) => {
@@ -219,13 +249,15 @@ function WatchlistPage() {
     } else {
       updateSearch({
         sortBy: field,
-        sortDir: field === 'symbol' ? 'asc' : 'desc',
+        sortDir: field === 'symbol' || field === 'sector' ? 'asc' : 'desc',
       })
     }
   }
 
   const isAnyFilterActive = Boolean(
     searchQuery.trim() ||
+      sectorFilter !== 'all' ||
+      signalFilter !== 'all' ||
       valuationFilter !== 'all' ||
       drawdownFilter !== 'all' ||
       performanceFilter !== 'all' ||
@@ -235,23 +267,39 @@ function WatchlistPage() {
   // Filtered dataset
   const filteredWatchlist = useMemo(() => {
     return watchlist.filter((item) => {
-      // 1. In-table Search filter (symbol or name)
+      // 1. In-table Search filter (symbol, company name, or sector)
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase()
         const matchSymbol = item.symbol.toLowerCase().includes(q)
         const matchName = item.name ? item.name.toLowerCase().includes(q) : false
-        if (!matchSymbol && !matchName) return false
+        const matchSector = item.sector ? item.sector.toLowerCase().includes(q) : false
+        if (!matchSymbol && !matchName && !matchSector) return false
+      }
+
+      // 2. Sector filter
+      if (sectorFilter !== 'all') {
+        if (!item.sector || item.sector.toLowerCase() !== sectorFilter.toLowerCase()) {
+          return false
+        }
+      }
+
+      // 3. Foxel Trading Signal filter
+      if (signalFilter !== 'all') {
+        if (signalFilter === 'active' && !item.active_signal) return false
+        if (signalFilter === 'long' && item.active_signal !== 'long') return false
+        if (signalFilter === 'short' && item.active_signal !== 'short') return false
+        if (signalFilter === 'none' && item.active_signal) return false
       }
 
       const { isUndervalued, isDeepValue, isFairValue, isOvervalued } = getItemValuationStatus(item)
 
-      // 2. Valuation filter
+      // 4. Valuation filter
       if (valuationFilter === 'undervalued' && !isUndervalued) return false
       if (valuationFilter === 'deep_value' && !isDeepValue) return false
       if (valuationFilter === 'fair_value' && !isFairValue) return false
       if (valuationFilter === 'overvalued' && !isOvervalued) return false
 
-      // 3. 52W Drawdown filter
+      // 5. 52W Drawdown filter
       if (drawdownFilter !== 'all') {
         const highPct = item.pct_from_52w_high
         if (highPct === null || highPct === undefined) return false
@@ -260,7 +308,7 @@ function WatchlistPage() {
         if (drawdownFilter === 'pullback_20' && highPct > -20) return false
       }
 
-      // 4. Performance filter
+      // 6. Performance filter
       if (performanceFilter === 'green_day' && (item.day_pct ?? 0) <= 0) return false
       if (performanceFilter === 'red_day' && (item.day_pct ?? 0) >= 0) return false
       if (performanceFilter === 'green_ytd' && (item.ytd ?? 0) <= 0) return false
@@ -268,7 +316,7 @@ function WatchlistPage() {
 
       return true
     })
-  }, [watchlist, searchQuery, valuationFilter, drawdownFilter, performanceFilter])
+  }, [watchlist, searchQuery, sectorFilter, signalFilter, valuationFilter, drawdownFilter, performanceFilter])
 
   // Sorted dataset
   const sortedWatchlist = useMemo(() => {
@@ -282,6 +330,14 @@ function WatchlistPage() {
         case 'symbol':
           aVal = a.symbol
           bVal = b.symbol
+          break
+        case 'sector':
+          aVal = a.sector || null
+          bVal = b.sector || null
+          break
+        case 'signal':
+          aVal = a.active_signal || null
+          bVal = b.active_signal || null
           break
         case 'price':
           aVal = a.price
@@ -517,7 +573,7 @@ function WatchlistPage() {
       {/* Filter & Search Toolbar (When watchlist has items) */}
       {watchlist.length > 0 && (
         <div className="bg-white border border-brand-border rounded-2xl p-4 sm:p-5 mb-6 shadow-xs space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
             {/* 1. In-Table Search Input */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -531,7 +587,7 @@ function WatchlistPage() {
                     updateSearch({ q: searchInput.trim() || undefined })
                   }
                 }}
-                placeholder="Filter ticker or name..."
+                placeholder="Filter ticker, name..."
                 className="w-full pl-8 pr-8 py-2 bg-brand-bg/30 border border-brand-border rounded-xl text-xs font-mono text-brand-dark focus:outline-none focus:border-brand-primary focus:bg-white transition-all uppercase placeholder:normal-case placeholder:text-gray-400"
               />
               {searchInput && (
@@ -546,7 +602,38 @@ function WatchlistPage() {
               )}
             </div>
 
-            {/* 2. Valuation Dropdown */}
+            {/* 2. Sector Dropdown */}
+            <div>
+              <select
+                value={sectorFilter}
+                onChange={(e) => handleSectorChange(e.target.value)}
+                className="w-full py-2 px-3 bg-brand-bg/30 border border-brand-border rounded-xl text-xs font-mono text-brand-dark font-semibold focus:outline-none focus:border-brand-primary focus:bg-white transition-all cursor-pointer truncate"
+              >
+                <option value="all">Sector: All</option>
+                {availableSectors.map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3. Foxel Trading Signal Dropdown */}
+            <div>
+              <select
+                value={signalFilter}
+                onChange={(e) => handleSignalChange(e.target.value as SignalFilterType)}
+                className="w-full py-2 px-3 bg-brand-bg/30 border border-brand-border rounded-xl text-xs font-mono text-brand-dark font-semibold focus:outline-none focus:border-brand-primary focus:bg-white transition-all cursor-pointer"
+              >
+                <option value="all">Signal: All</option>
+                <option value="active">Active Signals (Any)</option>
+                <option value="long">Long (🟢)</option>
+                <option value="short">Short (🔴)</option>
+                <option value="none">No Signal</option>
+              </select>
+            </div>
+
+            {/* 4. Valuation Dropdown */}
             <div>
               <select
                 value={valuationFilter}
@@ -561,7 +648,7 @@ function WatchlistPage() {
               </select>
             </div>
 
-            {/* 3. 52W High Drawdown Dropdown */}
+            {/* 5. 52W High Drawdown Dropdown */}
             <div>
               <select
                 value={drawdownFilter}
@@ -575,7 +662,7 @@ function WatchlistPage() {
               </select>
             </div>
 
-            {/* 4. Performance / Momentum Dropdown */}
+            {/* 6. Performance / Momentum Dropdown */}
             <div>
               <select
                 value={performanceFilter}
@@ -670,10 +757,10 @@ function WatchlistPage() {
       ) : (
         <div className="bg-white border border-brand-border rounded-2xl shadow-xs overflow-hidden">
           <div className="sm:hidden px-4 py-2 bg-brand-bg/40 border-b border-brand-border text-[10px] font-mono text-gray-400 flex items-center justify-between">
-            <span>Scroll horizontally for all 10 metrics →</span>
+            <span>Scroll horizontally for all metrics &amp; signals →</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] text-left text-xs border-collapse font-sans table-auto">
+            <table className="w-full min-w-[1150px] text-left text-xs border-collapse font-sans table-auto">
               <thead>
                 <tr className="bg-brand-bg/40 border-b border-brand-border text-[11px] font-mono font-bold uppercase tracking-wider text-gray-500 select-none whitespace-nowrap">
                   <th
@@ -683,6 +770,24 @@ function WatchlistPage() {
                     <div className="flex items-center gap-1">
                       <span>Ticker</span>
                       {renderSortIndicator('symbol')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('sector')}
+                    className="py-3 px-3 min-w-[120px] cursor-pointer hover:bg-brand-bg/80 hover:text-brand-primary transition-colors group/th select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Sector</span>
+                      {renderSortIndicator('sector')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('signal')}
+                    className="py-3 px-3 min-w-[95px] text-center cursor-pointer hover:bg-brand-bg/80 hover:text-brand-primary transition-colors group/th select-none"
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <span>Signal</span>
+                      {renderSortIndicator('signal')}
                     </div>
                   </th>
                   <th
@@ -813,6 +918,48 @@ function WatchlistPage() {
                           <p className="text-[10px] text-gray-400 truncate max-w-[130px] font-sans font-normal">
                             {item.name}
                           </p>
+                        )}
+                      </td>
+
+                      {/* Sector */}
+                      <td className="py-3.5 px-3 whitespace-nowrap min-w-[120px]">
+                        {item.sector ? (
+                          <span
+                            className="inline-block text-[11px] font-sans font-medium text-gray-700 bg-brand-bg/70 border border-brand-border/60 px-2 py-0.5 rounded-md truncate max-w-[130px]"
+                            title={`${item.sector}${item.industry ? ` • ${item.industry}` : ''}`}
+                          >
+                            {item.sector}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 font-mono text-[11px]">—</span>
+                        )}
+                      </td>
+
+                      {/* Foxel Signal */}
+                      <td className="py-3.5 px-3 text-center whitespace-nowrap min-w-[95px]">
+                        {item.active_signal ? (
+                          <Link
+                            to="/daily-signals"
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border hover:opacity-85 transition-opacity ${
+                              item.active_signal === 'long'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}
+                            title={
+                              item.active_strategy
+                                ? `Active Signal: ${item.active_signal.toUpperCase()} (${item.active_strategy}) — click to view Daily Signals`
+                                : `Active Signal: ${item.active_signal.toUpperCase()} — click to view Daily Signals`
+                            }
+                          >
+                            {item.active_signal === 'long' ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            <span>{item.active_signal}</span>
+                          </Link>
+                        ) : (
+                          <span className="text-gray-300 font-mono text-[11px]">—</span>
                         )}
                       </td>
 

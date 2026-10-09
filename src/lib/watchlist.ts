@@ -16,6 +16,10 @@ export interface WatchlistItem {
   intrinsic_value: number | null
   over_under_pct: number | null
   iv_status?: 'ready' | 'pending' | 'not_applicable'
+  sector?: string | null
+  industry?: string | null
+  active_signal?: 'long' | 'short' | null
+  active_strategy?: string | null
   created_at: string
 }
 
