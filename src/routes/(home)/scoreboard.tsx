@@ -124,12 +124,16 @@ export interface ScoreboardSignal {
   resolved_date: string | null;
   bars_held: number | null;
   selected_strategy: string | null;
+  // 2026-10-23 (0.8): strategy stage when logged; benchmark is "SPY" (longs) or "cash" (shorts)
+  stage?: string | null;
+  benchmark?: string | null;
 }
 
 export interface ScoreboardResponse {
   scorecard: ScorecardRow[];
   resolved_signals: ScoreboardSignal[];
   open_signals: ScoreboardSignal[];
+  shadow_strategies?: ScorecardRow[];   // 2026-10-23 (0.8)
 }
 
 export const scoreboardQueryOptions = queryOptions({
@@ -172,6 +176,20 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   ALL: 'All Pipelines'
 }
 
+// 2026-10-23 (0.8): marks a signal from a strategy in the shadow stage. Shadow
+// signals fire, are logged and resolve like any other; the scoreboard leaves them
+// out of its totals unless "Include shadow" is on.
+function ShadowBadge() {
+  return (
+    <span
+      title="Shadow strategy: logged and resolved as usual, but left out of the scoreboard totals"
+      className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border border-dashed bg-gray-100 text-gray-600 border-gray-400"
+    >
+      Shadow
+    </span>
+  )
+}
+
 function ScoreboardPage() {
   const { data, isLoading, error, refetch } = useQuery(scoreboardQueryOptions)
   const [activeTab, setActiveTab] = useState<'resolved' | 'open'>('resolved')
@@ -185,6 +203,8 @@ function ScoreboardPage() {
   // Month & Strategy Expansion State
   const [monthFilter, setMonthFilter] = useState<string>('all')
   const [expandedPipelines, setExpandedPipelines] = useState<Record<string, boolean>>({})
+  // 2026-10-23 (0.8): shadow-stage signals are left out of the totals unless this is on
+  const [includeShadow, setIncludeShadow] = useState<boolean>(false)
 
   const togglePipelineExpand = (pipelineKey: string) => {
     setExpandedPipelines(prev => ({
@@ -224,10 +244,13 @@ function ScoreboardPage() {
 
   // Dynamic scorecard calculation including sub-strategy breakdown
   const dynamicScorecardData = useMemo(() => {
-    if (!data) return { pipelines: [], allRow: null }
+    if (!data) return { pipelines: [], allRow: null, shadowRows: [] as ScorecardRow[], shadowCount: 0 }
 
-    const resolved = monthFilteredResolved
-    const open = monthFilteredOpen
+    // 2026-10-23 (0.8): shadow-stage signals stay out of the pipeline rows and the
+    // totals unless "Include shadow" is on; they get their own section below.
+    const isShadow = (s: ScoreboardSignal) => s.stage === 'shadow'
+    const resolved = includeShadow ? monthFilteredResolved : monthFilteredResolved.filter(s => !isShadow(s))
+    const open = includeShadow ? monthFilteredOpen : monthFilteredOpen.filter(s => !isShadow(s))
 
     const pipeKeys = Array.from(
       new Set([...resolved.map(s => s.pipeline), ...open.map(s => s.pipeline)].filter(Boolean))
@@ -262,11 +285,21 @@ function ScoreboardPage() {
 
     const allRow = computeBucket(resolved, open, 'ALL')
 
+    // 2026-10-23 (0.8): one row per shadow strategy and direction, same columns
+    const shadowResolved = monthFilteredResolved.filter(isShadow)
+    const shadowOpen = monthFilteredOpen.filter(isShadow)
+    const shadowKey = (s: ScoreboardSignal) => `${s.selected_strategy || 'Default Strategy'} ${s.direction}`
+    const shadowRows = Array.from(new Set([...shadowResolved, ...shadowOpen].map(shadowKey))).sort().map(k =>
+      computeBucket(shadowResolved.filter(s => shadowKey(s) === k), shadowOpen.filter(s => shadowKey(s) === k), k)
+    )
+
     return {
       pipelines: pipelineRows,
-      allRow
+      allRow,
+      shadowRows,
+      shadowCount: shadowResolved.length + shadowOpen.length
     }
-  }, [data, monthFilteredResolved, monthFilteredOpen])
+  }, [data, monthFilteredResolved, monthFilteredOpen, includeShadow])
 
   // Overall stats for KPI grid (dynamically reflects month filter)
   const overallStats = dynamicScorecardData.allRow
@@ -311,9 +344,13 @@ function ScoreboardPage() {
     resolvedColumnHelper.accessor('pipeline', {
       header: 'Pipeline',
       cell: info => (
-        <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-          {info.getValue()}
-        </span>
+        <>
+          <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
+            {info.getValue()}
+          </span>
+          {/* 2026-10-23 (0.8) */}
+          {info.row.original.stage === 'shadow' && <ShadowBadge />}
+        </>
       ),
     }),
     resolvedColumnHelper.accessor('direction', {
@@ -401,7 +438,7 @@ function ScoreboardPage() {
       },
     }),
     resolvedColumnHelper.accessor('excess_return', {
-      header: 'Alpha (vs SPY)',
+      header: 'Alpha (vs benchmark)',   // 2026-10-23 (0.8): longs vs SPY, shorts vs cash
       cell: info => {
         const val = info.getValue()
         if (val == null) return <span className="text-gray-400 font-mono">-</span>
@@ -449,9 +486,13 @@ function ScoreboardPage() {
     openColumnHelper.accessor('pipeline', {
       header: 'Pipeline',
       cell: info => (
-        <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-          {info.getValue()}
-        </span>
+        <>
+          <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
+            {info.getValue()}
+          </span>
+          {/* 2026-10-23 (0.8) */}
+          {info.row.original.stage === 'shadow' && <ShadowBadge />}
+        </>
       ),
     }),
     openColumnHelper.accessor('direction', {
@@ -530,7 +571,7 @@ function ScoreboardPage() {
                 Scoreboard & Performance
               </h1>
               <p className="text-sm text-gray-500 mt-2">
-                Evaluate live, forward-test daily strategy signals and measure their actual closed PnL. We benchmark all closed strategies directly against SPY buy-and-hold returns over corresponding holding periods.
+                Evaluate live, forward-test daily strategy signals and measure their actual closed PnL. Longs are benchmarked against SPY buy-and-hold over the same holding period; shorts against cash.
               </p>
             </div>
 
@@ -635,20 +676,20 @@ function ScoreboardPage() {
                     <span className={`font-mono text-2xl font-black ${overallStats.avg_spy_return >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {overallStats.avg_spy_return >= 0 ? '+' : ''}{formatPercent(overallStats.avg_spy_return)}
                     </span>
-                    <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Market return benchmark</span>
+                    <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Longs only (shorts vs cash)</span>
                   </div>
                 </div>
 
                 <div className="col-span-2 lg:col-span-1 bg-white border border-brand-border rounded-xl p-4 flex flex-col justify-between shadow-xs">
                   <div className="flex items-center gap-2 text-gray-400 mb-2">
                     <Activity className="w-4 h-4 text-brand-primary" />
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Alpha (vs SPY)</span>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Alpha (vs benchmark)</span>
                   </div>
                   <div>
                     <span className={`font-mono text-2xl font-black ${overallStats.excess_return >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       {overallStats.excess_return >= 0 ? '+' : ''}{formatPercent(overallStats.excess_return)}
                     </span>
-                    <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Market outperformance</span>
+                    <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Longs vs SPY, shorts vs cash</span>
                   </div>
                 </div>
               </div>
@@ -662,22 +703,38 @@ function ScoreboardPage() {
                   Pipeline Rollup Summary
                 </h2>
 
-                {/* Timeframe / Month Selector */}
-                <div className="flex items-center gap-2 bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border text-xs font-mono">
-                  <Calendar className="w-4 h-4 text-brand-primary shrink-0" />
-                  <span className="text-gray-500 font-bold uppercase text-[10px]">Timeframe:</span>
-                  <select
-                    value={monthFilter}
-                    onChange={e => setMonthFilter(e.target.value)}
-                    className="bg-transparent border-0 text-xs font-mono font-bold text-brand-dark focus:outline-hidden cursor-pointer p-0"
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* 2026-10-23 (0.8): Include shadow toggle on the totals */}
+                  <label
+                    className="flex items-center gap-1.5 bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border text-[10px] font-mono font-bold uppercase text-gray-500 cursor-pointer select-none"
+                    title="Shadow strategies are logged and resolved as usual. Off: they are left out of the pipeline rows and totals."
                   >
-                    <option value="all">All Time ({availableMonths.length} Months)</option>
-                    {availableMonths.map(m => (
-                      <option key={m} value={m}>
-                        {formatMonthLabel(m)}
-                      </option>
-                    ))}
-                  </select>
+                    <input
+                      type="checkbox"
+                      checked={includeShadow}
+                      onChange={e => setIncludeShadow(e.target.checked)}
+                      className="accent-brand-primary cursor-pointer"
+                    />
+                    Include shadow ({dynamicScorecardData.shadowCount})
+                  </label>
+
+                  {/* Timeframe / Month Selector */}
+                  <div className="flex items-center gap-2 bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border text-xs font-mono">
+                    <Calendar className="w-4 h-4 text-brand-primary shrink-0" />
+                    <span className="text-gray-500 font-bold uppercase text-[10px]">Timeframe:</span>
+                    <select
+                      value={monthFilter}
+                      onChange={e => setMonthFilter(e.target.value)}
+                      className="bg-transparent border-0 text-xs font-mono font-bold text-brand-dark focus:outline-hidden cursor-pointer p-0"
+                    >
+                      <option value="all">All Time ({availableMonths.length} Months)</option>
+                      {availableMonths.map(m => (
+                        <option key={m} value={m}>
+                          {formatMonthLabel(m)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -807,7 +864,13 @@ function ScoreboardPage() {
                       const allRow = dynamicScorecardData.allRow
                       return (
                         <tr className="bg-brand-bg/60 font-bold border-t-2 border-brand-dark/80 whitespace-nowrap">
-                          <td className="py-3 px-4 font-sans font-bold">All Pipelines</td>
+                          <td className="py-3 px-4 font-sans font-bold">
+                            All Pipelines
+                            {/* 2026-10-23 (0.8) */}
+                            <span className="ml-2 text-[10px] font-mono font-normal text-gray-500">
+                              {includeShadow ? '(incl. shadow)' : '(excl. shadow)'}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-right">{allRow.resolved}</td>
                           <td className="py-3 px-4 text-right">{allRow.open}</td>
                           <td className="py-3 px-4 text-right">
@@ -833,6 +896,70 @@ function ScoreboardPage() {
                     })()}
                   </tbody>
                 </table>
+              </div>
+
+              {/* 2026-10-23 (0.8): Shadow strategies, same columns. Always listed here,
+                  whatever the Include shadow toggle says. */}
+              <div className="mt-8">
+                <h3 className="font-display text-base font-bold text-brand-dark flex items-center gap-2">
+                  Shadow strategies
+                  <ShadowBadge />
+                </h3>
+                <p className="text-xs text-gray-500 mt-1 mb-3">
+                  Signals from strategies in the shadow stage fire, are logged and resolve like any other, but are left
+                  out of the pipeline rows and totals above unless &quot;Include shadow&quot; is on.
+                </p>
+                {dynamicScorecardData.shadowRows.length === 0 ? (
+                  <p className="text-xs font-mono text-gray-400 py-3">No shadow-stage signals in this timeframe.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs font-mono table-auto min-w-[950px]">
+                      <thead>
+                        <tr className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px] whitespace-nowrap">
+                          <th className="py-3 px-4 font-bold">Strategy / Direction</th>
+                          <th className="py-3 px-4 text-right font-bold">Resolved</th>
+                          <th className="py-3 px-4 text-right font-bold">Open</th>
+                          <th className="py-3 px-4 text-right font-bold">Win Rate</th>
+                          <th className="py-3 px-4 text-right font-bold">Realized Exp-R</th>
+                          <th className="py-3 px-4 text-right font-bold">Profit Factor</th>
+                          <th className="py-3 px-4 text-right font-bold">Avg Return</th>
+                          <th className="py-3 px-4 text-right font-bold">Avg SPY</th>
+                          <th className="py-3 px-4 text-right font-bold">Alpha</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dynamicScorecardData.shadowRows.map(sRow => (
+                          <tr
+                            key={`shadow-${sRow.pipeline}`}
+                            className="border-b border-brand-border/40 hover:bg-brand-bg/40 transition-colors whitespace-nowrap"
+                          >
+                            <td className="py-2.5 px-4 font-mono text-xs font-semibold text-brand-dark">{sRow.pipeline}</td>
+                            <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">{sRow.resolved}</td>
+                            <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">{sRow.open}</td>
+                            <td className="py-2.5 px-4 text-right font-mono text-xs">
+                              {sRow.resolved > 0 ? formatPercent(sRow.win_rate) : '-'}
+                            </td>
+                            <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.expectancy_r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {sRow.resolved > 0 ? `${sRow.expectancy_r >= 0 ? '+' : ''}${sRow.expectancy_r.toFixed(2)} R` : '-'}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
+                              {sRow.resolved > 0 ? sRow.profit_factor.toFixed(2) : '-'}
+                            </td>
+                            <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
+                              {sRow.resolved > 0 ? `${sRow.avg_spy_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_spy_return)}` : '-'}
+                            </td>
+                            <td className={`py-2.5 px-4 text-right font-mono text-xs font-black ${sRow.excess_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {sRow.resolved > 0 ? `${sRow.excess_return >= 0 ? '+' : ''}${formatPercent(sRow.excess_return)}` : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
 

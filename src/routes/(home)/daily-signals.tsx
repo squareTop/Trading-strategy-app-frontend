@@ -67,6 +67,8 @@ export interface DailySignal {
   schema_version: string | null;
   generated_at_sgt: string | null;
   backtest_asof: string | null;
+  // 2026-10-23 (0.8): strategy stage when logged (research | shadow | forward | paper | live)
+  stage?: string | null;
 }
 
 export interface DailySignalJSONAPI {
@@ -148,6 +150,20 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   price_action: 'Price Action',
 }
 
+// 2026-10-23 (0.8): marks a signal from a strategy in the shadow stage. Shadow
+// signals fire, are logged and resolve like any other; the scoreboard leaves them
+// out of its totals unless "Include shadow" is on.
+function ShadowBadge() {
+  return (
+    <span
+      title="Shadow strategy: logged and resolved as usual, but left out of the scoreboard totals"
+      className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border border-dashed bg-gray-100 text-gray-600 border-gray-400"
+    >
+      Shadow
+    </span>
+  )
+}
+
 function DailySignalsPage() {
   const { data: signalsResponse, isLoading, error, refetch } = useQuery(dailySignalsQueryOptions)
 
@@ -163,6 +179,9 @@ function DailySignalsPage() {
   const [tickerSearch, setTickerSearch] = useState<string>('')
   const [directionFilter, setDirectionFilter] = useState<string>('all')
   const [pipelineStrategyFilter, setPipelineStrategyFilter] = useState<string>('all')
+  // 2026-10-23 (0.8): shadow-stage signals are shown by default; the filter hides them
+  const [showShadow, setShowShadow] = useState<boolean>(true)
+  const shadowCount = useMemo(() => signals.filter(s => s.stage === 'shadow').length, [signals])
 
   // Calculate high-level aggregated signals stats
   const stats = useMemo(() => {
@@ -225,10 +244,11 @@ function DailySignalsPage() {
         'N/A'
       const rowVal = `${pipelineName} / ${strategyName || 'N/A'}`
       const matchesPipelineStrategy = pipelineStrategyFilter === 'all' || rowVal === pipelineStrategyFilter
+      const matchesStage = showShadow || s.stage !== 'shadow'   // 2026-10-23 (0.8)
 
-      return matchesSearch && matchesDirection && matchesPipelineStrategy
+      return matchesSearch && matchesDirection && matchesPipelineStrategy && matchesStage
     })
-  }, [signals, tickerSearch, directionFilter, pipelineStrategyFilter])
+  }, [signals, tickerSearch, directionFilter, pipelineStrategyFilter, showShadow])
 
   // Define Columns
   const columns = useMemo(() => columnHelper.columns([
@@ -294,9 +314,13 @@ function DailySignalsPage() {
         id: 'pipeline_strategy',
         header: 'Pipeline / Strategy',
         cell: info => (
-          <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-            {info.getValue()}
-          </span>
+          <>
+            <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
+              {info.getValue()}
+            </span>
+            {/* 2026-10-23 (0.8) */}
+            {info.row.original.stage === 'shadow' && <ShadowBadge />}
+          </>
         ),
       }
     ),
@@ -374,6 +398,7 @@ function DailySignalsPage() {
     setTickerSearch('')
     setDirectionFilter('all')
     setPipelineStrategyFilter('all')
+    setShowShadow(true)   // 2026-10-23 (0.8)
     setSorting([])
   }
 
@@ -561,9 +586,23 @@ function DailySignalsPage() {
                   </select>
                 </div>
 
+                {/* 2026-10-23 (0.8): show / hide shadow-stage signals (shown by default) */}
+                <label
+                  className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-gray-500 cursor-pointer select-none"
+                  title="Shadow strategies are logged and resolved as usual, but left out of the scoreboard totals"
+                >
+                  <input
+                    type="checkbox"
+                    checked={showShadow}
+                    onChange={(e) => setShowShadow(e.target.checked)}
+                    className="accent-brand-primary cursor-pointer"
+                  />
+                  Show shadow ({shadowCount})
+                </label>
+
                 {/* Reset / Actions */}
                 <div className="flex items-center gap-3 sm:ml-auto ml-0">
-                  {(tickerSearch || directionFilter !== 'all' || pipelineStrategyFilter !== 'all' || sorting.length > 0) && (
+                  {(tickerSearch || directionFilter !== 'all' || pipelineStrategyFilter !== 'all' || !showShadow || sorting.length > 0) && (
                     <button
                       onClick={handleResetFilters}
                       className="text-xs text-gray-500 hover:text-brand-primary font-mono font-bold flex items-center gap-1 hover:underline transition-all cursor-pointer whitespace-nowrap"
