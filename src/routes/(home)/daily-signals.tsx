@@ -23,7 +23,6 @@ import {
   ArrowUpRight,
   RefreshCw,
   Layers,
-  Percent,
   CheckCircle
 } from 'lucide-react'
 import { formatPercent, formatPrice, formatDate } from '../../lib/utils'
@@ -69,6 +68,8 @@ export interface DailySignal {
   backtest_asof: string | null;
   // 2026-10-23 (0.8): strategy stage when logged (research | shadow | forward | paper | live)
   stage?: string | null;
+  // 2026-10-23 (0.5): latest daily run that checked this signal (generated_at_sgt = first logged)
+  last_checked_sgt?: string | null;
 }
 
 export interface DailySignalJSONAPI {
@@ -80,7 +81,8 @@ export interface DailySignalJSONAPI {
 export interface DailySignalsResponse {
   data: DailySignalJSONAPI[];
   meta: {
-    total_scan: number;
+    total_scan: number | null;          // 2026-10-23 (0.5): null when no weekly snapshot exists
+    last_checked_sgt?: string | null;   // 2026-10-23 (0.5)
   };
 }
 
@@ -172,7 +174,8 @@ function DailySignalsPage() {
     return signalsResponse?.data?.map(item => item.attributes) || []
   }, [signalsResponse])
 
-  const totalScan = signalsResponse?.meta?.total_scan ?? 200
+  // 2026-10-23 (0.5): no invented fallback; null (shown as "—") when there is no weekly snapshot
+  const totalScan = signalsResponse?.meta?.total_scan ?? null
 
   // Local state for table & filters
   const [sorting, setSorting] = useState<SortingState>([])
@@ -185,21 +188,16 @@ function DailySignalsPage() {
 
   // Calculate high-level aggregated signals stats
   const stats = useMemo(() => {
+    // 2026-10-23 (0.5): the average win rate is gone (it averaged different payoff structures)
     if (!signals || signals.length === 0) {
-      return { total: totalScan, longCount: 0, shortCount: 0, avgWinRate: 0, passedCount: 0 }
+      return { total: totalScan, longCount: 0, shortCount: 0, passedCount: 0 }
     }
 
     let longCount = 0
-    let winRateSum = 0
-    let winRateCount = 0
     let passedCount = 0
 
     signals.forEach(s => {
       if (s.direction === 'long') longCount++
-      if (s.win_rate !== null && s.win_rate !== undefined) {
-        winRateSum += s.win_rate
-        winRateCount++
-      }
       if (s.gate_pass) passedCount++
     })
 
@@ -207,7 +205,6 @@ function DailySignalsPage() {
       total: totalScan,
       longCount,
       shortCount: signals.length - longCount,
-      avgWinRate: winRateCount > 0 ? winRateSum / winRateCount : 0,
       passedCount,
     }
   }, [signals, totalScan])
@@ -336,37 +333,47 @@ function DailySignalsPage() {
       header: 'Target Price',
       cell: info => <span className="font-mono text-emerald-600">{formatPrice(info.getValue(), 'USD')}</span>,
     }),
+    // 2026-10-23 (0.5): historical columns retitled, with a tooltip that they are past
+    // backtest results for this ticker (not expected results); green highlights removed.
     columnHelper.accessor('win_rate', {
-      header: 'Win Rate',
+      header: () => <span title="Past backtest result for this ticker — not an expected result">Historical Win Rate (this ticker)</span>,
       cell: info => {
         const val = info.getValue()
         return (
-          <span className={`font-mono font-bold ${val !== null && val >= 0.6 ? 'text-emerald-600' : 'text-gray-700'}`}>
+          <span className="font-mono text-gray-700" title="Past backtest result for this ticker — not an expected result">
             {val !== null ? formatPercent(val) : '-'}
           </span>
         )
       },
     }),
     columnHelper.accessor('profit_factor', {
-      header: 'PF',
+      header: () => <span title="Past backtest result for this ticker — not an expected result">Historical PF (this ticker)</span>,
       cell: info => {
         const val = info.getValue()
         return (
-          <span className={`font-mono font-bold ${val !== null && val >= 2.0 ? 'text-emerald-600' : 'text-gray-700'}`}>
-            {val !== null ? val.toFixed(2) : '-'}
+          <span className="font-mono text-gray-700" title="Past backtest result for this ticker — not an expected result">
+            {val === null ? '-' : val >= 999 ? 'No losses' : val.toFixed(2)}
           </span>
         )
       },
     }),
     columnHelper.accessor('expectancy_r', {
-      header: 'Expectancy',
+      header: () => <span title="Past backtest result for this ticker — not an expected result">Historical Exp-R (this ticker)</span>,
       cell: info => {
         const val = info.getValue()
         return (
-          <span className={`font-mono font-bold ${val !== null && val >= 1.5 ? 'text-indigo-600' : 'text-gray-700'}`}>
+          <span className="font-mono text-gray-700" title="Past backtest result for this ticker — not an expected result">
             {val !== null ? `${val.toFixed(2)} R` : '-'}
           </span>
         )
+      },
+    }),
+    // 2026-10-23 (0.5): number of backtest trades behind the historical figures
+    columnHelper.accessor('trade_count', {
+      header: () => <span title="Backtest trades behind the historical figures for this ticker">Trades (this ticker)</span>,
+      cell: info => {
+        const val = info.getValue()
+        return <span className="font-mono text-gray-700">{val ?? '-'}</span>
       },
     }),
   ]), [columnHelper])
@@ -388,11 +395,13 @@ function DailySignalsPage() {
     },
   })
 
-  const lastUpdate = useMemo(() => {
-    if (!signals || signals.length === 0) return 'N/A'
-    const match = signals.find(s => s.generated_at_sgt)
-    return match?.generated_at_sgt ? formatDate(match.generated_at_sgt, 'Asia/Singapore') : 'N/A'
-  }, [signals])
+  // 2026-10-23 (0.5): "Last checked" = the latest daily run that evaluated the open
+  // signals (generated_at_sgt is now each signal's first-logged time).
+  const lastChecked = useMemo(() => {
+    const fromRows = signals.map(s => s.last_checked_sgt).filter((x): x is string => !!x).sort().pop()
+    const latest = signalsResponse?.meta?.last_checked_sgt || fromRows
+    return latest ? formatDate(latest, 'Asia/Singapore') : 'N/A'
+  }, [signals, signalsResponse])
 
   const handleResetFilters = () => {
     setTickerSearch('')
@@ -434,8 +443,8 @@ function DailySignalsPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-6">
-                  <span className="text-gray-500">Last Batch</span>
-                  <span className="font-bold text-brand-dark">{lastUpdate}</span>
+                  <span className="text-gray-500">Last checked</span>
+                  <span className="font-bold text-brand-dark">{lastChecked}</span>
                 </div>
               </div>
             </div>
@@ -443,14 +452,14 @@ function DailySignalsPage() {
 
           {/* Stats Grid cards */}
           {!isLoading && !error && signalsResponse && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
               <div className="bg-white border border-brand-border rounded-xl p-4 flex flex-col justify-between shadow-xs">
                 <div className="flex items-center gap-2 text-gray-400 mb-2">
                   <Layers className="w-4 h-4 text-brand-primary" />
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Total Scans</span>
                 </div>
                 <div>
-                  <span className="font-mono text-2xl font-black text-brand-dark">{stats.total}</span>
+                  <span className="font-mono text-2xl font-black text-brand-dark">{stats.total ?? '—'}</span>
                   <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Detections loaded</span>
                 </div>
               </div>
@@ -467,19 +476,6 @@ function DailySignalsPage() {
                     {stats.shortCount}<span className="text-gray-400 font-normal text-lg">S</span>
                   </span>
                   <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Direction bias</span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-brand-border rounded-xl p-4 flex flex-col justify-between shadow-xs">
-                <div className="flex items-center gap-2 text-gray-400 mb-2">
-                  <Percent className="w-4 h-4 text-indigo-600" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Avg Win Rate</span>
-                </div>
-                <div>
-                  <span className="font-mono text-2xl font-black text-indigo-600">
-                    {formatPercent(stats.avgWinRate)}
-                  </span>
-                  <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Historical strategy rate</span>
                 </div>
               </div>
 

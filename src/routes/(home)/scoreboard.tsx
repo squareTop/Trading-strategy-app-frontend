@@ -84,6 +84,11 @@ function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSig
   };
 }
 
+// 2026-10-23 (0.5): a profit factor of 999 means "no losing trades yet", not a ratio
+function formatPF(pf: number): string {
+  return pf >= 999 ? 'No losses' : pf.toFixed(2)
+}
+
 function formatMonthLabel(yyyymm: string): string {
   if (yyyymm === 'all') return 'All Time';
   const [yearStr, monthStr] = yyyymm.split('-');
@@ -134,12 +139,20 @@ export interface ScoreboardResponse {
   resolved_signals: ScoreboardSignal[];
   open_signals: ScoreboardSignal[];
   shadow_strategies?: ScorecardRow[];   // 2026-10-23 (0.8)
+  // 2026-10-23 (0.4/0.5): ruleset filter in force and every version in the log
+  meta?: {
+    ruleset: string | null;
+    ruleset_versions: string[];
+    include_shadow?: boolean;
+  };
 }
 
-export const scoreboardQueryOptions = queryOptions({
-  queryKey: ['scoreboard'],
+// 2026-10-23 (0.5): one query per ruleset filter ("all" = no filter)
+export const scoreboardQueryOptionsFor = (ruleset: string) => queryOptions({
+  queryKey: ['scoreboard', ruleset],
   queryFn: async () => {
-    const response = await fetch(`${API_URL}/api/scoreboard`);
+    const qs = ruleset && ruleset !== 'all' ? `?ruleset=${encodeURIComponent(ruleset)}` : ''
+    const response = await fetch(`${API_URL}/api/scoreboard${qs}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch scoreboard: error status ${response.status}`);
     }
@@ -147,6 +160,8 @@ export const scoreboardQueryOptions = queryOptions({
   },
   staleTime: 60 * 1000,
 })
+
+export const scoreboardQueryOptions = scoreboardQueryOptionsFor('all')
 
 export const Route = createFileRoute('/(home)/scoreboard')({
   head: () => ({
@@ -191,7 +206,12 @@ function ShadowBadge() {
 }
 
 function ScoreboardPage() {
-  const { data, isLoading, error, refetch } = useQuery(scoreboardQueryOptions)
+  // 2026-10-23 (0.5): ruleset filter fed by the API's version list, default all
+  const [ruleset, setRuleset] = useState<string>('all')
+  const { data, isLoading, error, refetch } = useQuery({
+    ...scoreboardQueryOptionsFor(ruleset),
+    placeholderData: prev => prev,   // keep the page while another ruleset loads
+  })
   const [activeTab, setActiveTab] = useState<'resolved' | 'open'>('resolved')
 
   // Local table state
@@ -588,7 +608,7 @@ function ScoreboardPage() {
               </div>
               <div className="flex items-center justify-between gap-6">
                 <span className="text-gray-500">Constraint</span>
-                <span className="font-bold text-brand-dark">One-Position-Per-Ticker</span>
+                <span className="font-bold text-brand-dark">One open signal per strategy and ticker</span>
               </div>
             </div>
           </div>
@@ -704,6 +724,26 @@ function ScoreboardPage() {
                 </h2>
 
                 <div className="flex flex-wrap items-center gap-3">
+                  {/* 2026-10-23 (0.5): ruleset filter (versions from the API), default all */}
+                  <div
+                    className="flex items-center gap-2 bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border text-xs font-mono"
+                    title="Which rule set the signals were logged under (R0 = from the Phase 0 release)"
+                  >
+                    <span className="text-gray-500 font-bold uppercase text-[10px]">Ruleset:</span>
+                    <select
+                      value={ruleset}
+                      onChange={e => setRuleset(e.target.value)}
+                      className="bg-transparent border-0 text-xs font-mono font-bold text-brand-dark focus:outline-hidden cursor-pointer p-0"
+                    >
+                      <option value="all">All</option>
+                      {(data.meta?.ruleset_versions || []).map(v => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* 2026-10-23 (0.8): Include shadow toggle on the totals */}
                   <label
                     className="flex items-center gap-1.5 bg-brand-bg px-3 py-1.5 rounded-lg border border-brand-border text-[10px] font-mono font-bold uppercase text-gray-500 cursor-pointer select-none"
@@ -802,7 +842,7 @@ function ScoreboardPage() {
                               {row.resolved > 0 ? `${row.expectancy_r >= 0 ? '+' : ''}${row.expectancy_r.toFixed(2)} R` : '-'}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              {row.resolved > 0 ? row.profit_factor.toFixed(2) : '-'}
+                              {row.resolved > 0 ? formatPF(row.profit_factor) : '-'}
                             </td>
                             <td className={`py-3 px-4 text-right font-bold ${row.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {row.resolved > 0 ? `${row.avg_trade_return >= 0 ? '+' : ''}${formatPercent(row.avg_trade_return)}` : '-'}
@@ -841,7 +881,7 @@ function ScoreboardPage() {
                                     {sRow.resolved > 0 ? `${sRow.expectancy_r >= 0 ? '+' : ''}${sRow.expectancy_r.toFixed(2)} R` : '-'}
                                   </td>
                                   <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
-                                    {sRow.resolved > 0 ? sRow.profit_factor.toFixed(2) : '-'}
+                                    {sRow.resolved > 0 ? formatPF(sRow.profit_factor) : '-'}
                                   </td>
                                   <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                                     {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
@@ -880,7 +920,7 @@ function ScoreboardPage() {
                             {allRow.resolved > 0 ? `${allRow.expectancy_r >= 0 ? '+' : ''}${allRow.expectancy_r.toFixed(2)} R` : '-'}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            {allRow.resolved > 0 ? allRow.profit_factor.toFixed(2) : '-'}
+                            {allRow.resolved > 0 ? formatPF(allRow.profit_factor) : '-'}
                           </td>
                           <td className={`py-3 px-4 text-right font-bold ${allRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                             {allRow.resolved > 0 ? `${allRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(allRow.avg_trade_return)}` : '-'}
@@ -943,7 +983,7 @@ function ScoreboardPage() {
                               {sRow.resolved > 0 ? `${sRow.expectancy_r >= 0 ? '+' : ''}${sRow.expectancy_r.toFixed(2)} R` : '-'}
                             </td>
                             <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
-                              {sRow.resolved > 0 ? sRow.profit_factor.toFixed(2) : '-'}
+                              {sRow.resolved > 0 ? formatPF(sRow.profit_factor) : '-'}
                             </td>
                             <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
