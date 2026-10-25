@@ -70,6 +70,14 @@ export interface DailySignal {
   stage?: string | null;
   // 2026-10-23 (0.5): latest daily run that checked this signal (generated_at_sgt = first logged)
   last_checked_sgt?: string | null;
+  // 2026-10-25 (2.2): from R1 a signal fires on a completed daily bar and enters at the next
+  // open. entry / stop / target stay the signal-close reference levels; the fill and the
+  // levels placed from it arrive with the first run that sees the next bar.
+  entry_basis?: string | null;      // "next_open" on R1 rows, null before R1
+  fill_date?: string | null;
+  fill_price?: number | null;
+  stop_level?: number | null;
+  target_level?: number | null;
 }
 
 export interface DailySignalJSONAPI {
@@ -162,6 +170,24 @@ function ShadowBadge() {
       className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border border-dashed bg-gray-100 text-gray-600 border-gray-400"
     >
       Shadow
+    </span>
+  )
+}
+
+// 2026-10-25 (2.2): an R1 signal that has not filled yet (its next open has not happened).
+function awaitingFill(s: DailySignal) {
+  return s.entry_basis === 'next_open' && (s.fill_price === null || s.fill_price === undefined)
+}
+
+function isFilled(s: DailySignal) {
+  return s.fill_price !== null && s.fill_price !== undefined
+}
+
+function RefLevel({ value, title }: { value: number; title: string }) {
+  return (
+    <span className="font-mono text-gray-400" title={title}>
+      <span className="text-[10px] uppercase tracking-wider mr-1">ref</span>
+      {formatPrice(value, 'USD')}
     </span>
   )
 }
@@ -321,17 +347,58 @@ function DailySignalsPage() {
         ),
       }
     ),
+    // 2026-10-25 (2.2): R1 rows enter at the next open. Until the fill: "Entry: next open" and the
+    // signal-close reference levels in grey; after it: the fill and the levels placed from it.
+    // Rows logged before R1 are shown as before.
     columnHelper.accessor('entry', {
       header: 'Entry',
-      cell: info => <span className="font-mono font-bold text-brand-dark">{formatPrice(info.getValue(), 'USD')}</span>,
+      cell: info => {
+        const s = info.row.original
+        if (isFilled(s)) {
+          return (
+            <span className="font-mono font-bold text-brand-dark"
+              title={`Filled at the open on ${s.fill_date ?? '?'}; signal-day close ${formatPrice(s.entry, 'USD')}`}>
+              {formatPrice(s.fill_price as number, 'USD')}
+              <span className="block text-[10px] font-normal text-gray-400">filled {s.fill_date ?? ''}</span>
+            </span>
+          )
+        }
+        if (awaitingFill(s)) {
+          return (
+            <span title="Enters at the next session's open; the price shown is the signal-day close">
+              <span className="block text-[10px] font-mono font-bold uppercase tracking-wider text-amber-700">Entry: next open</span>
+              <RefLevel value={s.entry} title="Signal-day close (reference)" />
+            </span>
+          )
+        }
+        return <span className="font-mono font-bold text-brand-dark">{formatPrice(info.getValue(), 'USD')}</span>
+      },
     }),
     columnHelper.accessor('stop', {
       header: 'Stop Price',
-      cell: info => <span className="font-mono text-red-600">{formatPrice(info.getValue(), 'USD')}</span>,
+      cell: info => {
+        const s = info.row.original
+        if (isFilled(s) && s.stop_level !== null && s.stop_level !== undefined) {
+          return <span className="font-mono text-red-600" title="Placed from the fill at the signal's stop distance">{formatPrice(s.stop_level, 'USD')}</span>
+        }
+        if (awaitingFill(s)) {
+          return <RefLevel value={s.stop} title="Reference stop at the signal-day close; the live stop is placed the same distance from the fill" />
+        }
+        return <span className="font-mono text-red-600">{formatPrice(info.getValue(), 'USD')}</span>
+      },
     }),
     columnHelper.accessor('target', {
       header: 'Target Price',
-      cell: info => <span className="font-mono text-emerald-600">{formatPrice(info.getValue(), 'USD')}</span>,
+      cell: info => {
+        const s = info.row.original
+        if (isFilled(s) && s.target_level !== null && s.target_level !== undefined) {
+          return <span className="font-mono text-emerald-600" title="Placed from the fill at the signal's target distance">{formatPrice(s.target_level, 'USD')}</span>
+        }
+        if (awaitingFill(s)) {
+          return <RefLevel value={s.target} title="Reference target at the signal-day close; the live target is placed the same distance from the fill" />
+        }
+        return <span className="font-mono text-emerald-600">{formatPrice(info.getValue(), 'USD')}</span>
+      },
     }),
     // 2026-10-23 (0.5): historical columns retitled, with a tooltip that they are past
     // backtest results for this ticker (not expected results); green highlights removed.
