@@ -857,7 +857,9 @@ function ScoreboardPage() {
                       <th className="py-3 px-4 text-right font-bold">Open</th>
                       <th className="py-3 px-4 text-right font-bold">Win Rate{net}</th>
                       <th className="py-3 px-4 text-right font-bold">Mean R{net}</th>
-                      <th className="py-3 px-4 text-right font-bold">Profit Factor{net}</th><th className="py-3 px-4 text-right font-bold">ROI{net}</th><th className="py-3 px-4 text-right font-bold">Backtest Exp-R{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">Profit Factor{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">ROI{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">Backtest Exp-R{net}</th>
                       <th className="py-3 px-4 text-right font-bold">Avg Return{net}</th>
                       <th className="py-3 px-4 text-right font-bold">Avg SPY</th>
                       <th className="py-3 px-4 text-right font-bold">Alpha{net}</th>
@@ -914,7 +916,7 @@ function ScoreboardPage() {
                             <td className="py-3 px-4 text-right">
                               {row.resolved > 0 ? formatPF(row.profit_factor) : '-'}
                             </td>
-                            <NetCells r={row} className="py-3 px-4 text-right" />   {/* 2026-10-26 (2.6) */}
+                            <NetCells r={row} className="py-3 px-4 text-right" />
                             <td className={`py-3 px-4 text-right font-bold ${row.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {row.resolved > 0 ? `${row.avg_trade_return >= 0 ? '+' : ''}${formatPercent(row.avg_trade_return)}` : '-'}
                             </td>
@@ -954,7 +956,7 @@ function ScoreboardPage() {
                                   <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
                                     {sRow.resolved > 0 ? formatPF(sRow.profit_factor) : '-'}
                                   </td>
-                                  <NetCells r={sRow} className="py-2.5 px-4 text-right font-mono text-xs text-gray-600" />   {/* 2026-10-26 (2.6) */}
+                                  <NetCells r={sRow} className="py-2.5 px-4 text-right font-mono text-xs text-gray-600" />
                                   <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                                     {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
                                   </td>
@@ -994,7 +996,7 @@ function ScoreboardPage() {
                           <td className="py-3 px-4 text-right">
                             {allRow.resolved > 0 ? formatPF(allRow.profit_factor) : '-'}
                           </td>
-                          <NetCells r={allRow} className="py-3 px-4 text-right" />   {/* 2026-10-26 (2.6) */}
+                          <NetCells r={allRow} className="py-3 px-4 text-right" />
                           <td className={`py-3 px-4 text-right font-bold ${allRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                             {allRow.resolved > 0 ? `${allRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(allRow.avg_trade_return)}` : '-'}
                           </td>
@@ -1034,7 +1036,9 @@ function ScoreboardPage() {
                           <th className="py-3 px-4 text-right font-bold">Open</th>
                           <th className="py-3 px-4 text-right font-bold">Win Rate{net}</th>
                           <th className="py-3 px-4 text-right font-bold">Mean R{net}</th>
-                          <th className="py-3 px-4 text-right font-bold">Profit Factor{net}</th><th className="py-3 px-4 text-right font-bold">ROI{net}</th><th className="py-3 px-4 text-right font-bold">Backtest Exp-R{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">Profit Factor{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">ROI{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">Backtest Exp-R{net}</th>
                           <th className="py-3 px-4 text-right font-bold">Avg Return{net}</th>
                           <th className="py-3 px-4 text-right font-bold">Avg SPY</th>
                           <th className="py-3 px-4 text-right font-bold">Alpha{net}</th>
@@ -1058,7 +1062,7 @@ function ScoreboardPage() {
                             <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
                               {sRow.resolved > 0 ? formatPF(sRow.profit_factor) : '-'}
                             </td>
-                            <NetCells r={sRow} className="py-2.5 px-4 text-right font-mono text-xs text-gray-600" />   {/* 2026-10-26 (2.6) */}
+                            <NetCells r={sRow} className="py-2.5 px-4 text-right font-mono text-xs text-gray-600" />
                             <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
                             </td>
