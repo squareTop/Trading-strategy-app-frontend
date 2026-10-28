@@ -43,6 +43,14 @@ import { formatPercent, formatPrice } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
 import ScoreboardSkeleton from '../../components/skeletons/ScoreboardSkeleton'
 
+// 2026-10-26 (2.6): R1+ rows are net of the round-trip cost and measured from the
+// next-open fill; ROI is the sum of R x the standard 0.5% risk per trade.
+const RISK_PER_TRADE = 0.005
+function isR1(v?: string | null): boolean {
+  const m = /^R(\d+)$/.exec(v || '')
+  return !!m && parseInt(m[1], 10) >= 1
+}
+
 function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSignal[], label: string): ScorecardRow {
   const n = resolvedList.length;
   if (n === 0) {
@@ -55,6 +63,8 @@ function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSig
       profit_factor: 0.0,
       total_r: 0.0,
       backtest_exp_r: 0.0,
+      roi: 0.0,          // 2026-10-26 (2.6)
+      backtest_n: 0,
       avg_trade_return: 0.0,
       avg_spy_return: 0.0,
       excess_return: 0.0,
@@ -68,6 +78,9 @@ function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSig
   const tradeReturns = resolvedList.map(s => s.trade_return).filter((x): x is number => x !== null);
   const spyReturns = resolvedList.map(s => s.spy_return).filter((x): x is number => x !== null);
   const excessReturns = resolvedList.map(s => s.excess_return).filter((x): x is number => x !== null);
+  // 2026-10-26 (2.6): backtest Exp-R from R1 rows only (same unit as Mean R since 2.1c)
+  const btR1 = resolvedList.filter(s => isR1(s.ruleset_version)).map(s => s.expectancy_r)
+    .filter((x): x is number => x !== null && x !== undefined);
 
   return {
     pipeline: label,
@@ -77,7 +90,9 @@ function computeBucket(resolvedList: ScoreboardSignal[], openList: ScoreboardSig
     expectancy_r: rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 0.0,
     profit_factor: pf,
     total_r: rs.reduce((a, b) => a + b, 0),
-    backtest_exp_r: 0.0,
+    backtest_exp_r: btR1.length ? btR1.reduce((a, b) => a + b, 0) / btR1.length : 0.0,   // 2026-10-26 (2.6)
+    backtest_n: btR1.length,
+    roi: rs.reduce((a, b) => a + b, 0) * RISK_PER_TRADE,
     avg_trade_return: tradeReturns.length ? tradeReturns.reduce((a, b) => a + b, 0) / tradeReturns.length : 0.0,
     avg_spy_return: spyReturns.length ? spyReturns.reduce((a, b) => a + b, 0) / spyReturns.length : 0.0,
     excess_return: excessReturns.length ? excessReturns.reduce((a, b) => a + b, 0) / excessReturns.length : 0.0,
@@ -111,6 +126,8 @@ export interface ScorecardRow {
   avg_trade_return: number;
   avg_spy_return: number;
   excess_return: number;
+  roi?: number;          // 2026-10-26 (2.6): sum of R x 0.5%, as a fraction of equity
+  backtest_n?: number;   // 2026-10-26 (2.6): R1 rows behind backtest_exp_r
 }
 
 export interface ScoreboardSignal {
@@ -132,6 +149,12 @@ export interface ScoreboardSignal {
   // 2026-10-23 (0.8): strategy stage when logged; benchmark is "SPY" (longs) or "cash" (shorts)
   stage?: string | null;
   benchmark?: string | null;
+  // 2026-10-26 (2.6): R1 fields used by the net metrics
+  ruleset_version?: string | null;
+  expectancy_r?: number | null;
+  fill_price?: number | null;
+  fill_date?: string | null;
+  net?: boolean;
 }
 
 export interface ScoreboardResponse {
@@ -144,6 +167,8 @@ export interface ScoreboardResponse {
     ruleset: string | null;
     ruleset_versions: string[];
     include_shadow?: boolean;
+    net_basis?: boolean;        // 2026-10-26 (2.6)
+    risk_per_trade?: number;    // 2026-10-26 (2.6)
   };
 }
 
@@ -202,6 +227,23 @@ function ShadowBadge() {
     >
       Shadow
     </span>
+  )
+}
+
+// 2026-10-26 (2.6): ROI and Backtest Exp-R cells, shared by every scorecard table
+function NetCells({ r, className }: { r: ScorecardRow; className: string }) {
+  const roi = r.roi ?? 0
+  const bt = r.backtest_n ? r.backtest_exp_r : null
+  return (
+    <>
+      <td className={`${className} ${roi >= 0 ? 'text-emerald-700' : 'text-red-700'}`}
+        title="Sum of R x 0.5% risk per trade, as % of equity, not compounded">
+        {r.resolved > 0 ? `${roi >= 0 ? '+' : ''}${formatPercent(roi)}` : '-'}
+      </td>
+      <td className={className} title="Mean net R of the shared-simulator backtest behind these signals (R1 rows only)">
+        {bt !== null && bt !== undefined ? `${bt >= 0 ? '+' : ''}${bt.toFixed(2)} R` : '-'}
+      </td>
+    </>
   )
 }
 
@@ -324,6 +366,15 @@ function ScoreboardPage() {
   // Overall stats for KPI grid (dynamically reflects month filter)
   const overallStats = dynamicScorecardData.allRow
 
+  // 2026-10-26 (2.6): "(net)" on the headers when every row on the page is R1+;
+  // a note when R1 (net, from the fill) and pre-R1 (gross, from the close) rows mix.
+  const { netBasis, mixedBasis } = useMemo(() => {
+    const all = [...(data?.resolved_signals || []), ...(data?.open_signals || [])]
+    const r1 = all.filter(s => isR1(s.ruleset_version)).length
+    return { netBasis: all.length > 0 && r1 === all.length, mixedBasis: r1 > 0 && r1 < all.length }
+  }, [data])
+  const net = netBasis ? ' (net)' : ''
+
   const filteredResolved = useMemo(() => {
     return monthFilteredResolved.filter(s => {
       const matchesSearch = s.ticker.toLowerCase().includes(tickerSearch.toLowerCase())
@@ -409,7 +460,19 @@ function ScoreboardPage() {
     }),
     resolvedColumnHelper.accessor('entry', {
       header: 'Entry',
-      cell: info => <span className="font-mono font-medium text-gray-700">{formatPrice(info.getValue(), 'USD')}</span>,
+      // 2026-10-26 (2.6): R1 rows entered at the next-open fill; show it, with the signal close in the tooltip
+      cell: info => {
+        const s = info.row.original
+        if (s.fill_price !== null && s.fill_price !== undefined) {
+          return (
+            <span className="font-mono font-medium text-gray-700"
+              title={`Filled at the open on ${s.fill_date ?? '?'}; signal close ${formatPrice(s.entry, 'USD')}`}>
+              {formatPrice(s.fill_price, 'USD')}
+            </span>
+          )
+        }
+        return <span className="font-mono font-medium text-gray-700">{formatPrice(info.getValue(), 'USD')}</span>
+      },
     }),
     resolvedColumnHelper.accessor('exit_price', {
       header: 'Exit',
@@ -778,6 +841,13 @@ function ScoreboardPage() {
                 </div>
               </div>
 
+              {/* 2026-10-26 (2.6) */}
+              {mixedBasis && (
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                  R1 rows are net of the 0.10% round-trip cost and measured from the next-open fill; rows logged
+                  before R1 are gross, from the signal close. Pick a ruleset above to compare like with like.
+                </p>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs font-mono table-auto min-w-[950px]">
                   <thead>
@@ -785,12 +855,14 @@ function ScoreboardPage() {
                       <th className="py-3 px-4 font-bold">Pipeline / Strategy</th>
                       <th className="py-3 px-4 text-right font-bold">Resolved</th>
                       <th className="py-3 px-4 text-right font-bold">Open</th>
-                      <th className="py-3 px-4 text-right font-bold">Win Rate</th>
-                      <th className="py-3 px-4 text-right font-bold">Realized Exp-R</th>
-                      <th className="py-3 px-4 text-right font-bold">Profit Factor</th>
-                      <th className="py-3 px-4 text-right font-bold">Avg Return</th>
+                      <th className="py-3 px-4 text-right font-bold">Win Rate{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">Mean R{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">Profit Factor{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">ROI{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">Backtest Exp-R{net}</th>
+                      <th className="py-3 px-4 text-right font-bold">Avg Return{net}</th>
                       <th className="py-3 px-4 text-right font-bold">Avg SPY</th>
-                      <th className="py-3 px-4 text-right font-bold">Alpha</th>
+                      <th className="py-3 px-4 text-right font-bold">Alpha{net}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -844,6 +916,7 @@ function ScoreboardPage() {
                             <td className="py-3 px-4 text-right">
                               {row.resolved > 0 ? formatPF(row.profit_factor) : '-'}
                             </td>
+                            <NetCells r={row} className="py-3 px-4 text-right" />
                             <td className={`py-3 px-4 text-right font-bold ${row.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {row.resolved > 0 ? `${row.avg_trade_return >= 0 ? '+' : ''}${formatPercent(row.avg_trade_return)}` : '-'}
                             </td>
@@ -883,6 +956,7 @@ function ScoreboardPage() {
                                   <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
                                     {sRow.resolved > 0 ? formatPF(sRow.profit_factor) : '-'}
                                   </td>
+                                  <NetCells r={sRow} className="py-2.5 px-4 text-right font-mono text-xs text-gray-600" />
                                   <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                                     {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
                                   </td>
@@ -922,6 +996,7 @@ function ScoreboardPage() {
                           <td className="py-3 px-4 text-right">
                             {allRow.resolved > 0 ? formatPF(allRow.profit_factor) : '-'}
                           </td>
+                          <NetCells r={allRow} className="py-3 px-4 text-right" />
                           <td className={`py-3 px-4 text-right font-bold ${allRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                             {allRow.resolved > 0 ? `${allRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(allRow.avg_trade_return)}` : '-'}
                           </td>
@@ -959,12 +1034,14 @@ function ScoreboardPage() {
                           <th className="py-3 px-4 font-bold">Strategy / Direction</th>
                           <th className="py-3 px-4 text-right font-bold">Resolved</th>
                           <th className="py-3 px-4 text-right font-bold">Open</th>
-                          <th className="py-3 px-4 text-right font-bold">Win Rate</th>
-                          <th className="py-3 px-4 text-right font-bold">Realized Exp-R</th>
-                          <th className="py-3 px-4 text-right font-bold">Profit Factor</th>
-                          <th className="py-3 px-4 text-right font-bold">Avg Return</th>
+                          <th className="py-3 px-4 text-right font-bold">Win Rate{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">Mean R{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">Profit Factor{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">ROI{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">Backtest Exp-R{net}</th>
+                          <th className="py-3 px-4 text-right font-bold">Avg Return{net}</th>
                           <th className="py-3 px-4 text-right font-bold">Avg SPY</th>
-                          <th className="py-3 px-4 text-right font-bold">Alpha</th>
+                          <th className="py-3 px-4 text-right font-bold">Alpha{net}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -985,6 +1062,7 @@ function ScoreboardPage() {
                             <td className="py-2.5 px-4 text-right font-mono text-xs text-gray-600">
                               {sRow.resolved > 0 ? formatPF(sRow.profit_factor) : '-'}
                             </td>
+                            <NetCells r={sRow} className="py-2.5 px-4 text-right font-mono text-xs text-gray-600" />
                             <td className={`py-2.5 px-4 text-right font-mono text-xs font-bold ${sRow.avg_trade_return >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                               {sRow.resolved > 0 ? `${sRow.avg_trade_return >= 0 ? '+' : ''}${formatPercent(sRow.avg_trade_return)}` : '-'}
                             </td>
