@@ -493,7 +493,7 @@ function DailySignalsPage() {
                   Daily Algorithmic Scanning
                 </h1>
                 <p className="text-sm text-gray-500 mt-2">
-                  Automated strategies scan global indices every 1 hours on working days. Tap any ticker symbol below
+                  {/* 2026-10-28 (release R1) */}Signals are scanned once a day on completed bars (06:30 SGT, after the US close); open signals are checked every hour. Tap any ticker symbol below
                   to jump into its deep corporate valuation.
                 </p>
               </div>
