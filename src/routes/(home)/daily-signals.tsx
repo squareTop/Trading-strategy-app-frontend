@@ -78,6 +78,15 @@ export interface DailySignal {
   fill_price?: number | null;
   stop_level?: number | null;
   target_level?: number | null;
+  // 2026-10-30 (3.2-4): R2 rows (a version-2+ strategy file). backtest_scope "strategy":
+  // the backtest columns are the strategy's figures over its whole universe; "ticker":
+  // this ticker's backtest (R1 rows).
+  strategy_version?: string | null;
+  backtest_scope?: 'strategy' | 'ticker';
+  strategy_display?: string | null;
+  style?: string | null;
+  style_display?: string | null;
+  cost_rt?: number | null;
 }
 
 export interface DailySignalJSONAPI {
@@ -91,7 +100,23 @@ export interface DailySignalsResponse {
   meta: {
     total_scan: number | null;          // 2026-10-23 (0.5): null when no weekly snapshot exists
     last_checked_sgt?: string | null;   // 2026-10-23 (0.5)
+    r2_universe?: number | null;        // 2026-10-30 (3.2-4): tickers a roster strategy admits (R2)
+    strategies?: Record<string, R2StrategyInfo | null>;   // 2026-10-30 (3.2-4)
   };
+}
+
+// 2026-10-30 (3.2-4): meta.strategies[label] — one R2 strategy version and its statistics
+export interface R2StrategyInfo {
+  label: string;
+  display_name: string;
+  style: string | null;
+  style_display: string | null;
+  max_hold: number | null;
+  min_dollar_volume: number | null;
+  stats?: {
+    asof: string;
+    periods: Record<string, Record<string, { trades: number; mean_r: number | null; profit_factor: number | null; win_rate: number | null }>>;
+  } | null;
 }
 
 export const dailySignalsQueryOptions = queryOptions({
@@ -158,7 +183,40 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   trend: 'SMA Crossover',
   mean_rev: 'Mean Reversion',
   price_action: 'Price Action',
+  // 2026-10-30 (3.2-4): from R2 the label is the strategy's style
+  trend_following: 'Trend following',
+  breakout: 'Breakout',
+  mean_reversion: 'Mean reversion',
+  pullback: 'Pullback',
+  failed_breakout: 'Failed breakout',
+  momentum: 'Momentum',
+  event_driven: 'Event driven',
 }
+
+// 2026-10-30 (3.2-4): "Style / Strategy" label. R2 rows: style / display name (version);
+// R1 rows keep the pipeline / strategy label they always had.
+function styleStrategyLabel(row: DailySignal): string {
+  const strategyName = row.selected_strategy || (row.trigger ? row.trigger.split(':')[0] : '')
+  if (row.backtest_scope === 'strategy') {
+    const style = row.style_display || (row.pipeline && PIPELINE_DISPLAY_NAMES[row.pipeline]) || row.pipeline || 'N/A'
+    return `${style} / ${row.strategy_display || strategyName || 'N/A'} (${row.strategy_version})`
+  }
+  const pipelineName =
+    (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
+    (row.pipeline && PIPELINE_DISPLAY_NAMES[row.pipeline]) ||
+    row.pipeline ||
+    'N/A'
+  return `${pipelineName} / ${strategyName || 'N/A'}`
+}
+
+// 2026-10-30 (3.2-4): what the backtest columns mean on this row
+function backtestNote(row: DailySignal): string {
+  return row.backtest_scope === 'strategy'
+    ? `Past backtest of ${row.strategy_version} over its whole universe, net of costs — not an expected result`
+    : 'Past backtest result for this ticker — not an expected result'
+}
+const BACKTEST_HEADER_NOTE =
+  'Past backtest results, not expected results. R2 rows: the strategy over its whole universe; R1 rows: this ticker'
 
 // 2026-10-23 (0.8): marks a signal from a strategy in the shadow stage. Shadow
 // signals fire, are logged and resolve like any other; the scoreboard leaves them
@@ -201,7 +259,9 @@ function DailySignalsPage() {
   }, [signalsResponse])
 
   // 2026-10-23 (0.5): no invented fallback; null (shown as "—") when there is no weekly snapshot
-  const totalScan = signalsResponse?.meta?.total_scan ?? null
+  const totalScan = signalsResponse?.meta?.total_scan ?? signalsResponse?.meta?.r2_universe ?? null
+  // 2026-10-30 (3.2-4): under R2 there is no weekly gate; the count is the admitted universe
+  const scanIsR2 = signalsResponse?.meta?.total_scan == null && signalsResponse?.meta?.r2_universe != null
 
   // Local state for table & filters
   const [sorting, setSorting] = useState<SortingState>([])
@@ -240,14 +300,7 @@ function DailySignalsPage() {
     if (!signals) return []
     const optionsSet = new Set<string>()
     signals.forEach(row => {
-      const strategyName = row.selected_strategy || (row.trigger ? row.trigger.split(':')[0] : '')
-      const pipelineName =
-        (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
-        (row.pipeline && PIPELINE_DISPLAY_NAMES[row.pipeline]) ||
-        row.pipeline ||
-        'N/A'
-      const displayVal = `${pipelineName} / ${strategyName || 'N/A'}`
-      optionsSet.add(displayVal)
+      optionsSet.add(styleStrategyLabel(row))   // 2026-10-30 (3.2-4)
     })
     return Array.from(optionsSet).sort()
   }, [signals])
@@ -259,13 +312,7 @@ function DailySignalsPage() {
       const matchesSearch = s.ticker.toLowerCase().includes(tickerSearch.toLowerCase())
       const matchesDirection = directionFilter === 'all' || s.direction === directionFilter
 
-      const strategyName = s.selected_strategy || (s.trigger ? s.trigger.split(':')[0] : '')
-      const pipelineName =
-        (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
-        (s.pipeline && PIPELINE_DISPLAY_NAMES[s.pipeline]) ||
-        s.pipeline ||
-        'N/A'
-      const rowVal = `${pipelineName} / ${strategyName || 'N/A'}`
+      const rowVal = styleStrategyLabel(s)   // 2026-10-30 (3.2-4)
       const matchesPipelineStrategy = pipelineStrategyFilter === 'all' || rowVal === pipelineStrategyFilter
       const matchesStage = showShadow || s.stage !== 'shadow'   // 2026-10-23 (0.8)
 
@@ -324,18 +371,10 @@ function DailySignalsPage() {
       },
     }),
     columnHelper.accessor(
-      row => {
-        const strategyName = row.selected_strategy || (row.trigger ? row.trigger.split(':')[0] : '')
-        const pipelineName =
-          (strategyName && STRATEGY_TO_PIPELINE[strategyName]) ||
-          (row.pipeline && PIPELINE_DISPLAY_NAMES[row.pipeline]) ||
-          row.pipeline ||
-          'N/A'
-        return `${pipelineName} / ${strategyName || 'N/A'}`
-      },
+      row => styleStrategyLabel(row),   // 2026-10-30 (3.2-4)
       {
         id: 'pipeline_strategy',
-        header: 'Pipeline / Strategy',
+        header: 'Style / Strategy',
         cell: info => (
           <>
             <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
@@ -402,34 +441,35 @@ function DailySignalsPage() {
     }),
     // 2026-10-23 (0.5): historical columns retitled, with a tooltip that they are past
     // backtest results for this ticker (not expected results); green highlights removed.
+    // 2026-10-30 (3.2-4): "Backtest" columns; each cell's tooltip says whose backtest it is
     columnHelper.accessor('win_rate', {
-      header: () => <span title="Past backtest result for this ticker — not an expected result">Historical Win Rate (this ticker)</span>,
+      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest Win Rate</span>,
       cell: info => {
         const val = info.getValue()
         return (
-          <span className="font-mono text-gray-700" title="Past backtest result for this ticker — not an expected result">
+          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
             {val !== null ? formatPercent(val) : '-'}
           </span>
         )
       },
     }),
     columnHelper.accessor('profit_factor', {
-      header: () => <span title="Past backtest result for this ticker — not an expected result">Historical PF (this ticker)</span>,
+      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest PF</span>,
       cell: info => {
         const val = info.getValue()
         return (
-          <span className="font-mono text-gray-700" title="Past backtest result for this ticker — not an expected result">
+          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
             {val === null ? '-' : val >= 999 ? 'No losses' : val.toFixed(2)}
           </span>
         )
       },
     }),
     columnHelper.accessor('expectancy_r', {
-      header: () => <span title="Past backtest result for this ticker — not an expected result">Historical Exp-R (this ticker)</span>,
+      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest Exp-R</span>,
       cell: info => {
         const val = info.getValue()
         return (
-          <span className="font-mono text-gray-700" title="Past backtest result for this ticker — not an expected result">
+          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
             {val !== null ? `${val.toFixed(2)} R` : '-'}
           </span>
         )
@@ -437,10 +477,17 @@ function DailySignalsPage() {
     }),
     // 2026-10-23 (0.5): number of backtest trades behind the historical figures
     columnHelper.accessor('trade_count', {
-      header: () => <span title="Backtest trades behind the historical figures for this ticker">Trades (this ticker)</span>,
+      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest Trades</span>,
       cell: info => {
         const val = info.getValue()
-        return <span className="font-mono text-gray-700">{val ?? '-'}</span>
+        return (
+          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
+            {val ?? '-'}
+            {info.row.original.backtest_scope === 'strategy' && (
+              <span className="block text-[10px] text-gray-400">whole universe</span>
+            )}
+          </span>
+        )
       },
     }),
   ]), [columnHelper])
@@ -527,7 +574,7 @@ function DailySignalsPage() {
                 </div>
                 <div>
                   <span className="font-mono text-2xl font-black text-brand-dark">{stats.total ?? '—'}</span>
-                  <span className="block text-[10px] text-gray-400 font-mono mt-0.5">Detections loaded</span>
+                  <span className="block text-[10px] text-gray-400 font-mono mt-0.5">{scanIsR2 ? "Tickers in the strategies' universes" : 'Detections loaded'}</span>
                 </div>
               </div>
 
@@ -633,14 +680,14 @@ function DailySignalsPage() {
                 {/* Pipeline / Strategy Filter Dropdown */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
-                    Pipeline / Strategy:
+                    Style / Strategy:
                   </span>
                   <select
                     value={pipelineStrategyFilter}
                     onChange={(e) => setPipelineStrategyFilter(e.target.value)}
                     className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
                   >
-                    <option value="all">All Pipelines / Strategies</option>
+                    <option value="all">All Styles / Strategies</option>
                     {pipelineStrategyOptions.map(opt => (
                       <option key={opt} value={opt}>
                         {opt}
