@@ -47,6 +47,7 @@ export interface TradeChartPayload {
   levels: { basis: 'fill' | 'reference'; entry: Num; stop: Num; target: Num; from: string; to: string } | null
   replay: Replay | null
   notes: string[]
+  exit_rules?: string[]       // 2026-11-05 (4.6 display fixes): how this trade exits, in words
   window?: { start: string; end: string; signal_index: number }
 }
 
@@ -84,6 +85,13 @@ const OVERLAY_COLOURS: Record<string, string> = {
   bb_upper: '#6366f1', bb_lower: '#6366f1', bb_middle: '#a855f7', sma50: '#2563eb',
 }
 const SERIES_COLOURS = ['#2563eb', '#a855f7', '#0891b2', '#ca8a04']
+// 2026-11-05 (4.6 display fixes): short names on the price axis and in the colour key
+const OVERLAY_SHORT: Record<string, string> = {
+  bb_upper: 'BB upper', bb_middle: 'BB middle', bb_lower: 'BB lower', sma50: 'SMA 50',
+}
+function overlayColour(key: string, i: number): string {
+  return OVERLAY_COLOURS[key] || SERIES_COLOURS[i % SERIES_COLOURS.length]
+}
 
 const STATUS_STYLE: Record<string, string> = {
   open: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -148,9 +156,10 @@ function TradeChart({ data }: { data: TradeChartPayload }) {
 
       data.overlays.forEach((o, i) => {
         const s = ch.addSeries(lwc.LineSeries, {
-          color: OVERLAY_COLOURS[o.key] || SERIES_COLOURS[i % SERIES_COLOURS.length], lineWidth: 1,
+          color: overlayColour(o.key, i), lineWidth: 1,
           lineStyle: o.key === 'bb_middle' ? lwc.LineStyle.Dashed : lwc.LineStyle.Solid,
-          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: '',
+          priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false,
+          title: OVERLAY_SHORT[o.key] || o.label,
         }, 0)
         s.setData(line(o.values))
       })
@@ -249,8 +258,24 @@ function TradeChart({ data }: { data: TradeChartPayload }) {
   }, [data])
 
   const height = 460 + 140 * data.panels.length
+  // 2026-11-05 (4.6 display fixes): a colour key for every line drawn on price
+  const lv = data.levels
+  const key: { label: string; colour: string; dash?: boolean }[] = [
+    ...data.overlays.map((o, i) => ({ label: o.label, colour: overlayColour(o.key, i), dash: o.key === 'bb_middle' })),
+    ...(lv && lv.stop !== null ? [{ label: lv.basis === 'reference' ? 'Stop (ref)' : 'Stop', colour: C.stop, dash: true }] : []),
+    ...(lv && lv.target !== null ? [{ label: lv.basis === 'reference' ? 'Target (ref)' : 'Target', colour: C.target, dash: true }] : []),
+    ...(lv && lv.entry !== null ? [{ label: lv.basis === 'fill' ? 'Fill price' : 'Entry (ref)', colour: C.entry, dash: true }] : []),
+  ]
   return (
     <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
+      <div className="px-4 py-2 border-b border-brand-border flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-gray-600">
+        {key.map((k) => (
+          <span key={k.label} className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-4" style={{ borderTop: `2px ${k.dash ? 'dashed' : 'solid'} ${k.colour}` }} />
+            {k.label}
+          </span>
+        ))}
+      </div>
       <div className="px-4 py-2 border-b border-brand-border font-mono text-[11px] text-gray-500 h-8">
         {hover || 'Hover the chart for a bar’s prices · scroll to zoom · drag to pan'}
       </div>
@@ -373,8 +398,12 @@ function TradePage() {
                 <ul className="space-y-0.5">
                   <li><span style={{ color: C.signal }}>▲</span> Signal: the completed bar the strategy fired on (its close is the reference entry).</li>
                   <li><span style={{ color: C.entry }}>●</span> Fill: the next open, where the trade is entered; the blue dotted line is that price.</li>
-                  <li><span style={{ color: C.stop }}>- -</span> Stop and <span style={{ color: C.target }}>- -</span> target, placed the signal&apos;s distances from the fill (marked “ref” before the fill).</li>
-                  <li>■ Exit, with its reason: target, stop, expired (time cap) or the strategy&apos;s own exit.</li>
+                  {data.levels?.target !== null && data.levels?.target !== undefined ? (
+                    <li><span style={{ color: C.stop }}>- -</span> Stop and <span style={{ color: C.target }}>- -</span> target, placed the signal&apos;s distances from the fill (marked “ref” before the fill).</li>
+                  ) : (
+                    <li><span style={{ color: C.stop }}>- -</span> Stop, placed the signal&apos;s distance from the fill (marked “ref” before the fill). This version has no target.</li>
+                  )}
+                  <li>■ Exit, with its reason.</li>
                   <li><span style={{ color: C.replay }}>●■</span> Amber marks: where the replay fills or exits when it differs from the log.</li>
                 </ul>
               </div>
@@ -389,6 +418,14 @@ function TradePage() {
                   </ul>
                 )}
                 {data.notes.map((n) => <p key={n} className="mt-1 italic">{n}</p>)}
+                {data.exit_rules && data.exit_rules.length > 0 && (
+                  <>
+                    <p className="font-bold text-brand-dark mt-3 mb-1">How this trade exits (whichever comes first)</p>
+                    <ul className="space-y-0.5 list-disc pl-4">
+                      {data.exit_rules.map((r) => <li key={r}>{r}</li>)}
+                    </ul>
+                  </>
+                )}
                 <p className="mt-2 text-gray-400">Daily bars, split-adjusted, from the price store: the bars the backtest and the forward log use.</p>
               </div>
             </div>
