@@ -414,15 +414,26 @@ function ScoreboardPage() {
       header: 'Ticker',
       cell: info => {
         const ticker = info.getValue()
+        // 2026-11-04 (Phase 4.6): "Chart" opens the trade page (/trade/{id})
         return (
-          <Link
-            to="/"
-            search={{ ticker }}
-            className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            {ticker}
-            <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              search={{ ticker }}
+              className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              {ticker}
+              <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+            </Link>
+            <Link
+              to="/trade/$id"
+              params={{ id: String(info.row.original.id) }}
+              title="Open the trade chart: bars, indicators, entry, levels and exit"
+              className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+            >
+              Chart
+            </Link>
+          </div>
         )
       },
     }),
@@ -568,15 +579,26 @@ function ScoreboardPage() {
       header: 'Ticker',
       cell: info => {
         const ticker = info.getValue()
+        // 2026-11-04 (Phase 4.6): "Chart" opens the trade page (/trade/{id})
         return (
-          <Link
-            to="/"
-            search={{ ticker }}
-            className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            {ticker}
-            <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              search={{ ticker }}
+              className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              {ticker}
+              <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+            </Link>
+            <Link
+              to="/trade/$id"
+              params={{ id: String(info.row.original.id) }}
+              title="Open the trade chart: bars, indicators, entry, levels and exit"
+              className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+            >
+              Chart
+            </Link>
+          </div>
         )
       },
     }),

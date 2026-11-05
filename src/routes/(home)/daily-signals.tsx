@@ -326,15 +326,26 @@ function DailySignalsPage() {
       header: 'Ticker',
       cell: info => {
         const ticker = info.getValue()
+        // 2026-11-04 (Phase 4.6): "Chart" opens the trade page (/trade/{id})
         return (
-          <Link
-            to="/"
-            search={{ ticker }}
-            className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            {ticker}
-            <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              search={{ ticker }}
+              className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              {ticker}
+              <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+            </Link>
+            <Link
+              to="/trade/$id"
+              params={{ id: String(info.row.original.id) }}
+              title="Open the trade chart: bars, indicators, entry, levels and exit"
+              className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+            >
+              Chart
+            </Link>
+          </div>
         )
       },
     }),
@@ -540,8 +551,8 @@ function DailySignalsPage() {
                   Daily Algorithmic Scanning
                 </h1>
                 <p className="text-sm text-gray-500 mt-2">
-                  {/* 2026-10-28 (release R1) */}Signals are scanned once a day on completed bars (06:30 SGT, after the US close); open signals are checked every hour. Tap any ticker symbol below
-                  to jump into its deep corporate valuation.
+                  {/* 2026-11-04 (release R2) */}Signals are scanned once a day on completed bars (08:15 SGT, after the US close and the crypto daily close) and open signals are resolved in the same run. Tap any ticker symbol below
+                  to jump into its deep corporate valuation, or “Chart” to see the trade on its bars.
                 </p>
               </div>
 
