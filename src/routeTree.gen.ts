@@ -24,6 +24,7 @@ import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
 import { Route as homeVerifyEmailRouteImport } from './routes/(home)/verify-email'
 import { Route as homeWatchlistRouteImport } from './routes/(home)/watchlist'
 import { Route as homeTradeIdRouteImport } from './routes/(home)/trade.$id'
+import { Route as homePromotionRouteImport } from './routes/(home)/promotion'
 import { Route as ApiThesisRouteImport } from './routes/api/thesis'
 import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
@@ -102,6 +103,11 @@ const homeTradeIdRoute = homeTradeIdRouteImport.update({
   path: '/trade/$id',
   getParentRoute: () => homeRouteRoute,
 } as any)
+const homePromotionRoute = homePromotionRouteImport.update({
+  id: '/promotion',
+  path: '/promotion',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 const ApiThesisRoute = ApiThesisRouteImport.update({
   id: '/api/thesis',
   path: '/api/thesis',
@@ -120,6 +126,7 @@ const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/trade/$id': typeof homeTradeIdRoute
+  '/promotion': typeof homePromotionRoute
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
   '/congress': typeof homeCongressRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/trade/$id': typeof homeTradeIdRoute
+  '/promotion': typeof homePromotionRoute
   '/health': typeof HealthRoute
   '/about': typeof homeAboutRoute
   '/congress': typeof homeCongressRoute
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(home)/trade/$id': typeof homeTradeIdRoute
+  '/(home)/promotion': typeof homePromotionRoute
   '/(home)': typeof homeRouteRouteWithChildren
   '/health': typeof HealthRoute
   '/(home)/about': typeof homeAboutRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/health'
     | '/trade/$id'
+    | '/promotion'
     | '/about'
     | '/congress'
     | '/daily-signals'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
   to:
     | '/health'
     | '/trade/$id'
+    | '/promotion'
     | '/about'
     | '/congress'
     | '/daily-signals'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/(home)/trade/$id'
+    | '/(home)/promotion'
     | '/(home)'
     | '/health'
     | '/(home)/about'
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       path: '/trade/$id'
       fullPath: '/trade/$id'
       preLoaderRoute: typeof homeTradeIdRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
+    '/(home)/promotion': {
+      id: '/(home)/promotion'
+      path: '/promotion'
+      fullPath: '/promotion'
+      preLoaderRoute: typeof homePromotionRouteImport
       parentRoute: typeof homeRouteRoute
     }
     '/(home)': {
@@ -379,6 +398,7 @@ declare module '@tanstack/react-router' {
 
 interface homeRouteRouteChildren {
   homeTradeIdRoute: typeof homeTradeIdRoute
+  homePromotionRoute: typeof homePromotionRoute
   homeAboutRoute: typeof homeAboutRoute
   homeCongressRoute: typeof homeCongressRoute
   homeDailySignalsRoute: typeof homeDailySignalsRoute
@@ -395,6 +415,7 @@ interface homeRouteRouteChildren {
 
 const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeTradeIdRoute: homeTradeIdRoute,
+  homePromotionRoute: homePromotionRoute,
   homeAboutRoute: homeAboutRoute,
   homeCongressRoute: homeCongressRoute,
   homeDailySignalsRoute: homeDailySignalsRoute,
