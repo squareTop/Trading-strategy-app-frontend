@@ -359,44 +359,44 @@ function PromotionPage() {
                   <thead>
                     <tr className="border-b border-brand-border text-gray-500 uppercase text-[10px] tracking-wider whitespace-nowrap bg-brand-bg/20">
                       <th className="py-3 px-3 min-w-[125px]">Version</th>
-                      <th className="py-3 px-3 min-w-[80px]">Stage</th>
+                      <th className="py-3 px-3 min-w-[80px] text-center">Stage</th>
                       <th className="py-3 px-3 min-w-[160px]">Recommendation</th>
                       <th className="py-3 px-3 text-right min-w-[90px]">Forward trades</th>
                       <th className="py-3 px-3 text-right min-w-[110px]" title="Mean net R of the resolved forward trades, with its 95% range">Forward mean R</th>
                       <th className="py-3 px-3 text-right min-w-[110px]" title="Backtest mean net R, confirmation period, with its 95% range">Backtest mean R</th>
                       <th className="py-3 px-3 text-right min-w-[100px]" title="Forward trades signalled in the last 91 days, against the backtest range">Last 3 months</th>
                       <th className="py-3 px-3 text-right min-w-[120px]" title="Last 20 due sessions: sessions with no check, unexplained rows">Fidelity</th>
-                      <th className="py-3 px-3 text-right min-w-[80px]" title="Resolved forward trades the simulator replays to the same result">Replay</th>
-                      <th className="py-3 px-3 text-right min-w-[60px]"></th>
+                      <th className="py-3 px-3 text-center min-w-[80px]" title="Resolved forward trades the simulator replays to the same result">Replay</th>
+                      <th className="py-3 px-3 text-center min-w-[60px]"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.rows.map((r) => (
                       <Fragment key={r.id}>
                         <tr className={`border-b border-brand-border/60 ${r.direction === 'all' ? 'bg-brand-bg/30 text-gray-500' : 'hover:bg-brand-bg/15'} transition-colors`}>
-                          <td className="py-3 px-3 whitespace-nowrap">
+                          <td className="py-3 px-3 whitespace-nowrap align-middle">
                             <span className="font-bold text-brand-dark">{r.strategy_version}</span>
                             <span className={`ml-1.5 uppercase text-[10px] font-bold ${r.direction === 'long' ? 'text-emerald-700' : r.direction === 'short' ? 'text-red-700' : 'text-gray-500'}`}>{r.direction}</span>
                           </td>
-                          <td className="py-3 px-3 whitespace-nowrap">
+                          <td className="py-3 px-3 whitespace-nowrap text-center align-middle">
                             {r.stage ? <span className="uppercase text-[10px] font-bold border rounded px-1.5 py-0.5 border-gray-300 inline-block bg-white text-gray-700">{r.stage}</span> : '—'}
                           </td>
-                          <td className="py-3 px-3">
+                          <td className="py-3 px-3 align-middle">
                             <span className={`inline-flex uppercase text-[10px] font-bold border rounded px-2 py-0.5 whitespace-nowrap ${REC_STYLE[r.recommendation]}`}>{recLabel(r)}</span>
                             {r.reasons && r.reasons[0] && r.direction !== 'all' && <span className="block text-[10px] text-gray-500 mt-1 font-sans max-w-xs leading-normal">{r.reasons[1] || r.reasons[0]}</span>}
                           </td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap">{r.fwd_trades}{r.fwd_open ? <span className="block text-[10px] text-gray-500">{r.fwd_open} open</span> : null}</td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap"><Range mean={r.fwd_mean_r} lo={r.fwd_mean_r_lo} hi={r.fwd_mean_r_hi} /></td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap"><Range mean={r.bt_mean_r} lo={r.bt_mean_r_lo} hi={r.bt_mean_r_hi} /></td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                          <td className="py-3 px-3 text-right whitespace-nowrap align-middle">{r.fwd_trades}{r.fwd_open ? <span className="block text-[10px] text-gray-500">{r.fwd_open} open</span> : null}</td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap align-middle"><Range mean={r.fwd_mean_r} lo={r.fwd_mean_r_lo} hi={r.fwd_mean_r_hi} /></td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap align-middle"><Range mean={r.bt_mean_r} lo={r.bt_mean_r_lo} hi={r.bt_mean_r_hi} /></td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap align-middle">
                             {r.recent_trades ? <>{fmtR(r.recent_mean_r)} R<span className="block text-[10px] text-gray-500">{r.recent_trades} trades{r.recent_vs_backtest ? `, ${r.recent_vs_backtest}` : ''}</span></> : '—'}
                           </td>
-                          <td className="py-3 px-3 text-right">
+                          <td className="py-3 px-3 text-right align-middle">
                             <span className={`font-bold ${r.fid_clean ? 'text-emerald-700' : 'text-amber-700'}`}>{r.fid_clean ? 'clean' : 'check'}</span>
                             <span className="block text-[10px] text-gray-500 whitespace-nowrap">{r.fid_sessions ?? 0} ses · {r.fid_failed_sessions ?? 0} missed · {r.fid_unexplained ?? 0} unexpl.</span>
                           </td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap">{r.replay_checked ? `${r.replay_matched} / ${r.replay_checked}` : '—'}</td>
-                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                          <td className="py-3 px-3 text-center whitespace-nowrap align-middle">{r.replay_checked ? `${r.replay_matched} / ${r.replay_checked}` : '—'}</td>
+                          <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
                             <button onClick={() => setOpen((o) => ({ ...o, [r.id]: !o[r.id] }))} className="text-brand-primary hover:underline text-[11px] font-bold cursor-pointer">
                               {open[r.id] ? 'Hide' : 'Details'}
                             </button>
