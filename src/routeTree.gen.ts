@@ -18,6 +18,7 @@ import { Route as homeDailySignalsRouteImport } from './routes/(home)/daily-sign
 import { Route as homeLoginRouteImport } from './routes/(home)/login'
 import { Route as homeMonteCarloRouteImport } from './routes/(home)/monte-carlo'
 import { Route as homeProfileRouteImport } from './routes/(home)/profile'
+import { Route as homePromotionRouteImport } from './routes/(home)/promotion'
 import { Route as homeRegisterRouteImport } from './routes/(home)/register'
 import { Route as homeScoreboardRouteImport } from './routes/(home)/scoreboard'
 import { Route as homeThesisRouteImport } from './routes/(home)/thesis'
@@ -26,6 +27,7 @@ import { Route as homeWatchlistRouteImport } from './routes/(home)/watchlist'
 import { Route as ApiThesisRouteImport } from './routes/api/thesis'
 import { Route as ApiThesisExplainRouteImport } from './routes/api/thesis-explain'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
+import { Route as homeTradeIdRouteImport } from './routes/(home)/trade.$id'
 
 const homeRouteRoute = homeRouteRouteImport.update({
   id: '/(home)',
@@ -71,6 +73,11 @@ const homeProfileRoute = homeProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => homeRouteRoute,
 } as any)
+const homePromotionRoute = homePromotionRouteImport.update({
+  id: '/promotion',
+  path: '/promotion',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 const homeRegisterRoute = homeRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -111,6 +118,11 @@ const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
   path: '/demo/tanstack-query',
   getParentRoute: () => rootRouteImport,
 } as any)
+const homeTradeIdRoute = homeTradeIdRouteImport.update({
+  id: '/trade/$id',
+  path: '/trade/$id',
+  getParentRoute: () => homeRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
@@ -120,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof homeLoginRoute
   '/monte-carlo': typeof homeMonteCarloRoute
   '/profile': typeof homeProfileRoute
+  '/promotion': typeof homePromotionRoute
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
@@ -129,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/api/thesis-explain': typeof ApiThesisExplainRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
+  '/trade/$id': typeof homeTradeIdRoute
 }
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
@@ -138,6 +152,7 @@ export interface FileRoutesByTo {
   '/login': typeof homeLoginRoute
   '/monte-carlo': typeof homeMonteCarloRoute
   '/profile': typeof homeProfileRoute
+  '/promotion': typeof homePromotionRoute
   '/register': typeof homeRegisterRoute
   '/scoreboard': typeof homeScoreboardRoute
   '/thesis': typeof homeThesisRoute
@@ -147,6 +162,7 @@ export interface FileRoutesByTo {
   '/api/thesis-explain': typeof ApiThesisExplainRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof homeIndexRoute
+  '/trade/$id': typeof homeTradeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -158,6 +174,7 @@ export interface FileRoutesById {
   '/(home)/login': typeof homeLoginRoute
   '/(home)/monte-carlo': typeof homeMonteCarloRoute
   '/(home)/profile': typeof homeProfileRoute
+  '/(home)/promotion': typeof homePromotionRoute
   '/(home)/register': typeof homeRegisterRoute
   '/(home)/scoreboard': typeof homeScoreboardRoute
   '/(home)/thesis': typeof homeThesisRoute
@@ -167,6 +184,7 @@ export interface FileRoutesById {
   '/api/thesis-explain': typeof ApiThesisExplainRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/(home)/': typeof homeIndexRoute
+  '/(home)/trade/$id': typeof homeTradeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -178,6 +196,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/monte-carlo'
     | '/profile'
+    | '/promotion'
     | '/register'
     | '/scoreboard'
     | '/thesis'
@@ -187,6 +206,7 @@ export interface FileRouteTypes {
     | '/api/thesis-explain'
     | '/demo/tanstack-query'
     | '/'
+    | '/trade/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/health'
@@ -196,6 +216,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/monte-carlo'
     | '/profile'
+    | '/promotion'
     | '/register'
     | '/scoreboard'
     | '/thesis'
@@ -205,6 +226,7 @@ export interface FileRouteTypes {
     | '/api/thesis-explain'
     | '/demo/tanstack-query'
     | '/'
+    | '/trade/$id'
   id:
     | '__root__'
     | '/(home)'
@@ -215,6 +237,7 @@ export interface FileRouteTypes {
     | '/(home)/login'
     | '/(home)/monte-carlo'
     | '/(home)/profile'
+    | '/(home)/promotion'
     | '/(home)/register'
     | '/(home)/scoreboard'
     | '/(home)/thesis'
@@ -224,6 +247,7 @@ export interface FileRouteTypes {
     | '/api/thesis-explain'
     | '/demo/tanstack-query'
     | '/(home)/'
+    | '/(home)/trade/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -299,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof homeProfileRouteImport
       parentRoute: typeof homeRouteRoute
     }
+    '/(home)/promotion': {
+      id: '/(home)/promotion'
+      path: '/promotion'
+      fullPath: '/promotion'
+      preLoaderRoute: typeof homePromotionRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
     '/(home)/register': {
       id: '/(home)/register'
       path: '/register'
@@ -355,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoTanstackQueryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(home)/trade/$id': {
+      id: '/(home)/trade/$id'
+      path: '/trade/$id'
+      fullPath: '/trade/$id'
+      preLoaderRoute: typeof homeTradeIdRouteImport
+      parentRoute: typeof homeRouteRoute
+    }
   }
 }
 
@@ -365,12 +403,14 @@ interface homeRouteRouteChildren {
   homeLoginRoute: typeof homeLoginRoute
   homeMonteCarloRoute: typeof homeMonteCarloRoute
   homeProfileRoute: typeof homeProfileRoute
+  homePromotionRoute: typeof homePromotionRoute
   homeRegisterRoute: typeof homeRegisterRoute
   homeScoreboardRoute: typeof homeScoreboardRoute
   homeThesisRoute: typeof homeThesisRoute
   homeVerifyEmailRoute: typeof homeVerifyEmailRoute
   homeWatchlistRoute: typeof homeWatchlistRoute
   homeIndexRoute: typeof homeIndexRoute
+  homeTradeIdRoute: typeof homeTradeIdRoute
 }
 
 const homeRouteRouteChildren: homeRouteRouteChildren = {
@@ -380,12 +420,14 @@ const homeRouteRouteChildren: homeRouteRouteChildren = {
   homeLoginRoute: homeLoginRoute,
   homeMonteCarloRoute: homeMonteCarloRoute,
   homeProfileRoute: homeProfileRoute,
+  homePromotionRoute: homePromotionRoute,
   homeRegisterRoute: homeRegisterRoute,
   homeScoreboardRoute: homeScoreboardRoute,
   homeThesisRoute: homeThesisRoute,
   homeVerifyEmailRoute: homeVerifyEmailRoute,
   homeWatchlistRoute: homeWatchlistRoute,
   homeIndexRoute: homeIndexRoute,
+  homeTradeIdRoute: homeTradeIdRoute,
 }
 
 const homeRouteRouteWithChildren = homeRouteRoute._addFileChildren(

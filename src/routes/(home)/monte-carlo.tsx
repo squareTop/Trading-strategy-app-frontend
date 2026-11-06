@@ -42,6 +42,7 @@ const FAMILY_LABEL: Record<McFamily, string> = {
   trend: 'Trend',
   mean_reversion: 'Mean reversion',
   price_action: 'Price action',
+  r2: 'R2 strategies (strategy files, net of costs)',   // 2026-10-30 (3.2-4)
 }
 const MODE_TEXT: Record<McMode, { label: string; hint: string }> = {
   trades: { label: 'Trade reshuffle', hint: 'Redraws the backtest’s trades at random. Answers in about a second.' },

@@ -14,7 +14,7 @@ import { isActiveStatus, type McStatus } from './monte-carlo-utils'
 
 export type { McStatus } from './monte-carlo-utils'
 export type McMode = 'trades' | 'paths'
-export type McFamily = 'trend' | 'mean_reversion' | 'price_action'
+export type McFamily = 'trend' | 'mean_reversion' | 'price_action' | 'r2'   // 2026-10-30 (3.2-4)
 
 export interface McStrategy {
   key: string
@@ -23,6 +23,8 @@ export interface McStrategy {
   directions: string[]
   designed_kinds: string[]
   est_seconds_per_path_per_1000_bars: number
+  style?: string | null           // 2026-10-30 (3.2-4): R2 entries
+  style_display?: string | null
 }
 
 export interface McStrategiesResponse {

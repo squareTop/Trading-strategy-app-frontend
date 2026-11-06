@@ -135,7 +135,7 @@ export interface ScoreboardSignal {
   ticker: string;
   pipeline: string;
   direction: 'long' | 'short';
-  status: 'target' | 'stop' | 'expired' | 'open';
+  status: 'target' | 'stop' | 'expired' | 'exit' | 'open';   // 2026-10-30 (3.2-4): 'exit' = own-signal exit (R2)
   entry: number;
   exit_price: number | null;
   realized_r: number | null;
@@ -213,8 +213,17 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   trend: 'SMA Crossover',
   mean_rev: 'Mean Reversion',
   price_action: 'Price Action',
+  // 2026-10-30 (3.2-4): from R2 the label is the strategy's style
+  trend_following: 'Trend following',
+  breakout: 'Breakout',
+  mean_reversion: 'Mean reversion',
+  pullback: 'Pullback',
+  failed_breakout: 'Failed breakout',
+  momentum: 'Momentum',
+  event_driven: 'Event driven',
   ALL: 'All Pipelines'
 }
+const R1_PIPELINES = ['trend', 'mean_rev', 'price_action']
 
 // 2026-10-23 (0.8): marks a signal from a strategy in the shadow stage. Shadow
 // signals fire, are logged and resolve like any other; the scoreboard leaves them
@@ -374,6 +383,11 @@ function ScoreboardPage() {
     return { netBasis: all.length > 0 && r1 === all.length, mixedBasis: r1 > 0 && r1 < all.length }
   }, [data])
   const net = netBasis ? ' (net)' : ''
+  // 2026-10-30 (3.2-4): R2 labels (styles) present in the log, for the filter
+  const styleOptions = useMemo(() => {
+    const all = [...(data?.resolved_signals || []), ...(data?.open_signals || [])]
+    return Array.from(new Set(all.map(s => s.pipeline).filter(p => p && !R1_PIPELINES.includes(p)))).sort()
+  }, [data])
 
   const filteredResolved = useMemo(() => {
     return monthFilteredResolved.filter(s => {
@@ -400,24 +414,35 @@ function ScoreboardPage() {
       header: 'Ticker',
       cell: info => {
         const ticker = info.getValue()
+        // 2026-11-04 (Phase 4.6): "Chart" opens the trade page (/trade/{id})
         return (
-          <Link
-            to="/"
-            search={{ ticker }}
-            className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            {ticker}
-            <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              search={{ ticker }}
+              className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              {ticker}
+              <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+            </Link>
+            <Link
+              to="/trade/$id"
+              params={{ id: String(info.row.original.id) }}
+              title="Open the trade chart: bars, indicators, entry, levels and exit"
+              className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+            >
+              Chart
+            </Link>
+          </div>
         )
       },
     }),
     resolvedColumnHelper.accessor('pipeline', {
-      header: 'Pipeline',
+      header: 'Pipeline / Style',
       cell: info => (
         <>
           <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-            {info.getValue()}
+            {PIPELINE_DISPLAY_NAMES[info.getValue()] || info.getValue()}
           </span>
           {/* 2026-10-23 (0.8) */}
           {info.row.original.stage === 'shadow' && <ShadowBadge />}
@@ -554,24 +579,35 @@ function ScoreboardPage() {
       header: 'Ticker',
       cell: info => {
         const ticker = info.getValue()
+        // 2026-11-04 (Phase 4.6): "Chart" opens the trade page (/trade/{id})
         return (
-          <Link
-            to="/"
-            search={{ ticker }}
-            className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            {ticker}
-            <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              search={{ ticker }}
+              className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              {ticker}
+              <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+            </Link>
+            <Link
+              to="/trade/$id"
+              params={{ id: String(info.row.original.id) }}
+              title="Open the trade chart: bars, indicators, entry, levels and exit"
+              className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+            >
+              Chart
+            </Link>
+          </div>
         )
       },
     }),
     openColumnHelper.accessor('pipeline', {
-      header: 'Pipeline',
+      header: 'Pipeline / Style',
       cell: info => (
         <>
           <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-            {info.getValue()}
+            {PIPELINE_DISPLAY_NAMES[info.getValue()] || info.getValue()}
           </span>
           {/* 2026-10-23 (0.8) */}
           {info.row.original.stage === 'shadow' && <ShadowBadge />}
@@ -844,15 +880,15 @@ function ScoreboardPage() {
               {/* 2026-10-26 (2.6) */}
               {mixedBasis && (
                 <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-                  R1 rows are net of the 0.10% round-trip cost and measured from the next-open fill; rows logged
-                  before R1 are gross, from the signal close. Pick a ruleset above to compare like with like.
+                  R1 rows are net of the 0.10% round-trip cost and R2 rows of their liquidity-tier cost, both measured
+                  from the next-open fill; rows logged before R1 are gross, from the signal close. Pick a ruleset above to compare like with like.
                 </p>
               )}
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs font-mono table-auto min-w-[950px]">
                   <thead>
                     <tr className="border-b border-brand-border bg-brand-bg text-gray-500 uppercase text-[10px] whitespace-nowrap">
-                      <th className="py-3 px-4 font-bold">Pipeline / Strategy</th>
+                      <th className="py-3 px-4 font-bold">Pipeline or Style / Strategy</th>
                       <th className="py-3 px-4 text-right font-bold">Resolved</th>
                       <th className="py-3 px-4 text-right font-bold">Open</th>
                       <th className="py-3 px-4 text-right font-bold">Win Rate{net}</th>
@@ -1131,6 +1167,10 @@ function ScoreboardPage() {
                       <option value="trend">SMA Crossover</option>
                       <option value="mean_rev">Mean Reversion</option>
                       <option value="price_action">Price Action</option>
+                      {/* 2026-10-30 (3.2-4): R2 styles present in the log */}
+                      {styleOptions.map(v => (
+                        <option key={v} value={v}>{PIPELINE_DISPLAY_NAMES[v] || v}</option>
+                      ))}
                     </select>
                   </div>
 

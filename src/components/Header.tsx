@@ -15,6 +15,7 @@ const navLinks = [
   { to: '/', label: 'IV Valuation' },
   { to: '/daily-signals', label: 'Daily Signals' },
   { to: '/scoreboard', label: 'Scoreboard' },
+  { to: '/promotion', label: 'Promotion' },   // 2026-11-05 (Phase 4.4)
   { to: '/thesis', label: 'Thesis AI' },
   { to: '/congress', label: 'Congress Trades' },
 ] as const
