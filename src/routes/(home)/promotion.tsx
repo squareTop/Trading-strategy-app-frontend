@@ -129,19 +129,19 @@ function recLabel(r: PromotionRow): string {
 function Detail({ r, history }: { r: PromotionRow; history: HistoryRow[] }) {
   const mine = history.filter((h) => h.strategy_version === r.strategy_version && (r.direction === 'all' || h.direction === r.direction))
   return (
-    <div className="grid gap-4 md:grid-cols-2 text-xs text-gray-700 p-4 bg-brand-bg/40 font-sans">
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 text-xs text-gray-700 p-4 bg-brand-bg/40 font-sans">
       <div>
         <p className="font-bold text-brand-dark mb-1">Why</p>
-        <ul className="space-y-0.5 list-disc pl-4">
+        <ul className="space-y-0.5 list-disc pl-4 break-words">
           {(r.reasons || []).map((x, i) => <li key={i}>{x}</li>)}
         </ul>
         {r.checks && r.checks.length > 0 && (
           <>
             <p className="font-bold text-brand-dark mt-3 mb-1">Checks</p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-0.5 break-words">
               {r.checks.map((c) => (
                 <li key={c.name}>
-                  <span className={c.met ? 'text-emerald-700' : 'text-gray-400'}>{c.met ? '✓' : '✗'}</span> {c.detail}
+                  <span className={c.met ? 'text-emerald-700 font-bold' : 'text-gray-400'}>{c.met ? '✓' : '✗'}</span> {c.detail}
                 </li>
               ))}
             </ul>
@@ -150,13 +150,13 @@ function Detail({ r, history }: { r: PromotionRow; history: HistoryRow[] }) {
         {(r.detail?.failed_sessions?.length || r.detail?.unexplained_rows?.length || r.detail?.replay_mismatched_ids?.length) ? (
           <>
             <p className="font-bold text-brand-dark mt-3 mb-1">To look at</p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-0.5 break-words">
               {r.detail?.failed_sessions?.length ? <li>Sessions with no fidelity check: {r.detail.failed_sessions.join(', ')}</li> : null}
               {r.detail?.unexplained_rows?.length ? <li>Unexplained fidelity rows: {r.detail.unexplained_rows.map(([d, why]) => `${d} ${why}`).join('; ')}</li> : null}
               {r.detail?.replay_mismatched_ids?.length ? (
                 <li>Replay differs from the log:{' '}
                   {r.detail.replay_mismatched_ids.map((id, i) => (
-                    <Fragment key={id}>{i ? ', ' : ''}<Link to="/trade/$id" params={{ id: String(id) }} className="text-brand-primary hover:underline">#{id}</Link></Fragment>
+                    <Fragment key={id}>{i ? ', ' : ''}<Link to="/trade/$id" params={{ id: String(id) }} className="text-brand-primary hover:underline font-bold">#{id}</Link></Fragment>
                   ))}
                 </li>
               ) : null}
@@ -166,17 +166,17 @@ function Detail({ r, history }: { r: PromotionRow; history: HistoryRow[] }) {
       </div>
       <div>
         <p className="font-bold text-brand-dark mb-1">Hypothesis {r.hypothesis_id || ''}</p>
-        <p>Archive condition (judged by you, not tested by the job): {r.archive_condition || '—'}</p>
-        <p className="mt-1">Ideas tried: {r.ideas_strategy ?? '—'} for {r.strategy}, {r.ideas_total ?? '—'} in the whole log.</p>
-        <p className="mt-1">Backtest: {r.bt_period || '—'}{r.bt_trades ? `, ${r.bt_trades.toLocaleString()} trades` : ''}{r.bt_asof ? `, statistics as of ${r.bt_asof}` : ''}{r.bt_random_excess !== null ? `; random-entry excess ${fmtR(r.bt_random_excess)} R` : ''}.</p>
-        <p className="mt-1">Forward: {r.fwd_sessions ?? 0} trading days since go-live ({r.go_live || '—'}); win rate {r.fwd_win_rate === null ? '—' : `${(r.fwd_win_rate * 100).toFixed(0)}%`}; PF {r.fwd_pf_no_losses ? 'no losses' : r.fwd_pf === null ? '—' : r.fwd_pf.toFixed(2)} (information only).</p>
+        <p className="break-words">Archive condition (judged by you, not tested by the job): {r.archive_condition || '—'}</p>
+        <p className="mt-1 break-words">Ideas tried: {r.ideas_strategy ?? '—'} for {r.strategy}, {r.ideas_total ?? '—'} in the whole log.</p>
+        <p className="mt-1 break-words">Backtest: {r.bt_period || '—'}{r.bt_trades ? `, ${r.bt_trades.toLocaleString()} trades` : ''}{r.bt_asof ? `, statistics as of ${r.bt_asof}` : ''}{r.bt_random_excess !== null ? `; random-entry excess ${fmtR(r.bt_random_excess)} R` : ''}.</p>
+        <p className="mt-1 break-words">Forward: {r.fwd_sessions ?? 0} trading days since go-live ({r.go_live || '—'}); win rate {r.fwd_win_rate === null ? '—' : `${(r.fwd_win_rate * 100).toFixed(0)}%`}; PF {r.fwd_pf_no_losses ? 'no losses' : r.fwd_pf === null ? '—' : r.fwd_pf.toFixed(2)} (information only).</p>
         {r.direction !== 'all' && <p className="mt-1 font-mono text-[11px] text-gray-500">Review row id {r.id} (stage_admin --review-id {r.id})</p>}
         <p className="font-bold text-brand-dark mt-3 mb-1">Stage history</p>
         {mine.length === 0 ? <p>None recorded.</p> : (
-          <ul className="space-y-0.5">
+          <ul className="space-y-1">
             {mine.map((h) => (
-              <li key={h.id}>
-                <span className="font-mono">{h.effective_from}</span> {h.direction}: {h.from_stage ? `${h.from_stage} → ` : ''}{h.to_stage} ({h.kind}), {h.reason} · {h.decided_by}
+              <li key={h.id} className="break-words leading-relaxed">
+                <span className="font-mono font-bold text-gray-800">{h.effective_from}</span> {h.direction}: {h.from_stage ? `${h.from_stage} → ` : ''}<span className="font-bold text-brand-dark">{h.to_stage}</span> ({h.kind}), {h.reason} · <span className="text-gray-500">{h.decided_by}</span>
                 {h.review_id ? ` · review ${h.review_id}` : ''}
               </li>
             ))}
@@ -194,11 +194,11 @@ function PromotionPage() {
 
   return (
     <div className="min-h-[calc(100vh-61px)] bg-brand-bg font-sans pb-12 flex flex-col">
-      <main className="max-w-360 w-full mx-auto px-4 md:px-8 mt-8 flex-1 flex flex-col gap-6">
-        <div className="bg-white border border-brand-border rounded-xl p-6 shadow-xs">
+      <main className="max-w-360 w-full mx-auto px-4 md:px-8 mt-4 sm:mt-8 flex-1 flex flex-col gap-4 sm:gap-6">
+        <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs">
           <p className="font-mono text-xs text-brand-primary font-bold uppercase tracking-wider">Promotion review</p>
-          <h1 className="font-display text-3xl font-extrabold text-brand-dark tracking-tight mt-1">Where each strategy version stands</h1>
-          <p className="text-sm text-gray-600 mt-2 max-w-3xl">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-brand-dark tracking-tight mt-1">Where each strategy version stands</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-2 max-w-3xl leading-relaxed">
             Every Saturday after the weekly run, the review compares each version’s forward results with its backtest,
             checks fidelity and replays the resolved trades, and recommends promote, hold, demote or archive. It never
             changes a stage: that is your call, made with stage_admin.
@@ -228,66 +228,196 @@ function PromotionPage() {
         )}
 
         {!isLoading && !error && data && data.rows.length > 0 && (
-          <div className="bg-white border border-brand-border rounded-xl shadow-xs overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs font-mono min-w-[1100px]">
-              <thead>
-                <tr className="border-b border-brand-border text-gray-500 uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">Version</th>
-                  <th className="py-3 px-4">Stage</th>
-                  <th className="py-3 px-4">Recommendation</th>
-                  <th className="py-3 px-4 text-right">Forward trades</th>
-                  <th className="py-3 px-4 text-right" title="Mean net R of the resolved forward trades, with its 95% range">Forward mean R</th>
-                  <th className="py-3 px-4 text-right" title="Backtest mean net R, confirmation period, with its 95% range">Backtest mean R</th>
-                  <th className="py-3 px-4 text-right" title="Forward trades signalled in the last 91 days, against the backtest range">Last 3 months</th>
-                  <th className="py-3 px-4 text-right" title="Last 20 due sessions: sessions with no check, unexplained rows">Fidelity</th>
-                  <th className="py-3 px-4 text-right" title="Resolved forward trades the simulator replays to the same result">Replay</th>
-                  <th className="py-3 px-4"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.rows.map((r) => (
-                  <Fragment key={r.id}>
-                    <tr className={`border-b border-brand-border/60 ${r.direction === 'all' ? 'bg-brand-bg/30 text-gray-500' : ''}`}>
-                      <td className="py-3 px-4">
-                        <span className="font-bold text-brand-dark">{r.strategy_version}</span>
-                        <span className={`ml-2 uppercase text-[10px] font-bold ${r.direction === 'long' ? 'text-emerald-700' : r.direction === 'short' ? 'text-red-700' : 'text-gray-500'}`}>{r.direction}</span>
-                      </td>
-                      <td className="py-3 px-4">{r.stage ? <span className="uppercase text-[10px] border rounded px-1.5 py-0.5 border-gray-300">{r.stage}</span> : '—'}</td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex uppercase text-[10px] font-bold border rounded px-2 py-0.5 ${REC_STYLE[r.recommendation]}`}>{recLabel(r)}</span>
-                        {r.reasons && r.reasons[0] && r.direction !== 'all' && <span className="block text-[10px] text-gray-500 mt-1 font-sans max-w-xs">{r.reasons[1] || r.reasons[0]}</span>}
-                      </td>
-                      <td className="py-3 px-4 text-right">{r.fwd_trades}{r.fwd_open ? <span className="block text-[10px] text-gray-500">{r.fwd_open} open</span> : null}</td>
-                      <td className="py-3 px-4 text-right"><Range mean={r.fwd_mean_r} lo={r.fwd_mean_r_lo} hi={r.fwd_mean_r_hi} /></td>
-                      <td className="py-3 px-4 text-right"><Range mean={r.bt_mean_r} lo={r.bt_mean_r_lo} hi={r.bt_mean_r_hi} /></td>
-                      <td className="py-3 px-4 text-right">
-                        {r.recent_trades ? <>{fmtR(r.recent_mean_r)} R<span className="block text-[10px] text-gray-500">{r.recent_trades} trades{r.recent_vs_backtest ? `, ${r.recent_vs_backtest}` : ''}</span></> : '—'}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className={r.fid_clean ? 'text-emerald-700' : 'text-amber-700'}>{r.fid_clean ? 'clean' : 'check'}</span>
-                        <span className="block text-[10px] text-gray-500">{r.fid_sessions ?? 0} sessions · {r.fid_failed_sessions ?? 0} missed · {r.fid_unexplained ?? 0} unexpl.</span>
-                      </td>
-                      <td className="py-3 px-4 text-right">{r.replay_checked ? `${r.replay_matched} / ${r.replay_checked}` : '—'}</td>
-                      <td className="py-3 px-4 text-right">
-                        <button onClick={() => setOpen((o) => ({ ...o, [r.id]: !o[r.id] }))} className="text-brand-primary hover:underline text-[11px]">
-                          {open[r.id] ? 'Hide' : 'Details'}
-                        </button>
-                      </td>
-                    </tr>
-                    {open[r.id] && (
-                      <tr className="border-b border-brand-border/60">
-                        <td colSpan={10} className="p-0"><Detail r={r} history={data.history} /></td>
-                      </tr>
+          <>
+            {/* Mobile Card View (< md) */}
+            <div className="md:hidden flex flex-col gap-3">
+              {data.rows.map((r) => {
+                const isOpen = !!open[r.id]
+                return (
+                  <div
+                    key={r.id}
+                    className={`bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden transition-all ${
+                      r.direction === 'all' ? 'bg-brand-bg/30 text-gray-600' : ''
+                    }`}
+                  >
+                    {/* Card Header */}
+                    <div className="p-4 border-b border-brand-border/60 flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-sm font-bold text-brand-dark">{r.strategy_version}</span>
+                          <span
+                            className={`uppercase text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                              r.direction === 'long'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : r.direction === 'short'
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : 'bg-gray-100 text-gray-600 border border-gray-200'
+                            }`}
+                          >
+                            {r.direction}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {r.stage ? (
+                            <span className="uppercase text-[10px] font-mono font-bold border border-gray-300 rounded px-1.5 py-0.5 text-gray-700 bg-gray-50 whitespace-nowrap">
+                              {r.stage}
+                            </span>
+                          ) : null}
+                          <span className={`inline-flex uppercase text-[10px] font-mono font-bold border rounded px-2 py-0.5 whitespace-nowrap ${REC_STYLE[r.recommendation]}`}>
+                            {recLabel(r)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {r.reasons && r.reasons[0] && r.direction !== 'all' && (
+                        <p className="text-xs text-gray-600 font-sans leading-relaxed">
+                          {r.reasons[1] || r.reasons[0]}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Metrics Grid */}
+                    <div className="p-3.5 grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-white text-xs font-mono">
+                      <div className="bg-brand-bg/40 p-2.5 rounded-lg border border-brand-border/50">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Fwd Trades</span>
+                        <span className="text-sm font-bold text-brand-dark">{r.fwd_trades}</span>
+                        {r.fwd_open ? <span className="block text-[10px] text-gray-500">{r.fwd_open} open</span> : null}
+                      </div>
+
+                      <div className="bg-brand-bg/40 p-2.5 rounded-lg border border-brand-border/50">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Fwd Mean R</span>
+                        <Range mean={r.fwd_mean_r} lo={r.fwd_mean_r_lo} hi={r.fwd_mean_r_hi} />
+                      </div>
+
+                      <div className="bg-brand-bg/40 p-2.5 rounded-lg border border-brand-border/50">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Backtest Mean R</span>
+                        <Range mean={r.bt_mean_r} lo={r.bt_mean_r_lo} hi={r.bt_mean_r_hi} />
+                      </div>
+
+                      <div className="bg-brand-bg/40 p-2.5 rounded-lg border border-brand-border/50">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Last 3 Months</span>
+                        {r.recent_trades ? (
+                          <>
+                            <span className="text-sm font-bold text-brand-dark">{fmtR(r.recent_mean_r)} R</span>
+                            <span className="block text-[10px] text-gray-500">{r.recent_trades} trades{r.recent_vs_backtest ? `, ${r.recent_vs_backtest}` : ''}</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </div>
+
+                      <div className="bg-brand-bg/40 p-2.5 rounded-lg border border-brand-border/50">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Fidelity</span>
+                        <span className={`text-sm font-bold ${r.fid_clean ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {r.fid_clean ? 'clean' : 'check'}
+                        </span>
+                        <span className="block text-[10px] text-gray-500">{r.fid_sessions ?? 0} ses · {r.fid_failed_sessions ?? 0} missed</span>
+                      </div>
+
+                      <div className="bg-brand-bg/40 p-2.5 rounded-lg border border-brand-border/50">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-0.5">Replay</span>
+                        <span className="text-sm font-bold text-brand-dark">
+                          {r.replay_checked ? `${r.replay_matched} / ${r.replay_checked}` : '—'}
+                        </span>
+                        {r.replay_checked ? (
+                          <span className="block text-[10px] text-gray-500">
+                            {r.replay_checked === r.replay_matched ? '100% match' : `${r.replay_checked - (r.replay_matched || 0)} diff`}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Details Action Bar */}
+                    <div className="px-4 py-2.5 bg-brand-bg/25 border-t border-brand-border/50 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setOpen((o) => ({ ...o, [r.id]: !o[r.id] }))}
+                        className="text-brand-primary hover:text-brand-primary-hover font-mono text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {isOpen ? 'Hide Details ▲' : 'View Details ▼'}
+                      </button>
+                    </div>
+
+                    {/* Details Container */}
+                    {isOpen && (
+                      <div className="border-t border-brand-border/80">
+                        <Detail r={r} history={data.history} />
+                      </div>
                     )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop / Tablet Table View (>= md) */}
+            <div className="hidden md:block bg-white border border-brand-border rounded-xl shadow-xs overflow-hidden">
+              <div className="lg:hidden px-4 py-2 bg-brand-bg/40 border-b border-brand-border text-[10px] font-mono text-gray-400 flex items-center justify-between">
+                <span>Scroll horizontally for all metrics &amp; fidelity →</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs font-mono min-w-[980px]">
+                  <thead>
+                    <tr className="border-b border-brand-border text-gray-500 uppercase text-[10px] tracking-wider whitespace-nowrap bg-brand-bg/20">
+                      <th className="py-3 px-3 min-w-[125px]">Version</th>
+                      <th className="py-3 px-3 min-w-[80px]">Stage</th>
+                      <th className="py-3 px-3 min-w-[160px]">Recommendation</th>
+                      <th className="py-3 px-3 text-right min-w-[90px]">Forward trades</th>
+                      <th className="py-3 px-3 text-right min-w-[110px]" title="Mean net R of the resolved forward trades, with its 95% range">Forward mean R</th>
+                      <th className="py-3 px-3 text-right min-w-[110px]" title="Backtest mean net R, confirmation period, with its 95% range">Backtest mean R</th>
+                      <th className="py-3 px-3 text-right min-w-[100px]" title="Forward trades signalled in the last 91 days, against the backtest range">Last 3 months</th>
+                      <th className="py-3 px-3 text-right min-w-[120px]" title="Last 20 due sessions: sessions with no check, unexplained rows">Fidelity</th>
+                      <th className="py-3 px-3 text-right min-w-[80px]" title="Resolved forward trades the simulator replays to the same result">Replay</th>
+                      <th className="py-3 px-3 text-right min-w-[60px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.rows.map((r) => (
+                      <Fragment key={r.id}>
+                        <tr className={`border-b border-brand-border/60 ${r.direction === 'all' ? 'bg-brand-bg/30 text-gray-500' : 'hover:bg-brand-bg/15'} transition-colors`}>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="font-bold text-brand-dark">{r.strategy_version}</span>
+                            <span className={`ml-1.5 uppercase text-[10px] font-bold ${r.direction === 'long' ? 'text-emerald-700' : r.direction === 'short' ? 'text-red-700' : 'text-gray-500'}`}>{r.direction}</span>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            {r.stage ? <span className="uppercase text-[10px] font-bold border rounded px-1.5 py-0.5 border-gray-300 inline-block bg-white text-gray-700">{r.stage}</span> : '—'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-flex uppercase text-[10px] font-bold border rounded px-2 py-0.5 whitespace-nowrap ${REC_STYLE[r.recommendation]}`}>{recLabel(r)}</span>
+                            {r.reasons && r.reasons[0] && r.direction !== 'all' && <span className="block text-[10px] text-gray-500 mt-1 font-sans max-w-xs leading-normal">{r.reasons[1] || r.reasons[0]}</span>}
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">{r.fwd_trades}{r.fwd_open ? <span className="block text-[10px] text-gray-500">{r.fwd_open} open</span> : null}</td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap"><Range mean={r.fwd_mean_r} lo={r.fwd_mean_r_lo} hi={r.fwd_mean_r_hi} /></td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap"><Range mean={r.bt_mean_r} lo={r.bt_mean_r_lo} hi={r.bt_mean_r_hi} /></td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            {r.recent_trades ? <>{fmtR(r.recent_mean_r)} R<span className="block text-[10px] text-gray-500">{r.recent_trades} trades{r.recent_vs_backtest ? `, ${r.recent_vs_backtest}` : ''}</span></> : '—'}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <span className={`font-bold ${r.fid_clean ? 'text-emerald-700' : 'text-amber-700'}`}>{r.fid_clean ? 'clean' : 'check'}</span>
+                            <span className="block text-[10px] text-gray-500 whitespace-nowrap">{r.fid_sessions ?? 0} ses · {r.fid_failed_sessions ?? 0} missed · {r.fid_unexplained ?? 0} unexpl.</span>
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">{r.replay_checked ? `${r.replay_matched} / ${r.replay_checked}` : '—'}</td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            <button onClick={() => setOpen((o) => ({ ...o, [r.id]: !o[r.id] }))} className="text-brand-primary hover:underline text-[11px] font-bold cursor-pointer">
+                              {open[r.id] ? 'Hide' : 'Details'}
+                            </button>
+                          </td>
+                        </tr>
+                        {open[r.id] && (
+                          <tr className="border-b border-brand-border/60">
+                            <td colSpan={10} className="p-0"><Detail r={r} history={data.history} /></td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {data && (
-          <div className="bg-white border border-brand-border rounded-xl p-4 shadow-xs text-xs text-gray-600 grid gap-2 md:grid-cols-2">
+          <div className="bg-white border border-brand-border rounded-xl p-4 sm:p-6 shadow-xs text-xs text-gray-600 grid gap-4 md:grid-cols-2">
             <div>
               <p className="font-bold text-brand-dark mb-1">The rules</p>
               <ul className="space-y-0.5 list-disc pl-4">
