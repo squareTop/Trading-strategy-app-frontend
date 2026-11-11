@@ -25,7 +25,7 @@ import {
   Layers,
   CheckCircle
 } from 'lucide-react'
-import { formatPercent, formatPrice, formatDate } from '../../lib/utils'
+import { formatPrice, formatDate } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
 import DailySignalsSkeleton from '../../components/skeletons/DailySignalsSkeleton'
 
@@ -87,6 +87,28 @@ export interface DailySignal {
   style?: string | null;
   style_display?: string | null;
   cost_rt?: number | null;
+  // 2026-11-11 (D2, Signal Data Quality & Labelling): context at the signal point
+  // (signal_context, stamped at 10:00 SGT); null until stamped
+  context?: SignalContextView | null;
+}
+
+// 2026-11-11 (D2): display strings built by the backend (foxel_signal_context.page_context)
+export interface SignalContextView {
+  regime: {
+    state: string;
+    stay: string | null;          // "55% stay · ~2.2 bars"
+    on_break: string | null;      // "on break → Avoid (default) 100% · 2 of 2 exits"
+    low_sample: boolean;          // fewer than 10 exits from this state seen
+    detail: string | null;        // full Markov readout (tooltip)
+  } | null;
+  news_label: string | null;      // Very bearish .. Very bullish | Thin news | No news
+  news_coverage: string | null;   // "8 articles over 6 days"
+  news_method: string | null;
+  analyst: string | null;         // "Buy 55% · 44 analysts · buy ↓5 pts in 3m"
+  analyst_view: 'Buy' | 'Hold' | 'Sell' | null;
+  analyst_asof: string | null;
+  analyst_stamped: boolean;
+  context_version: string | null;
 }
 
 export interface DailySignalJSONAPI {
@@ -209,14 +231,31 @@ function styleStrategyLabel(row: DailySignal): string {
   return `${pipelineName} / ${strategyName || 'N/A'}`
 }
 
-// 2026-10-30 (3.2-4): what the backtest columns mean on this row
-function backtestNote(row: DailySignal): string {
-  return row.backtest_scope === 'strategy'
-    ? `Past backtest of ${row.strategy_version} over its whole universe, net of costs — not an expected result`
-    : 'Past backtest result for this ticker — not an expected result'
+// 2026-11-11 (D2): the context columns are labels, not validated trade filters;
+// backtest and live performance live on the scoreboard only.
+const CONTEXT_NOTE = 'Context at the signal, not validated as a trade filter. Performance figures are on the Scoreboard.'
+
+const NEWS_STYLE: Record<string, string> = {
+  'Very bullish': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  'Bullish': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'Neutral': 'bg-gray-50 text-gray-600 border-gray-200',
+  'Bearish': 'bg-red-50 text-red-700 border-red-200',
+  'Very bearish': 'bg-red-100 text-red-800 border-red-300',
 }
-const BACKTEST_HEADER_NOTE =
-  'Past backtest results, not expected results. R2 rows: the strategy over its whole universe; R1 rows: this ticker'
+
+const ANALYST_STYLE: Record<string, string> = {
+  Buy: 'text-emerald-700',
+  Hold: 'text-gray-700',
+  Sell: 'text-red-700',
+}
+
+function NotStamped() {
+  return (
+    <span className="font-mono text-gray-400" title="Not stamped yet: context is added at 10:00 SGT, after the 08:15 scan">
+      —
+    </span>
+  )
+}
 
 // 2026-10-23 (0.8): marks a signal from a strategy in the shadow stage. Shadow
 // signals fire, are logged and resolve like any other; the scoreboard leaves them
@@ -450,57 +489,81 @@ function DailySignalsPage() {
         return <span className="font-mono text-emerald-600">{formatPrice(info.getValue(), 'USD')}</span>
       },
     }),
-    // 2026-10-23 (0.5): historical columns retitled, with a tooltip that they are past
-    // backtest results for this ticker (not expected results); green highlights removed.
-    // 2026-10-30 (3.2-4): "Backtest" columns; each cell's tooltip says whose backtest it is
-    columnHelper.accessor('win_rate', {
-      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest Win Rate</span>,
-      cell: info => {
-        const val = info.getValue()
-        return (
-          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
-            {val !== null ? formatPercent(val) : '-'}
-          </span>
-        )
-      },
-    }),
-    columnHelper.accessor('profit_factor', {
-      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest PF</span>,
-      cell: info => {
-        const val = info.getValue()
-        return (
-          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
-            {val === null ? '-' : val >= 999 ? 'No losses' : val.toFixed(2)}
-          </span>
-        )
-      },
-    }),
-    columnHelper.accessor('expectancy_r', {
-      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest Exp-R</span>,
-      cell: info => {
-        const val = info.getValue()
-        return (
-          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
-            {val !== null ? `${val.toFixed(2)} R` : '-'}
-          </span>
-        )
-      },
-    }),
-    // 2026-10-23 (0.5): number of backtest trades behind the historical figures
-    columnHelper.accessor('trade_count', {
-      header: () => <span title={BACKTEST_HEADER_NOTE}>Backtest Trades</span>,
-      cell: info => {
-        const val = info.getValue()
-        return (
-          <span className="font-mono text-gray-700" title={backtestNote(info.row.original)}>
-            {val ?? '-'}
-            {info.row.original.backtest_scope === 'strategy' && (
-              <span className="block text-[10px] text-gray-400">whole universe</span>
-            )}
-          </span>
-        )
-      },
-    }),
+    // 2026-11-11 (D2, Signal Data Quality & Labelling): the backtest columns (win rate,
+    // PF, expectancy-R, trades) are gone from this page - performance is shown on the
+    // scoreboard only. In their place, the context at the signal: regime (state and
+    // Markov readout), news sentiment and analyst consensus. Context, not trade filters.
+    columnHelper.accessor(
+      row => row.context?.regime?.state ?? '',
+      {
+        id: 'regime',
+        header: () => <span title={CONTEXT_NOTE}>Regime</span>,
+        cell: info => {
+          const r = info.row.original.context?.regime
+          if (!r) return <NotStamped />
+          return (
+            <div className="whitespace-normal min-w-[220px] max-w-[300px]" title={r.detail ?? undefined}>
+              <span className="font-semibold text-brand-dark">{r.state}</span>
+              {r.stay && <span className="block text-[11px] font-mono text-gray-600">{r.stay}</span>}
+              {r.on_break && <span className="block text-[11px] font-mono text-gray-500">{r.on_break}</span>}
+              {r.low_sample && (
+                <span
+                  className="mt-0.5 inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border border-dashed bg-amber-50 text-amber-700 border-amber-300"
+                  title="Fewer than 10 exits from this state seen in this ticker's history: the on-break numbers rest on few cases"
+                >
+                  Low sample
+                </span>
+              )}
+            </div>
+          )
+        },
+      }
+    ),
+    columnHelper.accessor(
+      row => row.context?.news_label ?? '',
+      {
+        id: 'news',
+        header: () => <span title={CONTEXT_NOTE}>News Sentiment</span>,
+        cell: info => {
+          const c = info.row.original.context
+          if (!c || !c.news_label) return <NotStamped />
+          const style = NEWS_STYLE[c.news_label] ?? 'bg-gray-50 text-gray-500 border-gray-200 border-dashed'
+          return (
+            <div title={`Up to 10 relevant news articles in the 30 days before the signal, at most 2 a day, rated by ${c.news_method ?? 'the news model'}`}>
+              <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${style}`}>
+                {c.news_label}
+              </span>
+              {c.news_coverage && <span className="block text-[11px] font-mono text-gray-500 mt-0.5">{c.news_coverage}</span>}
+            </div>
+          )
+        },
+      }
+    ),
+    columnHelper.accessor(
+      row => row.context?.analyst ?? '',
+      {
+        id: 'analyst',
+        header: () => <span title={CONTEXT_NOTE}>Analyst Consensus</span>,
+        cell: info => {
+          const c = info.row.original.context
+          if (!c) return <NotStamped />
+          if (!c.analyst) {
+            return (
+              <span className="font-mono text-gray-400" title={c.analyst_stamped ? 'No analyst coverage (usual for ETFs, commodity funds and crypto)' : 'Not stamped yet'}>
+                —
+              </span>
+            )
+          }
+          const [head, ...rest] = c.analyst.split(' · ')
+          return (
+            <div title={c.analyst_asof ? `FMP analyst grades as of ${c.analyst_asof}` : undefined}>
+              <span className={`font-mono font-bold ${ANALYST_STYLE[c.analyst_view ?? ''] ?? 'text-gray-700'}`}>{head}</span>
+              {rest.length > 0 && <span className="block text-[11px] font-mono text-gray-500">{rest.join(' · ')}</span>}
+            </div>
+          )
+        },
+      }
+    ),
   ]), [columnHelper])
 
   // Instantiate Table
@@ -553,6 +616,12 @@ function DailySignalsPage() {
                 <p className="text-sm text-gray-500 mt-2">
                   {/* 2026-11-04 (release R2) */}Signals are scanned once a day on completed bars (08:15 SGT, after the US close and the crypto daily close) and open signals are resolved in the same run. Tap any ticker symbol below
                   to jump into its deep corporate valuation, or “Chart” to see the trade on its bars.
+                </p>
+                {/* 2026-11-11 (D2) */}
+                <p className="text-xs text-gray-400 mt-2">
+                  Regime, news sentiment and analyst consensus are context at the signal, not validated trade filters.
+                  Backtest and live performance are on the{' '}
+                  <Link to="/scoreboard" className="underline hover:text-brand-primary">Scoreboard</Link>.
                 </p>
               </div>
 
