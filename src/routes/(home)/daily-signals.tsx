@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   useTable,
   tableFeatures,
@@ -90,6 +90,22 @@ export interface DailySignal {
   // 2026-11-11 (D2, Signal Data Quality & Labelling): context at the signal point
   // (signal_context, stamped at 10:00 SGT); null until stamped
   context?: SignalContextView | null;
+  // 2026-11-11 (D3): FCF Valuation from the site's DCF records (display only)
+  valuation?: ValuationView | null;
+}
+
+// 2026-11-11 (D3): built by the backend (foxel_signal_valuation.valuation_view)
+export interface ValuationView {
+  method: string;                 // "FCF"
+  label: string;                  // "FCF Valuation"
+  status: 'ok' | 'nm' | 'none' | 'n/a' | 'currency' | null;
+  iv: number | null;              // FCF intrinsic value per share
+  vs_price_pct: number | null;    // (price / IV - 1) x 100; negative = price below IV
+  price: number | null;           // fill price, else the signal-day close
+  asof: string | null;
+  stale: boolean | null;          // valuation older than 30 days
+  ocf_iv: number | null;
+  ni_iv: number | null;
 }
 
 // 2026-11-11 (D2): display strings built by the backend (foxel_signal_context.page_context)
@@ -249,6 +265,66 @@ const ANALYST_STYLE: Record<string, string> = {
   Sell: 'text-red-700',
 }
 
+// 2026-11-11 (D3): column ids and their menu labels (the ticker column is always shown)
+const COLUMN_LABELS: Record<string, string> = {
+  signal_date: 'Signal Date',
+  direction: 'Direction',
+  pipeline_strategy: 'Strategy',
+  entry: 'Entry',
+  stop: 'Stop Price',
+  target: 'Target Price',
+  regime: 'Regime',
+  news: 'News Sentiment',
+  analyst: 'Analyst Consensus',
+  valuation: 'FCF Valuation',
+}
+const HIDDEN_COLUMNS_KEY = 'foxel.dailySignals.hiddenColumns'
+
+function loadHiddenColumns(): string[] {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(HIDDEN_COLUMNS_KEY) : null
+    const v = raw ? JSON.parse(raw) : []
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x in COLUMN_LABELS) : []
+  } catch {
+    return []
+  }
+}
+
+function saveHiddenColumns(ids: string[]) {
+  try {
+    window.localStorage.setItem(HIDDEN_COLUMNS_KEY, JSON.stringify(ids))
+  } catch {
+    // storage unavailable (private window, blocked): the choice lasts for this visit only
+  }
+}
+
+// 2026-11-11 (D3): compact strategy label for the table cell; the full
+// "Style / Strategy (version)" label stays in the tooltip and the filter
+function shortStrategyLabel(row: DailySignal): string {
+  if (row.backtest_scope === 'strategy' && row.strategy_version) return row.strategy_version
+  return row.selected_strategy || (row.trigger ? row.trigger.split(':')[0] : '') || row.pipeline || 'N/A'
+}
+
+// 2026-11-11 (D3): valuation filter buckets
+function valuationBucket(v: ValuationView | null | undefined): string {
+  if (!v || !v.status) return 'none'
+  if (v.status === 'ok') {
+    if (v.vs_price_pct === null) return 'none'
+    return v.vs_price_pct < 0 ? 'below' : 'above'
+  }
+  if (v.status === 'n/a') return 'na'
+  if (v.status === 'nm') return 'nm'
+  return 'none'
+}
+
+const VALUATION_FILTERS: { value: string; label: string }[] = [
+  { value: 'below', label: 'Price below FCF IV' },
+  { value: 'above', label: 'Price above FCF IV' },
+  { value: 'nm', label: 'Not meaningful (negative FCF)' },
+  { value: 'none', label: 'Not valued yet' },
+  { value: 'na', label: 'Not a stock (ETF / crypto)' },
+]
+
 function NotStamped() {
   return (
     <span className="font-mono text-gray-400" title="Not stamped yet: context is added at 10:00 SGT, after the 08:15 scan">
@@ -309,6 +385,21 @@ function DailySignalsPage() {
   const [pipelineStrategyFilter, setPipelineStrategyFilter] = useState<string>('all')
   // 2026-10-23 (0.8): shadow-stage signals are shown by default; the filter hides them
   const [showShadow, setShowShadow] = useState<boolean>(true)
+  // 2026-11-11 (D3): context and valuation filters; hidden columns (remembered in this browser)
+  const [newsFilter, setNewsFilter] = useState<string>('all')
+  const [analystFilter, setAnalystFilter] = useState<string>('all')
+  const [regimeFilter, setRegimeFilter] = useState<string>('all')
+  const [valuationFilter, setValuationFilter] = useState<string>('all')
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([])
+  const [columnsMenuOpen, setColumnsMenuOpen] = useState<boolean>(false)
+  useEffect(() => { setHiddenColumns(loadHiddenColumns()) }, [])
+  const toggleColumn = (id: string) => {
+    setHiddenColumns(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      saveHiddenColumns(next)
+      return next
+    })
+  }
   const shadowCount = useMemo(() => signals.filter(s => s.stage === 'shadow').length, [signals])
 
   // Calculate high-level aggregated signals stats
@@ -344,6 +435,16 @@ function DailySignalsPage() {
     return Array.from(optionsSet).sort()
   }, [signals])
 
+  // 2026-11-11 (D3): options present in today's data
+  const newsOptions = useMemo(() => {
+    const order = ['Very bullish', 'Bullish', 'Neutral', 'Bearish', 'Very bearish', 'Thin news', 'No news']
+    const present = new Set(signals.map(s => s.context?.news_label).filter((x): x is string => !!x))
+    return order.filter(o => present.has(o))
+  }, [signals])
+  const regimeOptions = useMemo(() => {
+    return Array.from(new Set(signals.map(s => s.context?.regime?.state).filter((x): x is string => !!x))).sort()
+  }, [signals])
+
   // Custom filter logic
   const filteredData = useMemo(() => {
     if (!signals) return []
@@ -354,10 +455,17 @@ function DailySignalsPage() {
       const rowVal = styleStrategyLabel(s)   // 2026-10-30 (3.2-4)
       const matchesPipelineStrategy = pipelineStrategyFilter === 'all' || rowVal === pipelineStrategyFilter
       const matchesStage = showShadow || s.stage !== 'shadow'   // 2026-10-23 (0.8)
+      // 2026-11-11 (D3)
+      const matchesNews = newsFilter === 'all' || (newsFilter === 'none' ? !s.context?.news_label : s.context?.news_label === newsFilter)
+      const matchesAnalyst = analystFilter === 'all' || (analystFilter === 'none' ? !s.context?.analyst_view : s.context?.analyst_view === analystFilter)
+      const matchesRegime = regimeFilter === 'all' || s.context?.regime?.state === regimeFilter
+      const matchesValuation = valuationFilter === 'all' || valuationBucket(s.valuation) === valuationFilter
 
       return matchesSearch && matchesDirection && matchesPipelineStrategy && matchesStage
+        && matchesNews && matchesAnalyst && matchesRegime && matchesValuation
     })
-  }, [signals, tickerSearch, directionFilter, pipelineStrategyFilter, showShadow])
+  }, [signals, tickerSearch, directionFilter, pipelineStrategyFilter, showShadow,
+      newsFilter, analystFilter, regimeFilter, valuationFilter])
 
   // Define Columns
   const columns = useMemo(() => columnHelper.columns([
@@ -389,6 +497,7 @@ function DailySignalsPage() {
       },
     }),
     columnHelper.accessor('signal_date', {
+      id: 'signal_date',   // 2026-11-11 (D3): explicit id for the Columns menu
       header: 'Signal Date',
       cell: info => {
         const val = info.getValue()
@@ -403,6 +512,7 @@ function DailySignalsPage() {
       },
     }),
     columnHelper.accessor('direction', {
+      id: 'direction',   // 2026-11-11 (D3): explicit id for the Columns menu
       header: 'Direction',
       cell: info => {
         const dir = info.getValue()
@@ -424,11 +534,15 @@ function DailySignalsPage() {
       row => styleStrategyLabel(row),   // 2026-10-30 (3.2-4)
       {
         id: 'pipeline_strategy',
-        header: 'Style / Strategy',
+        header: 'Strategy',
+        // 2026-11-11 (D3): compact cell (version label); full label in the tooltip
         cell: info => (
           <>
-            <span className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60">
-              {info.getValue()}
+            <span
+              className="font-mono text-xs text-gray-700 bg-brand-bg px-2 py-0.5 rounded border border-brand-border/60"
+              title={info.getValue()}
+            >
+              {shortStrategyLabel(info.row.original)}
             </span>
             {/* 2026-10-23 (0.8) */}
             {info.row.original.stage === 'shadow' && <ShadowBadge />}
@@ -440,6 +554,7 @@ function DailySignalsPage() {
     // signal-close reference levels in grey; after it: the fill and the levels placed from it.
     // Rows logged before R1 are shown as before.
     columnHelper.accessor('entry', {
+      id: 'entry',   // 2026-11-11 (D3): explicit id for the Columns menu
       header: 'Entry',
       cell: info => {
         const s = info.row.original
@@ -464,6 +579,7 @@ function DailySignalsPage() {
       },
     }),
     columnHelper.accessor('stop', {
+      id: 'stop',   // 2026-11-11 (D3): explicit id for the Columns menu
       header: 'Stop Price',
       cell: info => {
         const s = info.row.original
@@ -477,6 +593,7 @@ function DailySignalsPage() {
       },
     }),
     columnHelper.accessor('target', {
+      id: 'target',   // 2026-11-11 (D3): explicit id for the Columns menu
       header: 'Target Price',
       cell: info => {
         const s = info.row.original
@@ -564,13 +681,70 @@ function DailySignalsPage() {
         },
       }
     ),
+    // 2026-11-11 (D3): FCF Valuation - the site's DCF on free cash flow (the IV Valuation
+    // page's default method) against the signal's price. Display only.
+    columnHelper.accessor(
+      row => row.valuation?.vs_price_pct ?? Number.POSITIVE_INFINITY,
+      {
+        id: 'valuation',
+        header: () => <span title="Intrinsic value per share from the site's DCF on free cash flow, against the signal's price (the fill once filled). Context, not a trade filter.">FCF Valuation</span>,
+        cell: info => {
+          const v = info.row.original.valuation
+          const ticker = info.row.original.ticker
+          if (!v || v.status === 'none' || v.status === null) {
+            return <span className="font-mono text-gray-400" title="Not valued yet: open signals' stocks are valued daily after the scan">—</span>
+          }
+          if (v.status === 'n/a') {
+            return <span className="font-mono text-gray-400" title="No DCF for ETFs, commodity funds or crypto">—</span>
+          }
+          if (v.status === 'currency') {
+            return <span className="font-mono text-gray-400" title="Valuation not in US dollars: not compared">—</span>
+          }
+          const others = [
+            v.ocf_iv !== null ? `OCF ${formatPrice(v.ocf_iv, 'USD')}` : null,
+            v.ni_iv !== null ? `NI ${formatPrice(v.ni_iv, 'USD')}` : null,
+          ].filter(Boolean).join(' · ')
+          const tip = `FCF Valuation${v.asof ? ` as of ${v.asof}` : ''}${v.stale ? ' (over 30 days old)' : ''}${others ? `. Other methods: ${others}` : ''}. Click for the full valuation.`
+          if (v.status === 'nm') {
+            return (
+              <Link to="/" search={{ ticker }} className="font-mono text-gray-500 hover:underline" title={`Negative or zero free cash flow: FCF valuation not meaningful. ${tip}`}>
+                n/m
+              </Link>
+            )
+          }
+          const pct = v.vs_price_pct
+          const below = pct !== null && pct < 0
+          return (
+            <Link to="/" search={{ ticker }} className="block hover:underline" title={tip}>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-gray-400 mr-1">FCF IV</span>
+              <span className="font-mono font-bold text-brand-dark">{v.iv !== null ? formatPrice(v.iv, 'USD') : '—'}</span>
+              {pct !== null && (
+                <span className={`block text-[11px] font-mono ${below ? 'text-emerald-700' : 'text-red-700'}`}>
+                  price {Math.abs(pct).toFixed(0)}% {below ? 'below' : 'above'}
+                  {v.stale && <span className="text-gray-400"> · old</span>}
+                </span>
+              )}
+            </Link>
+          )
+        },
+      }
+    ),
   ]), [columnHelper])
+
+  // 2026-11-11 (D3): hidden columns are left out of the table
+  const visibleColumns = useMemo(
+    () => columns.filter(c => {
+      const id = (c as { id?: string }).id
+      return !(id && hiddenColumns.includes(id))
+    }),
+    [columns, hiddenColumns],
+  )
 
   // Instantiate Table
   const table = useTable({
     features,
     data: filteredData,
-    columns,
+    columns: visibleColumns,
     state: {
       sorting,
     },
@@ -596,6 +770,10 @@ function DailySignalsPage() {
     setDirectionFilter('all')
     setPipelineStrategyFilter('all')
     setShowShadow(true)   // 2026-10-23 (0.8)
+    setNewsFilter('all')     // 2026-11-11 (D3)
+    setAnalystFilter('all')
+    setRegimeFilter('all')
+    setValuationFilter('all')
     setSorting([])
   }
 
@@ -760,20 +938,76 @@ function DailySignalsPage() {
                 {/* Pipeline / Strategy Filter Dropdown */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hidden sm:inline">
-                    Style / Strategy:
+                    Strategy:
                   </span>
                   <select
                     value={pipelineStrategyFilter}
                     onChange={(e) => setPipelineStrategyFilter(e.target.value)}
                     className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
                   >
-                    <option value="all">All Styles / Strategies</option>
+                    <option value="all">All Strategies</option>
                     {pipelineStrategyOptions.map(opt => (
                       <option key={opt} value={opt}>
                         {opt}
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* 2026-11-11 (D3): context and valuation filters */}
+                <select value={newsFilter} onChange={(e) => setNewsFilter(e.target.value)} className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10" title="News sentiment">
+                  <option value="all">All News</option>
+                  {newsOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                  <option value="none">Not stamped</option>
+                </select>
+                <select value={analystFilter} onChange={(e) => setAnalystFilter(e.target.value)} className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10" title="Analyst consensus (dominant view)">
+                  <option value="all">All Analyst Views</option>
+                  <option value="Buy">Buy</option>
+                  <option value="Hold">Hold</option>
+                  <option value="Sell">Sell</option>
+                  <option value="none">No coverage</option>
+                </select>
+                <select value={regimeFilter} onChange={(e) => setRegimeFilter(e.target.value)} className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10" title="Regime state">
+                  <option value="all">All Regimes</option>
+                  {regimeOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <select value={valuationFilter} onChange={(e) => setValuationFilter(e.target.value)} className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10" title="FCF Valuation">
+                  <option value="all">All Valuations</option>
+                  {VALUATION_FILTERS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+
+                {/* 2026-11-11 (D3): show / hide columns */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setColumnsMenuOpen(o => !o)}
+                    className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 hover:bg-brand-border/30 cursor-pointer whitespace-nowrap"
+                    aria-expanded={columnsMenuOpen}
+                  >
+                    Columns{hiddenColumns.length > 0 ? ` (${hiddenColumns.length} hidden)` : ''}
+                  </button>
+                  {columnsMenuOpen && (
+                    <div className="absolute z-30 mt-1 w-56 bg-white border border-brand-border rounded-lg shadow-lg p-2 left-0">
+                      {Object.entries(COLUMN_LABELS).map(([id, label]) => (
+                        <label key={id} className="flex items-center gap-2 px-2 py-1 text-xs text-gray-700 rounded hover:bg-brand-bg cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!hiddenColumns.includes(id)}
+                            onChange={() => toggleColumn(id)}
+                            className="accent-brand-primary cursor-pointer"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setColumnsMenuOpen(false)}
+                        className="mt-1 w-full text-[11px] font-mono font-bold text-gray-500 hover:text-brand-primary py-1 cursor-pointer"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2026-10-23 (0.8): show / hide shadow-stage signals (shown by default) */}
@@ -792,7 +1026,8 @@ function DailySignalsPage() {
 
                 {/* Reset / Actions */}
                 <div className="flex items-center gap-3 sm:ml-auto ml-0">
-                  {(tickerSearch || directionFilter !== 'all' || pipelineStrategyFilter !== 'all' || !showShadow || sorting.length > 0) && (
+                  {(tickerSearch || directionFilter !== 'all' || pipelineStrategyFilter !== 'all' || !showShadow || sorting.length > 0
+                    || newsFilter !== 'all' || analystFilter !== 'all' || regimeFilter !== 'all' || valuationFilter !== 'all') && (
                     <button
                       onClick={handleResetFilters}
                       className="text-xs text-gray-500 hover:text-brand-primary font-mono font-bold flex items-center gap-1 hover:underline transition-all cursor-pointer whitespace-nowrap"

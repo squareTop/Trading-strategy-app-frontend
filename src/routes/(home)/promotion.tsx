@@ -4,12 +4,14 @@
 // against backtest net R with 95% ranges, fidelity, the replay), plus the version's
 // stage history. Every figure is the job's own: nothing is calculated here, so the
 // Phase 4 hand check holds on the page. The review recommends; a stage moves only
-// when Andrew runs stage_admin, citing the review row's id. No login, like the
-// scoreboard.
+// when Andrew runs stage_admin, citing the review row's id.
+// 2026-11-11 (D3): logged-in users only, like Watchlist and Monte Carlo (linked from
+// the profile menu); the API requires a login too, so the data is not public.
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { Fragment, useState } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { Fragment, useEffect, useState } from 'react'
 import { API_URL } from '../../lib/config'
+import { useAuth } from '../../lib/auth'   // 2026-11-11 (D3)
 
 type Num = number | null
 
@@ -77,7 +79,7 @@ export interface PromotionResponse {
 const promotionQueryOptions = queryOptions({
   queryKey: ['promotion'],
   queryFn: async () => {
-    const response = await fetch(`${API_URL}/api/promotion`)
+    const response = await fetch(`${API_URL}/api/promotion`, { credentials: 'include' })   // 2026-11-11 (D3): login cookie
     if (!response.ok) throw new Error(`Failed to fetch the promotion review: error status ${response.status}`)
     return response.json() as Promise<PromotionResponse>
   },
@@ -91,9 +93,7 @@ export const Route = createFileRoute('/(home)/promotion')({
       { name: 'description', content: 'Weekly promotion review: each strategy version’s forward results against its backtest, fidelity and the recommendation.' },
     ],
   }),
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(promotionQueryOptions).catch(() => { })
-  },
+  // 2026-11-11 (D3): no prefetch in the loader - the API needs the visitor's login
   component: PromotionPage,
 })
 
@@ -188,7 +188,15 @@ function Detail({ r, history }: { r: PromotionRow; history: HistoryRow[] }) {
 }
 
 function PromotionPage() {
-  const { data, isLoading, error, refetch } = useQuery(promotionQueryOptions)
+  // 2026-11-11 (D3): route protection (same as Watchlist / Monte Carlo)
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      navigate({ to: '/login', search: { redirect: '/promotion' } })
+    }
+  }, [isAuthLoading, isAuthenticated, navigate])
+  const { data, isLoading, error, refetch } = useQuery({ ...promotionQueryOptions, enabled: isAuthenticated })
   const [open, setOpen] = useState<Record<number, boolean>>({})
   const th = data?.thresholds || {}
 
