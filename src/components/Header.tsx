@@ -8,6 +8,7 @@ import {
   Bookmark,
   Dices,
   Loader2,
+  Award,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
@@ -15,7 +16,7 @@ const navLinks = [
   { to: '/', label: 'IV Valuation' },
   { to: '/daily-signals', label: 'Daily Signals' },
   { to: '/scoreboard', label: 'Scoreboard' },
-  { to: '/promotion', label: 'Promotion' },   // 2026-11-05 (Phase 4.4)
+  // 2026-11-11 (D3): Promotion moved to the profile menu (logged-in users only)
   { to: '/thesis', label: 'Thesis AI' },
   { to: '/congress', label: 'Congress Trades' },
 ] as const
@@ -160,6 +161,15 @@ function UserMenu({ onOpen, size = 'md' }: UserMenuProps) {
             >
               <Dices className="w-4 h-4 text-purple-600 shrink-0" />
               <span>Monte Carlo</span>
+            </Link>
+            {/* 2026-11-11 (D3): Promotion review, logged-in users only */}
+            <Link
+              to="/promotion"
+              onClick={() => setDropdownOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2 text-gray-700 hover:bg-brand-bg hover:text-brand-dark transition-colors font-sans text-xs"
+            >
+              <Award className="w-4 h-4 text-brand-primary shrink-0" />
+              <span>Promotion</span>
             </Link>
           </div>
 
