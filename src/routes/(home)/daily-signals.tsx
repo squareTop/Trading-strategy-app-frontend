@@ -28,6 +28,9 @@ import {
 import { formatPrice, formatDate } from '../../lib/utils'
 import { API_URL } from '../../lib/config'
 import DailySignalsSkeleton from '../../components/skeletons/DailySignalsSkeleton'
+// 2026-11-12 (Scoreboard Rebuild): each row carries its strategy's live record
+import { StrategyBadge } from '../../components/scoreboard/StrategyBadge'
+import { scoreboardSummaryQueryOptions, summaryLookup } from '../../lib/scoreboard'
 
 const features = tableFeatures({
   columnVisibilityFeature,
@@ -68,6 +71,7 @@ export interface DailySignal {
   backtest_asof: string | null;
   // 2026-10-23 (0.8): strategy stage when logged (research | shadow | forward | paper | live)
   stage?: string | null;
+  ruleset_version?: string | null;   // 2026-11-12: finds the row's scoreboard card
   // 2026-10-23 (0.5): latest daily run that checked this signal (generated_at_sgt = first logged)
   last_checked_sgt?: string | null;
   // 2026-10-25 (2.2): from R1 a signal fires on a completed daily bar and enters at the next
@@ -183,6 +187,8 @@ export const Route = createFileRoute('/(home)/daily-signals')({
   }),
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(dailySignalsQueryOptions).catch(() => { });
+    // 2026-11-12: the badges' one request; a failure leaves the rows without badges
+    await context.queryClient.ensureQueryData(scoreboardSummaryQueryOptions).catch(() => { });
   },
   pendingComponent: DailySignalsSkeleton,
   pendingMs: 50,
@@ -367,6 +373,10 @@ function RefLevel({ value, title }: { value: number; title: string }) {
 
 function DailySignalsPage() {
   const { data: signalsResponse, isLoading, error, refetch } = useQuery(dailySignalsQueryOptions)
+  // 2026-11-12 (Scoreboard Rebuild): one summary request per page; each row looks up its badge.
+  // If it fails, the signals still show, without badges.
+  const { data: scoreSummary } = useQuery(scoreboardSummaryQueryOptions)
+  const badgeFor = useMemo(() => summaryLookup(scoreSummary), [scoreSummary])
 
   // Map JSON:API data array to normal list of DailySignals
   const signals = useMemo(() => {
@@ -474,24 +484,29 @@ function DailySignalsPage() {
       cell: info => {
         const ticker = info.getValue()
         // 2026-11-04 (Phase 4.6): "Chart" opens the trade page (/trade/{id})
+        // 2026-11-12 (Scoreboard Rebuild): the strategy's live record under the ticker
+        // (this column cannot be hidden, so the badge always shows)
         return (
-          <div className="flex items-center gap-2">
-            <Link
-              to="/"
-              search={{ ticker }}
-              className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              {ticker}
-              <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
-            </Link>
-            <Link
-              to="/trade/$id"
-              params={{ id: String(info.row.original.id) }}
-              title="Open the trade chart: bars, indicators, entry, levels and exit"
-              className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
-            >
-              Chart
-            </Link>
+          <div className="flex flex-col items-start gap-1 min-w-48">
+            <div className="flex items-center gap-2">
+              <Link
+                to="/"
+                search={{ ticker }}
+                className="font-mono font-black text-brand-primary hover:text-brand-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                {ticker}
+                <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
+              </Link>
+              <Link
+                to="/trade/$id"
+                params={{ id: String(info.row.original.id) }}
+                title="Open the trade chart: bars, indicators, entry, levels and exit"
+                className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+              >
+                Chart
+              </Link>
+            </div>
+            <StrategyBadge line={badgeFor(info.row.original)} />
           </div>
         )
       },
@@ -729,7 +744,7 @@ function DailySignalsPage() {
         },
       }
     ),
-  ]), [columnHelper])
+  ]), [columnHelper, badgeFor])   // 2026-11-12: badges arrive after the rows
 
   // 2026-11-11 (D3): hidden columns are left out of the table
   const visibleColumns = useMemo(
