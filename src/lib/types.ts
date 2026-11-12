@@ -66,3 +66,147 @@ export interface FoxelSignalIVResponse {
   error?: string;
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2026-11-12 (Scoreboard Rebuild): GET /api/scoreboard/v2 and /summary.
+// Every figure is computed on the server (app/strategies/scoreboard.py); the
+// browser only shows them.
+// ─────────────────────────────────────────────────────────────────────────────
+export type ScoreVerdict = 'too_few' | 'inside' | 'below' | 'above' | 'no_backtest'
+export type ScoreColour = 'neutral' | 'green' | 'red'
+
+export interface ScoreBacktest {
+  mean_r: number | null
+  mean_r_lo: number | null
+  mean_r_hi: number | null
+  trades: number | null
+  asof: string | null
+  period: string | null
+}
+
+export interface ScorePoint {
+  date: string
+  cum_r: number
+  trades: number
+  expected_r: number | null
+}
+
+export interface ScoreMonth {
+  month: string
+  closed: number
+  wins: number
+  win_rate: number
+  mean_r: number
+  sum_r: number
+}
+
+export interface ScoreOpenTrade {
+  id: number
+  ticker: string
+  direction: string
+  signal_date: string
+  unrealised_r: number | null
+  awaiting_fill: boolean
+}
+
+export interface ScoreClosedTrade {
+  id: number
+  ticker: string
+  direction: string
+  signal_date: string
+  exit_date: string
+  status: string
+  r: number | null
+}
+
+export interface ScoreCardData {
+  key: string
+  strategy: string
+  version: number | null
+  version_label: string
+  label: string
+  display_name: string | null
+  style: string | null
+  style_display: string | null
+  direction: 'long' | 'short' | 'all'
+  anchor: string
+  section: 'live' | 'shadow' | 'retired'
+  stage: string | null
+  go_live: string | null
+  sessions_live: number | null
+  asof: string | null
+  signals: number
+  signals_per_week: number | null
+  closed: number
+  open: number
+  unscored: number
+  mean_r: number | null
+  mean_r_lo: number | null
+  mean_r_hi: number | null
+  backtest: ScoreBacktest | null
+  verdict: ScoreVerdict
+  colour: ScoreColour
+  win_rate: number | null
+  avg_winner_r: number | null
+  avg_loser_r: number | null
+  worst_losing_streak: number
+  max_drawdown_r: number
+  median_hold_bars: number | null
+  open_unrealised: {
+    open: number
+    priced: number
+    awaiting_fill: number
+    sum_r: number | null
+    share_above_0: number | null
+  }
+  recent: { days: number; closed: number; mean_r: number | null }
+  show_chart: boolean
+  cumulative: ScorePoint[]
+  by_month: ScoreMonth[]
+  open_trades: ScoreOpenTrade[]
+  closed_trades: ScoreClosedTrade[]
+  earlier: string[]
+  retired_on: string | null
+  retired_reason: string | null
+  last_signal?: string | null
+  record: string
+}
+
+export interface ScoreRetiredGroup {
+  strategy: string
+  display_name: string | null
+  style_display: string | null
+  cards: ScoreCardData[]
+}
+
+export interface ScoreboardV2Response {
+  computed_at: string | null
+  asof: string | null
+  stale: boolean
+  expected_us_bar: string | null
+  min_closed: number
+  tooltips: Record<string, string>
+  live: ScoreCardData[]
+  retired: ScoreRetiredGroup[]
+}
+
+export interface ScoreSummaryLine {
+  key: string
+  direction: string
+  section: 'live' | 'shadow' | 'retired'
+  label: string | null
+  stage: string | null
+  closed: number | null
+  mean_r: number | null
+  mean_r_lo: number | null
+  mean_r_hi: number | null
+  verdict: ScoreVerdict | null
+  colour: ScoreColour | null
+  record: string | null
+  anchor: string | null
+}
+
+export interface ScoreboardSummaryResponse {
+  computed_at: string | null
+  lines: ScoreSummaryLine[]
+}
