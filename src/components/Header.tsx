@@ -271,6 +271,13 @@ export default function Header() {
             )
           })}
 
+          <a
+            href="/options-hunter/index.html"
+            className="px-3.5 py-2 rounded-lg font-bold uppercase tracking-wider transition-all border border-solid border-transparent text-[11px] whitespace-nowrap text-gray-600 hover:text-brand-primary hover:bg-brand-bg/50"
+          >
+            Options Hunter
+          </a>
+
           {/* Desktop User Menu Dropdown */}
           <div className="relative ml-2 pl-4 border-l border-brand-border">
             <UserMenu size="md" />
@@ -323,6 +330,13 @@ export default function Header() {
               </Link>
             )
           })}
+          <a
+            href="/options-hunter/index.html"
+            onClick={() => setMenuOpen(false)}
+            className="px-3.5 py-2.5 rounded-lg font-bold uppercase tracking-wider transition-all border border-solid border-transparent text-[11px] text-gray-600 hover:text-brand-primary hover:bg-brand-bg/50"
+          >
+            Options Hunter
+          </a>
         </nav>
       )}
     </header>
