@@ -17,11 +17,25 @@
   <div style="display:flex;align-items:end"><button id="chainReload" type="button">Load contracts</button></div>
 </div>
 <p id="chainReferenceNote" class="small muted" style="margin:10px 0 0">Enter a recent stock price for strike distance and exercise value. It is manually entered, may be stale, and is not a synchronized underlying quote.</p>
+<div id="hunterUnifiedSignals" class="panel" style="margin-top:14px;padding:14px">
+  <h3 style="margin:0 0 6px">Signal context <span class="pill">Historical research</span></h3>
+  <p class="small muted">Optional: link the selected archived FoxelSignal signal to these listed options. The signal is NOT database-verified. No probabilities have been estimated. Uses the stock price entered above.</p>
+  <div class="controls" style="margin-top:12px">
+    <div><label for="alignmentObservedUtc">Stock price observed at (UTC)</label>
+      <input id="alignmentObservedUtc" type="text" inputmode="text" placeholder="YYYY-MM-DD HH:MM UTC" autocomplete="off" aria-describedby="alignmentTimeHelp" /></div>
+    <div style="display:flex;align-items:end"><button type="button" id="alignmentUseNow">Use current UTC time</button></div>
+    <div style="display:flex;align-items:end"><button type="button" id="alignmentLoad">Apply selected signal</button></div>
+  </div>
+  <p id="alignmentTimeHelp" class="small muted" style="margin-top:8px">Enter the UTC time when you really observed the stock price. Use the button only immediately after obtaining a fresh price. The backend requires an observation no older than five minutes and cannot verify the entered stock price.</p>
+  <div id="alignmentStatus" class="small muted" role="status" style="margin-top:8px">Browse contracts normally, or select an archived signal and apply it here.</div>
+  <div id="alignmentMetadata" class="small muted" style="margin-top:8px"></div>
+</div>
+
 <div id="chainStatus" role="status" class="small muted" style="margin-top:12px">Set your staging backend URL to load Alpaca data.</div>
 <div id="chainSummary" role="status" class="small muted" style="margin-top:7px">No contracts loaded.</div>
 <div id="chainGreeksStatus" role="status" class="small muted" style="margin-top:7px">IV / Delta coverage: no contracts loaded.</div>
 <div class="small muted" style="margin-top:9px">**Sell premium** = indicative bid × 100 (amount received if selling one standard contract). **Buy cost** = indicative ask × 100 (amount paid if buying one standard contract). Neither is net profit; fees, assignment, contract multiplier and price movement matter. Select a row for further details.</div>
-<div style="overflow-x:auto;margin-top:12px"><table id="chainTable"><thead><tr><th>Type</th><th>Strike</th><th>Distance</th><th>Sell premium*</th><th>Buy cost*</th><th>Bid/ask width*</th><th>IV</th><th>Delta</th><th>Details</th></tr></thead><tbody><tr><td colspan="9">No contracts loaded</td></tr></tbody></table></div>
+<div style="overflow-x:auto;margin-top:12px"><table id="chainTable"><thead><tr><th>Type</th><th>Strike</th><th>Distance</th><th>Sell premium*</th><th>Buy cost*</th><th>Bid/ask width*</th><th>IV</th><th>Delta</th><th>Signal evidence</th><th>Details</th></tr></thead><tbody><tr><td colspan="10">No contracts loaded</td></tr></tbody></table></div>
 <div class="controls" style="margin-top:10px;align-items:center"><button id="chainPrevious" type="button" disabled>Previous</button><span id="chainPage" class="small muted">Page 0 of 0</span><button id="chainNext" type="button" disabled>Next</button></div>
 <div class="small muted" style="margin-top:12px">* Free Alpaca indicative quotes are modified and trades may be delayed: NOT executable. Standard US equity contracts generally cover 100 shares, but adjusted contracts can differ; multiplier must be confirmed separately. No orders are placed. IV and Delta are shown only when delivered by the data provider, and missing values are never guessed. No probability of profit is inferred from Delta.</div>
 
@@ -41,20 +55,7 @@ const contexts=DATA.context.filter(c=>c.signal_id===s.id);const c=contexts.find(
 byId('intelligence').innerHTML=cards.map(([name,value])=>`<div class="card"><div class="small muted">${esc(name)}</div><div style="font-weight:600;margin-top:5px">${display(value)}</div></div>`).join('');
 }byId('ticker').addEventListener('change',fillSignals);byId('signal').addEventListener('change',render);byId('mode').addEventListener('change',render);byId('metric').addEventListener('change',render);fillSignals();</script><script src="/options-hunter/config.js"></script>
 <script src="/options-hunter/live_chain.js"></script>
-<section class="panel" id="hunterAlignmentPanel" aria-labelledby="hunterAlignmentTitle" style="margin-top:18px">
-  <h2 id="hunterAlignmentTitle">Signal-linked options contracts <span class="pill">v0.6 · Research</span></h2>
-  <p class="small muted">Uses an archived FoxelSignal signal from the embedded research snapshot (NOT verified against the staging database) and real listed Alpaca contracts. No signal-conditioned strike probabilities have been calculated. Quotes are indicative, not executable.</p>
-  <div class="controls" style="margin-top:12px">
-    <div><label for="alignmentReference">Observed stock price (USD)</label><input id="alignmentReference" type="number" step="0.01" min="0.01" placeholder="Enter a newly observed price" inputmode="decimal" /></div>
-    <div><label for="alignmentObservedUtc">Price observed at (UTC)</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="alignmentObservedUtc" type="text" inputmode="text" placeholder="YYYY-MM-DD HH:MM UTC" aria-describedby="alignmentTimeHelp" autocomplete="off" style="flex:1;min-width:175px" /><button type="button" id="alignmentUseNow" title="Only when you observed the entered stock price just now">Use current UTC time</button></div></div>
-    <div style="display:flex;align-items:end"><button id="alignmentLoad" type="button">Align selected signal and contracts</button></div>
-  </div>
-  <p id="alignmentTimeHelp" class="small muted" style="margin-top:8px">Enter the actual UTC observation time as YYYY-MM-DD HH:MM, or click “Use current UTC time” only if you just checked the stock price. A price older than five minutes must be refreshed. The backend cannot verify your price against the options feed.</p>
-  <div id="alignmentStatus" role="status" class="small muted" style="margin-top:10px">Select a recorded signal and listed expiration, then enter a recently observed stock price and its UTC time.</div>
-  <div id="alignmentMetadata" class="small muted" style="margin-top:8px"></div>
-  <div style="overflow-x:auto;margin-top:12px"><table id="alignmentTable"><thead><tr><th>Contract</th><th>Strike</th><th>Distance from stock</th><th>Expiry</th><th>Weekdays left*</th><th>Sell premium*</th><th>Buy cost*</th><th>IV / Delta</th><th>Signal probability</th><th>Quality flags</th></tr></thead><tbody><tr><td colspan="10">No alignment requested.</td></tr></tbody></table></div>
-  <p class="small muted" style="margin-top:10px">*Theoretical gross US dollars per assumed 100-share contract; excludes fees and assignment obligations. Weekdays are an estimate, not an exchange-holiday calendar. All quotes are Alpaca indicative. No forecast, trade recommendation, or expected P&amp;L is provided.</p>
-</section>
+
 
 <script src="/options-hunter/alignment.js" defer></script>
 </body></html>

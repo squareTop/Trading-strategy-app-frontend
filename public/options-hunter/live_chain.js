@@ -5,6 +5,7 @@ const api = String(window.FOXEL_OPTIONS_API_BASE || '').replace(/\/$/, '');
 const status=$('chainStatus'), expiry=$('chainExpiry'), table=$('chainTable'), tbody=table?.querySelector('tbody');
 if(!status||!expiry||!tbody)return;
 let rows=[],generation=0,page=0,partial=false,quoteStatus='';
+let signalAlignment=null;
 const ticker=()=>String($('ticker')?.value||'').toUpperCase();
 const num=x=>typeof x==='number'&&Number.isFinite(x)?x:null;
 const fmt=(x,d=2)=>num(x)!==null?x.toFixed(d):'Not available';
@@ -47,7 +48,7 @@ function filtered(){
 function addCell(tr,value,mono=false){const td=tr.insertCell();td.textContent=String(value);if(mono)td.className='mono';return td;}
 function showDetail(item,tr,spot){
   const detail=tbody.insertRow();detail.className='chain-detail-row';
-  const cell=detail.insertCell();cell.colSpan=9;
+  const cell=detail.insertCell();cell.colSpan=10;
   const bid=num(item.bid),ask=num(item.ask),strike=num(item.strike);
   const valid=bid!==null&&ask!==null&&bid>=0&&ask>=bid;
   const midpoint=valid?(bid+ask)/2:null;
@@ -73,7 +74,7 @@ function display(){
   const pages=Math.ceil(records.length/limit);page=Math.max(0,Math.min(page,pages-1));
   const visible=records.slice(page*limit,(page+1)*limit);
   tbody.replaceChildren();
-  if(!visible.length){const c=tbody.insertRow().insertCell();c.colSpan=9;c.textContent=rows.length&&spot===null&&($('chainDistance').value!=='all'||$('chainPosition').value!=='all')?'Enter a stock price to apply these filters.':'No matching contracts.';}
+  if(!visible.length){const c=tbody.insertRow().insertCell();c.colSpan=10;c.textContent=rows.length&&spot===null&&($('chainDistance').value!=='all'||$('chainPosition').value!=='all')?'Enter a stock price to apply these filters.':'No matching contracts.';}
   for(const item of visible){
     const bid=num(item.bid),ask=num(item.ask),strike=num(item.strike);
     const valid=bid!==null&&ask!==null&&bid>=0&&ask>=bid;
@@ -87,6 +88,12 @@ function display(){
     addCell(tr,valid?money((ask-bid)*100):'Not available');
     addCell(tr,num(item.implied_volatility)===null?'Not available':(item.implied_volatility*100).toFixed(1)+'%');
     addCell(tr,fmt(item.delta,3));
+    // Never infer probabilities from delta or the archived strategy name.
+    const isAligned=!!signalAlignment && signalAlignment.ticker===ticker() &&
+      signalAlignment.expiration===expiry.value &&
+      Number(signalAlignment.reference_price)===spot &&
+      signalAlignment.contracts.has(item.symbol);
+    addCell(tr, isAligned ? 'Archived signal · probability not estimated' : 'Not aligned');
     const cell=tr.insertCell(),btn=document.createElement('button');
     btn.type='button';btn.textContent='View details';btn.setAttribute('aria-expanded','false');
     btn.addEventListener('click',()=>{
@@ -104,6 +111,7 @@ function display(){
   $('chainGreeksStatus').textContent='Greeks coverage (entire returned chain): IV '+iv+'/'+rows.length+' · Delta '+delta+'/'+rows.length+(rows.length&&iv===0&&delta===0?' · Provider supplied no usable IV/Delta; inspect later-dated, near-the-money contracts with nonzero bids and asks.':'');
 }
 async function loadDates(){
+  signalAlignment=null;
   const g=++generation,t=ticker();rows=[];partial=false;page=0;display();expiry.replaceChildren(new Option('Loading…',''));
   if(!api){note('Set FOXEL_OPTIONS_API_BASE in frontend config.js');return;}
   note('Loading '+t+' expirations from Alpaca…');
@@ -118,6 +126,7 @@ async function loadDates(){
   }catch(e){if(g!==generation)return;expiry.replaceChildren(new Option('Unavailable',''));note(e.message);}
 }
 async function loadChain(g){
+  signalAlignment=null;
   const requestId=g??++generation,t=ticker(),ex=expiry.value,side=$('chainSide').value;
   if(!ex)return;
   note('Loading '+t+' '+side+' contracts expiring '+ex+'…');
@@ -136,5 +145,19 @@ for(const id of ['chainReference','chainDistance','chainPosition','chainSort','c
 $('chainReload').addEventListener('click',loadDates);
 $('chainPrevious').addEventListener('click',()=>{page=Math.max(0,page-1);display();});
 $('chainNext').addEventListener('click',()=>{page++;display();});
+// Alignment is supplied only after the v0.6.1 endpoint verifies archived response identity.
+window.addEventListener('foxel:alignment', event => {
+  const info=event.detail;
+  if(!info || info.ticker!==ticker() || info.expiration!==expiry.value ||
+     !['all','call','put'].includes(info.side) || info.side!==$('chainSide').value ||
+     reference()===null || info.reference_price!==reference() || !Array.isArray(info.contracts)) return;
+  signalAlignment={ ticker:info.ticker, expiration:info.expiration,
+    reference_price:info.reference_price,
+    contracts:new Set(info.contracts.filter(c=>c && c.expiration===expiry.value &&
+      (info.side==='all' || c.type===info.side)).map(c=>c.symbol).filter(Boolean)) };
+  display();
+});
+window.addEventListener('foxel:alignment-clear', () => { signalAlignment=null; display(); });
+$('signal')?.addEventListener('change', () => {signalAlignment=null;display();});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadDates);else loadDates();
 })();
