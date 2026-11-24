@@ -41,4 +41,20 @@ const contexts=DATA.context.filter(c=>c.signal_id===s.id);const c=contexts.find(
 byId('intelligence').innerHTML=cards.map(([name,value])=>`<div class="card"><div class="small muted">${esc(name)}</div><div style="font-weight:600;margin-top:5px">${display(value)}</div></div>`).join('');
 }byId('ticker').addEventListener('change',fillSignals);byId('signal').addEventListener('change',render);byId('mode').addEventListener('change',render);byId('metric').addEventListener('change',render);fillSignals();</script><script src="/options-hunter/config.js"></script>
 <script src="/options-hunter/live_chain.js"></script>
+<section class="panel" id="hunterAlignmentPanel" aria-labelledby="hunterAlignmentTitle" style="margin-top:18px">
+  <h2 id="hunterAlignmentTitle">Signal-linked options contracts <span class="pill">v0.6 · Research</span></h2>
+  <p class="small muted">Uses the selected recorded FoxelSignal signal and real listed Alpaca contracts. No signal-conditioned strike probabilities have been calculated. Quotes are indicative, not executable.</p>
+  <div class="controls" style="margin-top:12px">
+    <div><label for="alignmentReference">Observed stock price (USD)</label><input id="alignmentReference" type="number" step="0.01" min="0.01" placeholder="Enter a newly observed price" inputmode="decimal" /></div>
+    <div><label for="alignmentObservedUtc">Price observed at (UTC)</label><input id="alignmentObservedUtc" type="datetime-local" step="1" aria-describedby="alignmentTimeHelp" /></div>
+    <div style="display:flex;align-items:end"><button id="alignmentLoad" type="button">Align selected signal and contracts</button></div>
+  </div>
+  <p id="alignmentTimeHelp" class="small muted" style="margin-top:8px">Enter when you actually observed that price, in UTC (not Singapore time). The backend allows observations no more than five minutes old. It cannot verify your quote against the options feed.</p>
+  <div id="alignmentStatus" role="status" class="small muted" style="margin-top:10px">Select a recorded signal and listed expiration, then enter a recently observed stock price and its UTC time.</div>
+  <div id="alignmentMetadata" class="small muted" style="margin-top:8px"></div>
+  <div style="overflow-x:auto;margin-top:12px"><table id="alignmentTable"><thead><tr><th>Contract</th><th>Strike</th><th>Distance from stock</th><th>Expiry</th><th>Weekdays left*</th><th>Sell premium*</th><th>Buy cost*</th><th>IV / Delta</th><th>Signal probability</th><th>Quality flags</th></tr></thead><tbody><tr><td colspan="10">No alignment requested.</td></tr></tbody></table></div>
+  <p class="small muted" style="margin-top:10px">*Theoretical gross US dollars per assumed 100-share contract; excludes fees and assignment obligations. Weekdays are an estimate, not an exchange-holiday calendar. All quotes are Alpaca indicative. No forecast, trade recommendation, or expected P&amp;L is provided.</p>
+</section>
+
+<script src="/options-hunter/alignment.js" defer></script>
 </body></html>
