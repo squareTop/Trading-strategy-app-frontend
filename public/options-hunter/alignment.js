@@ -45,7 +45,7 @@
     const side = $('chainSide')?.value || 'all';
     const priceText = $('alignmentReference')?.value.trim() || '';
     const price = Number(priceText);
-    const observed = $('alignmentObservedUtc')?.value || '';
+    const observed = ($('alignmentObservedUtc')?.value || '').trim();
     if (!api) { status.textContent = 'Backend address missing from options-hunter/config.js.'; return; }
     if (!signal) { status.textContent = 'Choose a valid archived signal for this ticker.'; return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(expiration)) { status.textContent = 'Choose a listed expiration first.'; return; }
@@ -53,10 +53,12 @@
     if (!priceText || !Number.isFinite(price) || price <= 0) {
       status.textContent = 'Enter a positive, recently observed stock price.'; return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(observed)) {
-      status.textContent = 'Enter the actual UTC date and time when you observed that price.'; return;
+    // Plain UTC input avoids browser-specific datetime-local parsing and timezone conversion.
+    const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*(?:UTC|Z))?$/i.exec(observed);
+    if (!match) {
+      status.textContent = 'Enter UTC as YYYY-MM-DD HH:MM, or use the current UTC time button after checking the price.'; return;
     }
-    const iso = observed + (observed.length === 16 ? ':00Z' : 'Z');
+    const iso = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] || '00'}Z`;
     const stamp = Date.parse(iso);
     const age = Date.now() - stamp;
     if (!Number.isFinite(stamp) || age > 300000 || age < -30000) {
@@ -133,6 +135,15 @@
       button.disabled = false;
     }
   }
+  $('alignmentUseNow')?.addEventListener('click', () => {
+    if (!($('alignmentReference')?.value || '').trim()) {
+      status.textContent = 'First enter a stock price you just observed, then set its UTC time.';
+      return;
+    }
+    const now = new Date();
+    $('alignmentObservedUtc').value = now.toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
+    status.textContent = 'Current UTC time entered. Confirm the stock price was actually observed just now; otherwise refresh the quote.';
+  });
   button.addEventListener('click', loadAlignment);
   for (const id of ['ticker', 'signal', 'chainExpiry', 'chainSide']) {
     $(id)?.addEventListener('change', () => {
