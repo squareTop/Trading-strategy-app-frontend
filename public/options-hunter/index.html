@@ -43,7 +43,7 @@ byId('intelligence').innerHTML=cards.map(([name,value])=>`<div class="card"><div
 <script src="/options-hunter/live_chain.js"></script>
 <section class="panel" id="hunterAlignmentPanel" aria-labelledby="hunterAlignmentTitle" style="margin-top:18px">
   <h2 id="hunterAlignmentTitle">Signal-linked options contracts <span class="pill">v0.6 · Research</span></h2>
-  <p class="small muted">Uses the selected recorded FoxelSignal signal and real listed Alpaca contracts. No signal-conditioned strike probabilities have been calculated. Quotes are indicative, not executable.</p>
+  <p class="small muted">Uses an archived FoxelSignal signal from the embedded research snapshot (NOT verified against the staging database) and real listed Alpaca contracts. No signal-conditioned strike probabilities have been calculated. Quotes are indicative, not executable.</p>
   <div class="controls" style="margin-top:12px">
     <div><label for="alignmentReference">Observed stock price (USD)</label><input id="alignmentReference" type="number" step="0.01" min="0.01" placeholder="Enter a newly observed price" inputmode="decimal" /></div>
     <div><label for="alignmentObservedUtc">Price observed at (UTC)</label><input id="alignmentObservedUtc" type="datetime-local" step="1" aria-describedby="alignmentTimeHelp" /></div>
