@@ -113,6 +113,11 @@ export interface DailySignal {
   hit_10?: boolean | null;
   hit_20?: boolean | null;
   status?: string | null;
+  exit_reason?: string | null;         // 2026-11-26 (R3a.5): for the Status column
+  resolved_date?: string | null;
+  exit_price?: number | null;
+  realized_r_net?: number | null;
+  realized_r?: number | null;
 }
 
 // 2026-11-11 (D3): built by the backend (foxel_signal_valuation.valuation_view)
@@ -314,6 +319,7 @@ const COLUMN_LABELS: Record<string, string> = {
   valuation: 'FCF Valuation',
   sector_regime: 'Sector Regime',   // 2026-11-26 (R3a.5)
   moves: 'Move 5/10/20d',
+  status: 'Status',
 }
 const HIDDEN_COLUMNS_KEY = 'foxel.dailySignals.hiddenColumns'
 
@@ -403,21 +409,58 @@ function RefLevel({ value, title }: { value: number; title: string }) {
 }
 
 // 2026-11-26 (R3a.5): the move in the signal's direction after 5 / 10 / 20 sessions, from
-// the next open (fwd_ret_*); green when it beat the round-trip cost (hit_*). Scored daily.
+// the next open, net of the round-trip cost (fwd_ret_*: already in %); green when it beat
+// the cost (hit_*). Scored daily.
 function MoveCell({ s }: { s: DailySignal }) {
   const cells: [string, number | null | undefined, boolean | null | undefined][] = [
     ['5', s.fwd_ret_5, s.hit_5], ['10', s.fwd_ret_10, s.hit_10], ['20', s.fwd_ret_20, s.hit_20],
   ]
   return (
-    <div className="flex gap-2 font-mono text-[11px]" title="Move in the signal's direction from the next open, after 5 / 10 / 20 sessions. Green: beat the round-trip cost. Blank until that many sessions have passed.">
+    <div className="flex gap-2 font-mono text-[11px]" title="Move in the signal's direction from the next open, after 5 / 10 / 20 sessions, net of the round-trip cost (+ = the price went the signal's way). Green: beat the cost. Blank until that many sessions have passed. Independent of the trade's own stop and target.">
       {cells.map(([h, v, hit]) => (
         <span key={h} className="flex flex-col items-end min-w-10">
           <span className="text-[9px] text-gray-400">{h}d</span>
           <span className={v === null || v === undefined ? 'text-gray-300' : hit ? 'text-emerald-700 font-bold' : 'text-red-700'}>
-            {v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${(v * 100).toFixed(1)}%`}
+            {v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`}
           </span>
         </span>
       ))}
+    </div>
+  )
+}
+
+// 2026-11-26 (R3a.5): open, or how the trade closed and its net R
+const STATUS_NAMES: Record<string, string> = {
+  target: 'Target', stop: 'Stop', gap_stop: 'Gap stop', expired: 'Time cap', exit: 'Strategy exit',
+  break_even_stop: 'Break-even', trail_stop: 'Trail stop', invalid: 'Invalid',
+}
+const STATUS_CHIP: Record<string, string> = {
+  open: 'bg-blue-50 text-blue-700 border-blue-200',
+  target: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  stop: 'bg-red-50 text-red-700 border-red-200',
+}
+function StatusCell({ s }: { s: DailySignal }) {
+  const st = s.status || 'open'
+  if (st === 'open') {
+    return (
+      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${STATUS_CHIP.open}`}
+        title={s.fill_date ? `Filled ${s.fill_date}` : 'Waiting for the next open'}>
+        {s.fill_date ? 'Open' : 'Awaiting fill'}
+      </span>
+    )
+  }
+  const reason = (s.exit_reason || st).replace(/^own_exit:/, '')
+  const name = STATUS_NAMES[reason] || STATUS_NAMES[st] || reason.replace(/_/g, ' ')
+  const r = s.realized_r_net ?? s.realized_r ?? null
+  return (
+    <div className="flex flex-col items-start gap-0.5"
+      title={`Closed${s.resolved_date ? ` ${s.resolved_date}` : ''}${s.exit_price != null ? ` at ${s.exit_price}` : ''}`}>
+      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${STATUS_CHIP[st] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+        {name}
+      </span>
+      {r !== null && (
+        <span className={`text-[11px] font-mono ${r >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{r >= 0 ? '+' : ''}{r.toFixed(2)}R</span>
+      )}
     </div>
   )
 }
@@ -606,6 +649,15 @@ function DailySignalsPage() {
         )
       },
     }),
+    // 2026-11-26 (R3a.5): open, or closed with its exit and net R
+    columnHelper.accessor(
+      row => row.status ?? 'open',
+      {
+        id: 'status',
+        header: 'Status',
+        cell: info => <StatusCell s={info.row.original} />,
+      }
+    ),
     columnHelper.accessor(
       row => styleStrategyLabel(row),   // 2026-10-30 (3.2-4)
       {
