@@ -31,6 +31,10 @@ import DailySignalsSkeleton from '../../components/skeletons/DailySignalsSkeleto
 // 2026-11-12 (Scoreboard Rebuild): each row carries its strategy's live record
 import { StrategyBadge } from '../../components/scoreboard/StrategyBadge'
 import { scoreboardSummaryQueryOptions, summaryLookup } from '../../lib/scoreboard'
+// 2026-11-26 (R3a.5): regime panel, group filter, session window, chart drawer
+import { RegimePanel, RegimeChip } from '../../components/RegimePanel'
+import type { RegimeLevel, RegimeTile, SignalWindow } from '../../components/RegimePanel'
+import { ChartDrawer } from '../../components/ChartDrawer'
 
 const features = tableFeatures({
   columnVisibilityFeature,
@@ -96,6 +100,19 @@ export interface DailySignal {
   context?: SignalContextView | null;
   // 2026-11-11 (D3): FCF Valuation from the site's DCF records (display only)
   valuation?: ValuationView | null;
+  // 2026-11-26 (R3a.3 / R3a.5): stamps at the signal and the scoring of the move
+  sector?: string | null;
+  industry?: string | null;
+  sector_regime?: string | null;       // the sector's regime on the signal day
+  market_regime?: string | null;
+  sector_regime_now?: string | null;   // the sector's regime today
+  fwd_ret_5?: number | null;           // move in the signal's direction, from the next open
+  fwd_ret_10?: number | null;
+  fwd_ret_20?: number | null;
+  hit_5?: boolean | null;              // move beat the round-trip cost
+  hit_10?: boolean | null;
+  hit_20?: boolean | null;
+  status?: string | null;
 }
 
 // 2026-11-11 (D3): built by the backend (foxel_signal_valuation.valuation_view)
@@ -144,6 +161,10 @@ export interface DailySignalsResponse {
     last_checked_sgt?: string | null;   // 2026-10-23 (0.5)
     r2_universe?: number | null;        // 2026-10-30 (3.2-4): tickers a roster strategy admits (R2)
     strategies?: Record<string, R2StrategyInfo | null>;   // 2026-10-30 (3.2-4)
+    level?: string | null;              // 2026-11-26 (R3a.5)
+    group?: string | null;
+    window?: number | null;             // null: open signals; else sessions
+    group_regime?: (RegimeTile & { date: string }) | null;
   };
 }
 
@@ -161,17 +182,25 @@ export interface R2StrategyInfo {
   } | null;
 }
 
-export const dailySignalsQueryOptions = queryOptions({
-  queryKey: ['dailySignals'],
+// 2026-11-26 (R3a.5): ?level&group&window (the regime panel's selection and the session window)
+export interface SignalQuery { level?: RegimeLevel; group?: string | null; window?: SignalWindow }
+export const dailySignalsQuery = (q: SignalQuery = {}) => queryOptions({
+  queryKey: ['dailySignals', q.level ?? null, q.group ?? null, q.window ?? 'open'],
   queryFn: async () => {
-    const response = await fetch(`${API_URL}/daily-signals`);
+    const params = new URLSearchParams()
+    if (q.group && q.level) { params.set('level', q.level); params.set('group', q.group) }
+    if (q.window && q.window !== 'open') params.set('window', q.window)
+    const qs = params.toString()
+    const response = await fetch(`${API_URL}/daily-signals${qs ? `?${qs}` : ''}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch daily signals: error status ${response.status}`);
     }
     return response.json() as Promise<DailySignalsResponse>;
   },
   staleTime: 60 * 1000,
+  placeholderData: (prev) => prev,   // 2026-11-26 (R3a.5): keep the table while a new filter loads
 })
+export const dailySignalsQueryOptions = dailySignalsQuery()
 
 export const Route = createFileRoute('/(home)/daily-signals')({
   head: () => ({
@@ -283,6 +312,8 @@ const COLUMN_LABELS: Record<string, string> = {
   news: 'News Sentiment',
   analyst: 'Analyst Consensus',
   valuation: 'FCF Valuation',
+  sector_regime: 'Sector Regime',   // 2026-11-26 (R3a.5)
+  moves: 'Move 5/10/20d',
 }
 const HIDDEN_COLUMNS_KEY = 'foxel.dailySignals.hiddenColumns'
 
@@ -371,8 +402,37 @@ function RefLevel({ value, title }: { value: number; title: string }) {
   )
 }
 
+// 2026-11-26 (R3a.5): the move in the signal's direction after 5 / 10 / 20 sessions, from
+// the next open (fwd_ret_*); green when it beat the round-trip cost (hit_*). Scored daily.
+function MoveCell({ s }: { s: DailySignal }) {
+  const cells: [string, number | null | undefined, boolean | null | undefined][] = [
+    ['5', s.fwd_ret_5, s.hit_5], ['10', s.fwd_ret_10, s.hit_10], ['20', s.fwd_ret_20, s.hit_20],
+  ]
+  return (
+    <div className="flex gap-2 font-mono text-[11px]" title="Move in the signal's direction from the next open, after 5 / 10 / 20 sessions. Green: beat the round-trip cost. Blank until that many sessions have passed.">
+      {cells.map(([h, v, hit]) => (
+        <span key={h} className="flex flex-col items-end min-w-10">
+          <span className="text-[9px] text-gray-400">{h}d</span>
+          <span className={v === null || v === undefined ? 'text-gray-300' : hit ? 'text-emerald-700 font-bold' : 'text-red-700'}>
+            {v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${(v * 100).toFixed(1)}%`}
+          </span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+const WINDOW_LABELS: Record<SignalWindow, string> = {
+  open: 'Open signals', '5': 'Last 5 sessions', '10': 'Last 10 sessions', '20': 'Last 20 sessions',
+}
+
 function DailySignalsPage() {
-  const { data: signalsResponse, isLoading, error, refetch } = useQuery(dailySignalsQueryOptions)
+  // 2026-11-26 (R3a.5): the regime panel's selection and the session window go to the API
+  const [level, setLevel] = useState<RegimeLevel>('sector')
+  const [group, setGroup] = useState<string | null>(null)
+  const [signalWindow, setSignalWindow] = useState<SignalWindow>('open')
+  const [drawerId, setDrawerId] = useState<number | null>(null)
+  const { data: signalsResponse, isLoading, error, refetch } = useQuery(dailySignalsQuery({ level, group, window: signalWindow }))
   // 2026-11-12 (Scoreboard Rebuild): one summary request per page; each row looks up its badge.
   // If it fails, the signals still show, without badges.
   const { data: scoreSummary } = useQuery(scoreboardSummaryQueryOptions)
@@ -497,14 +557,15 @@ function DailySignalsPage() {
                 {ticker}
                 <ArrowUpRight className="w-3 h-3 text-brand-primary/60 shrink-0" />
               </Link>
-              <Link
-                to="/trade/$id"
-                params={{ id: String(info.row.original.id) }}
-                title="Open the trade chart: bars, indicators, entry, levels and exit"
-                className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5"
+              {/* 2026-11-26 (R3a.5): opens the chart drawer; the full page is a link inside it */}
+              <button
+                type="button"
+                onClick={() => setDrawerId(info.row.original.id)}
+                title="Open the strategy chart: bars, indicators, why it fired, levels and exit"
+                className="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 hover:text-brand-primary border border-brand-border rounded px-1.5 py-0.5 cursor-pointer"
               >
                 Chart
-              </Link>
+              </button>
             </div>
             <StrategyBadge line={badgeFor(info.row.original)} />
           </div>
@@ -696,6 +757,36 @@ function DailySignalsPage() {
         },
       }
     ),
+    // 2026-11-26 (R3a.5): the sector's regime at the signal and today
+    columnHelper.accessor(
+      row => row.sector_regime ?? '',
+      {
+        id: 'sector_regime',
+        header: () => <span title="The signal's sector (equal-weight index of its members): its regime on the signal day, and today when it has changed">Sector Regime</span>,
+        cell: info => {
+          const s = info.row.original
+          if (!s.sector) return <span className="font-mono text-gray-400" title="No sector group (Singapore stocks, generic ETFs)">—</span>
+          const changed = s.sector_regime_now && s.sector_regime_now !== s.sector_regime
+          return (
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[11px] text-gray-600 leading-tight">{s.sector}</span>
+              <span className="inline-flex items-center gap-1">
+                <RegimeChip regime={s.sector_regime} title="At the signal" />
+                {changed && <><span className="text-gray-400 text-[10px]">→</span><RegimeChip regime={s.sector_regime_now} title="Today" /></>}
+              </span>
+            </div>
+          )
+        },
+      }
+    ),
+    columnHelper.accessor(
+      row => row.fwd_ret_10 ?? Number.NEGATIVE_INFINITY,
+      {
+        id: 'moves',
+        header: () => <span title="Move in the signal's direction after 5 / 10 / 20 sessions (sorts by 10)">Move 5/10/20d</span>,
+        cell: info => <MoveCell s={info.row.original} />,
+      }
+    ),
     // 2026-11-11 (D3): FCF Valuation - the site's DCF on free cash flow (the IV Valuation
     // page's default method) against the signal's price. Display only.
     columnHelper.accessor(
@@ -744,7 +835,7 @@ function DailySignalsPage() {
         },
       }
     ),
-  ]), [columnHelper, badgeFor])   // 2026-11-12: badges arrive after the rows
+  ]), [columnHelper, badgeFor, setDrawerId])   // 2026-11-12: badges arrive after the rows
 
   // 2026-11-11 (D3): hidden columns are left out of the table
   const visibleColumns = useMemo(
@@ -789,6 +880,8 @@ function DailySignalsPage() {
     setAnalystFilter('all')
     setRegimeFilter('all')
     setValuationFilter('all')
+    setGroup(null)              // 2026-11-26 (R3a.5)
+    setSignalWindow('open')
     setSorting([])
   }
 
@@ -836,6 +929,9 @@ function DailySignalsPage() {
               </div>
             </div>
           </div>
+
+          {/* 2026-11-26 (R3a.5): regime panel (and the universe staleness banner) */}
+          <RegimePanel level={level} onLevel={setLevel} group={group} onGroup={setGroup} window={signalWindow} />
 
           {/* Stats Grid cards */}
           {!isLoading && !error && signalsResponse && (
@@ -933,6 +1029,23 @@ function DailySignalsPage() {
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-brand-border bg-brand-bg/20 text-brand-dark font-mono text-xs placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/15 focus:bg-white transition-all uppercase"
                   />
                 </div>
+
+                {/* 2026-11-26 (R3a.5): which signals: open now, or every signal of the last N sessions */}
+                <select
+                  value={signalWindow}
+                  onChange={(e) => setSignalWindow(e.target.value as SignalWindow)}
+                  title="Open signals, or every signal of the last 5 / 10 / 20 sessions (open or closed) with its scored move"
+                  className="bg-brand-bg/40 border border-brand-border rounded-lg text-xs font-semibold text-gray-700 px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/10"
+                >
+                  {(Object.keys(WINDOW_LABELS) as SignalWindow[]).map(w => <option key={w} value={w}>{WINDOW_LABELS[w]}</option>)}
+                </select>
+                {group && (
+                  <span className="inline-flex items-center gap-1.5 bg-brand-dark text-white rounded-lg text-xs font-semibold pl-3 pr-1.5 py-1.5">
+                    {group}
+                    {signalsResponse?.meta?.group_regime?.regime && <span className="text-[10px] font-mono uppercase opacity-80">· {signalsResponse.meta.group_regime.regime}</span>}
+                    <button type="button" onClick={() => setGroup(null)} className="ml-1 px-1 rounded hover:bg-white/20 cursor-pointer" aria-label="Clear group filter">✕</button>
+                  </span>
+                )}
 
                 {/* Direction Filter Dropdown */}
                 <div className="flex items-center gap-1.5">
@@ -1062,7 +1175,7 @@ function DailySignalsPage() {
 
               {/* Results table count indicator */}
               <div className="px-6 py-2.5 bg-brand-bg/30 border-b border-brand-border flex items-center justify-between text-[11px] text-gray-500 font-mono">
-                <span>Showing {filteredData.length} of {signals.length} scan targets</span>
+                <span>Showing {filteredData.length} of {signals.length} {signalWindow === 'open' ? 'open signals' : `signals from the ${WINDOW_LABELS[signalWindow].toLowerCase()}`}{group ? ` in ${group}` : ''}</span>
                 <span className="hidden sm:inline">Click column headers to sort</span>
               </div>
 
@@ -1178,6 +1291,8 @@ function DailySignalsPage() {
           )}
         </div>
       </main>
+      {/* 2026-11-26 (R3a.5) */}
+      <ChartDrawer id={drawerId} onClose={() => setDrawerId(null)} />
     </div>
   )
 }
