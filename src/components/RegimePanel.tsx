@@ -74,9 +74,9 @@ function Strip({ history }: { history: RegimeTile['history'] }) {
   const h = history || []
   if (h.length === 0) return null
   return (
-    <div className="flex h-1.5 w-full rounded overflow-hidden mt-2" title={`${h[0].date} → ${h[h.length - 1].date}`}>
+    <div className="flex h-1.5 w-full rounded overflow-hidden mt-2" title={`Regime each session, ${h[0].date} (left) → ${h[h.length - 1].date} (right)`}>
       {h.map((x) => (
-        <span key={x.date} className="flex-1" style={{ background: ((x.regime && REGIME_STYLE[x.regime]) || NO_REGIME).bar }} />
+        <span key={x.date} className="flex-1" title={`${x.date}: ${x.regime || 'no regime'}`} style={{ background: ((x.regime && REGIME_STYLE[x.regime]) || NO_REGIME).bar }} />
       ))}
     </div>
   )
@@ -134,9 +134,14 @@ export function RegimePanel(props: {
                 <span className="font-bold text-brand-dark">{m.group}</span>
                 <RegimeChip regime={m.regime} />
                 <Strength n={m.strength} />
-                <span className="font-mono text-xs text-gray-500">
-                  day {m.days_in_regime ?? '—'} · breadth {pct(m.breadth50_pct, false)} above SMA 50 · 20d {pct(m.ret20_pct)} · from 63d high {pct(m.dd63_pct)}
+                <span className="text-xs text-gray-500">
+                  for {m.days_in_regime ?? '—'} sessions · {pct(m.breadth50_pct, false)} of stocks above their 50-day average · {pct(m.ret20_pct)} over the last month · {pct(m.dd63_pct)} from its 3-month high
                 </span>
+                {m.regime_raw && m.regime_raw !== m.regime && (
+                  <span className="text-[11px] text-amber-700" title="A new regime counts only after 3 sessions in a row">
+                    (today reads {m.regime_raw}; not confirmed yet)
+                  </span>
+                )}
               </div>
             ) : (
               <p className="text-xs text-gray-400 mt-1">{isLoading ? 'Loading…' : error ? 'Regimes unavailable.' : 'Not computed yet.'}</p>
@@ -173,8 +178,8 @@ export function RegimePanel(props: {
                     <div className="flex items-start justify-between gap-2">
                       <span className="font-semibold text-xs text-brand-dark leading-tight">{t.group}</span>
                       {(t.signals || 0) > 0 && (
-                        <span className="shrink-0 text-[10px] font-mono font-bold bg-white border border-brand-border rounded px-1.5" title="Signals in the selected window">
-                          {t.signals}
+                        <span className="shrink-0 text-[10px] font-mono font-bold bg-white border border-brand-border rounded px-1.5" title="Signals in this group in the selected window">
+                          {t.signals} {t.signals === 1 ? 'signal' : 'signals'}
                         </span>
                       )}
                     </div>
@@ -182,9 +187,11 @@ export function RegimePanel(props: {
                       <RegimeChip regime={t.regime} />
                       <Strength n={t.strength} />
                     </div>
-                    <div className="font-mono text-[10px] text-gray-500 mt-1.5 leading-relaxed">
-                      day {t.days_in_regime ?? '—'} · 20d {pct(t.ret20_pct)}<br />
-                      breadth {pct(t.breadth50_pct, false)} · vs SMA50 {pct(t.vs_sma50_pct)}
+                    <div className="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
+                      {t.days_in_regime ?? '—'} sessions in it · <span className="font-mono">{pct(t.ret20_pct)}</span> last month<br />
+                      <span className="font-mono">{pct(t.breadth50_pct, false)}</span> of stocks above 50-day avg<br />
+                      index <span className="font-mono">{pct(t.vs_sma50_pct)}</span> vs its 50-day avg
+                      {t.regime_raw && t.regime_raw !== t.regime && <span className="block text-amber-700">today reads {t.regime_raw}</span>}
                     </div>
                     <Strip history={t.history} />
                   </button>
@@ -194,7 +201,7 @@ export function RegimePanel(props: {
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-[11px] text-gray-400">
             <span>
-              {data?.date ? `As of ${data.date}. ` : ''}Rally: index above a rising SMA 50 with breadth ≥ 55%. Correction: below its SMA 50, falling or 8%+ off its high, breadth ≤ 45%. Confirmed over 3 sessions. Bar: last 60 sessions.
+              {data?.date ? `As of ${data.date}. ` : ''}Each group is an equal-weight index of its stocks. Rally: index above its rising 50-day average and at least 55% of its stocks above theirs. Correction: index below its 50-day average, falling or 8%+ off its 3-month high, and 45% or fewer of its stocks above theirs. Sideways: neither. A change counts after 3 sessions in a row. Dots: strength out of 5. Coloured bar: the last 60 sessions.
             </span>
             {level === 'industry' && groups.length > 0 && (
               <button type="button" onClick={() => setShowAll((v) => !v)} className="text-brand-primary hover:underline cursor-pointer">
